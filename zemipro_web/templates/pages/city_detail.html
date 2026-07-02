@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ city.name_ru }} — ZemiPro{% endblock %}
+{% block meta_description %}Мастера по ремонту в {{ city.name_ru }}. Сантехника, электрика, кондиционеры, ремонт квартир.{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Мастера в {{ city.name_ru }}</h1>
+        <p>Выберите категорию или просматривайте всех мастеров города</p>
+    </div>
+</section>
+
+<section class="category-content">
+    <div class="container">
+
+        <div class="filter-bar">
+            <form method="get" class="filter-form">
+                <select name="category" class="form__select" onchange="this.form.submit()">
+                    <option value="">Все категории</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>
+                        {{ cat.emoji }} {{ cat.name_ru }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
+        {% if page_obj.object_list %}
+        <div class="orders-list" style="margin-top: 24px;">
+            {% for wp in page_obj %}
+            <div class="order-card-sm">
+                <div class="order-card-sm__header">
+                    <span class="order-card__category">{{ wp.user }}</span>
+                    {% if wp.avg_rating %}
+                    <span style="font-size: 0.875rem;">★ {{ wp.avg_rating|floatformat:1 }} ({{ wp.review_count }})</span>
+                    {% endif %}
+                </div>
+                <div class="order-card-sm__body">
+                    <p class="order-card-sm__desc">{{ wp.description|truncatewords:20 }}</p>
+                    <p>
+                        {% for skill in wp.skills.all %}
+                        <span class="tag">{{ skill.emoji }} {{ skill.name_ru }}</span>
+                        {% endfor %}
+                    </p>
+                </div>
+                <div class="order-card-sm__actions">
+                    <a href="{% url 'marketplace:worker_public_profile' pk=wp.pk %}" class="btn btn--primary btn--sm">Открыть профиль</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn--secondary btn--sm">← Назад</a>
+            {% endif %}
+            <span class="pagination__current">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn--secondary btn--sm">Далее →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <p class="empty-state">Мастеров{% if selected_category %} в выбранной категории{% endif %} в {{ city.name_ru }} пока нет.</p>
+        {% endif %}
+
+        <div class="cta-block" style="margin-top: 32px;">
+            <h2>Создать заявку в {{ city.name_ru }}</h2>
+            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">Создать заявку</a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

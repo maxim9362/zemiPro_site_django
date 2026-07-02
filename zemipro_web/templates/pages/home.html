@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}ZemiPro — Найдите мастера по ремонту в Израиле{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Найдите мастера по ремонту в&nbsp;Израиле</h1>
+        <p class="hero__subtitle">
+            Сантехника, электрика, кондиционеры, ремонт квартир, сборка мебели
+            — бесплатно и без посредников
+        </p>
+        <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary btn--lg">
+            Создать заявку
+        </a>
+    </div>
+</section>
+
+<section class="categories-preview">
+    <div class="container">
+        <h2>Категории услуг</h2>
+        <div class="categories-grid">
+            {% for cat in categories %}
+            <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
+                <span class="category-card__emoji">{{ cat.emoji }}</span>
+                <h3 class="category-card__title">{{ cat.name }}</h3>
+                <p class="category-card__desc">{{ cat.description }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="how-it-works">
+    <div class="container">
+        <h2>Как это работает</h2>
+        <div class="steps">
+            <div class="step">
+                <span class="step__number">1</span>
+                <h3>Создайте заявку</h3>
+                <p>Опишите задачу, выберите категорию и укажите адрес</p>
+            </div>
+            <div class="step">
+                <span class="step__number">2</span>
+                <h3>Получите отклики</h3>
+                <p>Мастера из вашей категории увидят заявку и откликнутся</p>
+            </div>
+            <div class="step">
+                <span class="step__number">3</span>
+                <h3>Выберите мастера</h3>
+                <p>Сравните профили, рейтинги и отзывы, выберите лучшего</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Пожаловаться — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Пожаловаться</h1>
+        {% if target_user %}
+        <p>На пользователя: {{ target_user }}</p>
+        {% elif target_order %}
+        <p>На заявку №{{ target_order.pk }}</p>
+        {% elif target_rating %}
+        <p>На отзыв</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="order-form">
+    <div class="container">
+        <form method="post" class="form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="form__errors">
+                {% for error in form.non_field_errors %}
+                <p class="form__error">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="form__group">
+                <label for="id_reason" class="form__label">Причина жалобы *</label>
+                {{ form.reason }}
+                {% if form.reason.errors %}
+                <span class="form__error">{{ form.reason.errors.0 }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form__group">
+                <label for="id_message" class="form__label">Описание *</label>
+                {{ form.message }}
+                {% if form.message.errors %}
+                <span class="form__error">{{ form.message.errors.0 }}</span>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--lg">
+                Отправить жалобу
+            </button>
+            <a href="javascript:history.back()" class="btn btn--secondary" style="margin-left: 12px;">
+                Назад
+            </a>
+        </form>
+    </div>
+</section>
+{% endblock %}

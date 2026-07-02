@@ -1,0 +1,72 @@
+services:
+  # 1. Основной бот
+  bot_main:
+    build: .
+    container_name: izprofi_main
+    restart: always
+    dns:
+      - 8.8.8.8
+    env_file:
+      - .env
+    command: python main.py
+    depends_on:
+      - db
+
+  # 2. Админ-бот (Статистика)
+  bot_admin:
+    build: .
+    container_name: izprofi_admin
+    restart: always
+    dns:
+      - 8.8.8.8
+    env_file:
+      - .env
+    environment:
+      # Это ключевая строка: она добавляет корень /app в пути поиска модулей
+      - PYTHONPATH=/app
+    # Запуск через флаг -m (как модуль) — самый надежный способ для вложенных структур
+    command: python -m admin_bot.admin_main
+    depends_on:
+      - db
+
+  # 3. База данных
+  db:
+    image: postgres:15-alpine
+    container_name: izprofi_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+    # 4. Web API (FastAPI для сайта)
+  web_api:
+    build: .
+    container_name: izprofi_api
+    restart: always
+    ports:
+      - "8000:8000" # Пробрасываем порт для сайта
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=db  # Указываем API, что база в Docker называется 'db'
+    # Запуск как модуля, чтобы работали относительные импорты (.db_bridge)
+    command: python -m web_api.server
+    depends_on:
+      - db
+
+# --- Списки томов (volumes) и сетей (networks) должны быть в корне файла ---
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1400

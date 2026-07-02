@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Откликнуться на заказ #{{ order.pk }} — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Откликнуться на заявку</h1>
+    </div>
+</section>
+
+<section class="order-detail">
+    <div class="container">
+        <div class="order-card" style="margin-bottom: 24px;">
+            <div class="order-card__header">
+                <span class="order-card__status order-card__status--new">В обработке</span>
+                <span class="order-card__category">{{ order.category.emoji }} {{ order.category.name_ru }}</span>
+            </div>
+            <div class="order-card__body">
+                <div class="order-card__field">
+                    <strong>Город:</strong> {{ order.city.name_ru }}
+                </div>
+                <div class="order-card__field">
+                    <strong>Адрес:</strong> {{ order.address }}
+                </div>
+                <div class="order-card__field">
+                    <strong>Описание:</strong>
+                    <p>{{ order.description }}</p>
+                </div>
+                <div class="order-card__field">
+                    <strong>Бюджет:</strong> {{ order.price }}
+                </div>
+            </div>
+        </div>
+
+        <div class="order-card">
+            <div class="order-card__body">
+                <h2 style="margin-bottom: 16px;">Ваш отклик</h2>
+
+                {% if messages %}
+                <div class="form__errors" style="background: #fef2f2; border-color: #fecaca; margin-bottom: 16px;">
+                    {% for message in messages %}
+                    <p class="form__error">{{ message }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="post" class="form">
+                    {% csrf_token %}
+
+                    <div class="form__group">
+                        <label for="id_message" class="form__label">Сообщение клиенту</label>
+                        {{ form.message }}
+                        {% if form.message.errors %}
+                        <span class="form__error">{{ form.message.errors.0 }}</span>
+                        {% endif %}
+                        <span class="form__hint">Необязательно. Максимум 1000 символов.</span>
+                    </div>
+
+                    <button type="submit" class="btn btn--primary btn--lg">
+                        Отправить отклик
+                    </button>
+                    <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-left: 12px;">
+                        Назад
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

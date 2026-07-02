@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ category.name_ru }} — ZemiPro{% endblock %}
+{% block meta_description %}{{ category.description }}. Найдите мастера по категории «{{ category.name_ru }}» в Израиле.{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>{{ category.emoji }} {{ category.name_ru }}</h1>
+        <p>{{ category.description }}</p>
+    </div>
+</section>
+
+<section class="category-content">
+    <div class="container">
+
+        <div class="filter-bar">
+            <form method="get" class="filter-form">
+                <select name="city" class="form__select" onchange="this.form.submit()">
+                    <option value="">Все города</option>
+                    {% for city in cities %}
+                    <option value="{{ city.slug }}" {% if selected_city == city.slug %}selected{% endif %}>
+                        {{ city.name_ru }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
+        {% if page_obj.object_list %}
+        <div class="orders-list" style="margin-top: 24px;">
+            {% for wp in page_obj %}
+            <div class="order-card-sm">
+                <div class="order-card-sm__header">
+                    <span class="order-card__category">{{ wp.user }}</span>
+                    {% if wp.avg_rating %}
+                    <span style="font-size: 0.875rem;">★ {{ wp.avg_rating|floatformat:1 }} ({{ wp.review_count }})</span>
+                    {% endif %}
+                </div>
+                <div class="order-card-sm__body">
+                    <p class="order-card-sm__city">{{ wp.city.name_ru }}</p>
+                    <p class="order-card-sm__desc">{{ wp.description|truncatewords:20 }}</p>
+                </div>
+                <div class="order-card-sm__actions">
+                    <a href="{% url 'marketplace:worker_public_profile' pk=wp.pk %}" class="btn btn--primary btn--sm">Открыть профиль</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if selected_city %}&city={{ selected_city }}{% endif %}" class="btn btn--secondary btn--sm">← Назад</a>
+            {% endif %}
+            <span class="pagination__current">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if selected_city %}&city={{ selected_city }}{% endif %}" class="btn btn--secondary btn--sm">Далее →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <p class="empty-state">Мастеров в этой категории{% if selected_city %} в выбранном городе{% endif %} пока нет.</p>
+        {% endif %}
+
+        <div class="cta-block" style="margin-top: 32px;">
+            <h2>Нужен мастер по «{{ category.name_ru }}»?</h2>
+            <p>Создайте заявку и получите отклики от проверенных специалистов</p>
+            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">Создать заявку</a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

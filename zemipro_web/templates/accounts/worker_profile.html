@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Профиль мастера — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Профиль мастера</h1>
+        <p>Укажите город, категории работ и описание ваших услуг</p>
+    </div>
+</section>
+
+<section class="order-form">
+    <div class="container">
+        {% if messages %}
+        <div class="form__errors" style="background: #d1fae5; border-color: #6ee7b7;">
+            {% for message in messages %}
+            <p class="form__error" style="color: #065f46;">{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="form__errors">
+                {% for error in form.non_field_errors %}
+                <p class="form__error">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="form__row">
+                <div class="form__group">
+                    <label for="id_city" class="form__label">Город *</label>
+                    {{ form.city }}
+                    {% if form.city.errors %}
+                    <span class="form__error">{{ form.city.errors.0 }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="form__group">
+                    <label for="id_contact" class="form__label">Контакт для связи *</label>
+                    {{ form.contact }}
+                    {% if form.contact.errors %}
+                    <span class="form__error">{{ form.contact.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form__group">
+                <label for="id_description" class="form__label">Описание услуг *</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <span class="form__error">{{ form.description.errors.0 }}</span>
+                {% endif %}
+                <span class="form__hint">Минимум 20 символов</span>
+            </div>
+
+            <div class="form__group">
+                <label class="form__label">Категории работ *</label>
+                <div class="checkbox-grid">
+                    {{ form.skills }}
+                </div>
+                {% if form.skills.errors %}
+                <span class="form__error">{{ form.skills.errors.0 }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form__group">
+                <label class="form__label">
+                    {{ form.receive_notifications }}
+                    Получать уведомления о новых заявках
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--lg">
+                Сохранить профиль
+            </button>
+        </form>
+    </div>
+</section>
+{% endblock %}

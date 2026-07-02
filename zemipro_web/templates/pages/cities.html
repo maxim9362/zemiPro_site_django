@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Города — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Города</h1>
+        <p>Выберите город для поиска мастеров</p>
+    </div>
+</section>
+
+<section class="cities-list">
+    <div class="container">
+        <div class="cities-grid">
+            {% for city in cities %}
+            <a href="{% url 'marketplace:city_detail' slug=city.slug %}" class="city-card">
+                <h3 class="city-card__title">{{ city.name }}</h3>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

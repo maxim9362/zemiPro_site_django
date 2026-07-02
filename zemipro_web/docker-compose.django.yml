@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: zemipro_django_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-zemipro_db}
+    volumes:
+      - zemipro_django_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    container_name: zemipro_django_web
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+    depends_on:
+      - db
+    command: gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3
+
+volumes:
+  zemipro_django_data:

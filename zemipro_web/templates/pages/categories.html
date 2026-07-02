@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Категории услуг — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Категории услуг</h1>
+        <p>Выберите категорию для вашего заказа</p>
+    </div>
+</section>
+
+<section class="categories-list">
+    <div class="container">
+        <div class="categories-grid">
+            {% for cat in categories %}
+            <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
+                <span class="category-card__emoji">{{ cat.emoji }}</span>
+                <h3 class="category-card__title">{{ cat.name }}</h3>
+                <p class="category-card__desc">{{ cat.description }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

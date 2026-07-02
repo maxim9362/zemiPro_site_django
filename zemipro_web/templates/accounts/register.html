@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Регистрация — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Регистрация</h1>
+    </div>
+</section>
+
+<section class="order-form">
+    <div class="container">
+        <form method="post" class="form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="form__errors">
+                {% for error in form.non_field_errors %}
+                <p class="form__error">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% for field in form %}
+            <div class="form__group">
+                <label for="{{ field.id_for_label }}" class="form__label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                <span class="form__hint">{{ field.help_text }}</span>
+                {% endif %}
+                {% if field.errors %}
+                <span class="form__error">{{ field.errors.0 }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn--primary btn--lg">Зарегистрироваться</button>
+        </form>
+
+        <p style="margin-top: 20px; text-align: center;">
+            Уже есть аккаунт? <a href="{% url 'accounts:login' %}">Войти</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

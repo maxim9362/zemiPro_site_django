@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Кабинет клиента — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Кабинет клиента</h1>
+        <p>{{ profile.city.name_ru }} · {{ profile.contact }}</p>
+    </div>
+</section>
+
+<section class="dashboard">
+    <div class="container">
+
+        {% if messages %}
+        <div class="form__errors" style="background: #d1fae5; border-color: #6ee7b7; margin-bottom: 24px;">
+            {% for message in messages %}
+            <p class="form__error" style="color: #065f46;">{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="dashboard__profile">
+            <h2>Ваш профиль</h2>
+            <p><strong>Город:</strong> {{ profile.city.name_ru }}</p>
+            <p><strong>Контакт:</strong> {{ profile.contact }}</p>
+            <a href="{% url 'accounts:client_profile' %}" class="btn btn--secondary">Редактировать профиль</a>
+            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary" style="margin-left: 8px;">Создать заявку</a>
+        </div>
+
+        {% if active_orders %}
+        <div class="dashboard__section">
+            <h2>Активные заявки</h2>
+            <div class="orders-list">
+                {% for item in orders_with_responses %}
+                {% if item.order.status == 'new' %}
+                <div class="order-card-sm">
+                    <div class="order-card-sm__header">
+                        <span class="order-card__status order-card__status--new">В обработке</span>
+                        <span class="order-card__category">{{ item.order.category.emoji }} {{ item.order.category.name_ru }}</span>
+                    </div>
+                    <div class="order-card-sm__body">
+                        <p class="order-card-sm__city">{{ item.order.city.name_ru }} · {{ item.order.address }}</p>
+                        <p class="order-card-sm__desc">{{ item.order.description|truncatewords:20 }}</p>
+                        <p class="order-card-sm__price">{{ item.order.price }}</p>
+                        <p class="order-card-sm__date">Откликов: {{ item.response_count }}</p>
+                    </div>
+                    <div class="order-card-sm__actions">
+                        <a href="{% url 'marketplace:order_detail' pk=item.order.pk %}" class="btn btn--primary btn--sm">Открыть</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if in_progress_orders %}
+        <div class="dashboard__section">
+            <h2>В процессе</h2>
+            <div class="orders-list">
+                {% for order in in_progress_orders %}
+                <div class="order-card-sm">
+                    <div class="order-card-sm__header">
+                        <span class="order-card__status order-card__status--in_progress">В процессе</span>
+                        <span class="order-card__category">{{ order.category.emoji }} {{ order.category.name_ru }}</span>
+                    </div>
+                    <div class="order-card-sm__body">
+                        <p class="order-card-sm__city">{{ order.city.name_ru }} · {{ order.address }}</p>
+                        <p class="order-card-sm__desc">{{ order.description|truncatewords:20 }}</p>
+                        <p class="order-card-sm__price">{{ order.price }}</p>
+                        {% if order.worker %}
+                        <p class="order-card-sm__date">Мастер: {{ order.worker }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="order-card-sm__actions">
+                        <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--primary btn--sm">Открыть</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if completed_orders %}
+        <div class="dashboard__section">
+            <h2>Завершённые</h2>
+            <div class="orders-list">
+                {% for order in completed_orders %}
+                <div class="order-card-sm">
+                    <div class="order-card-sm__header">
+                        <span class="order-card__status order-card__status--completed">Выполнен</span>
+                        <span class="order-card__category">{{ order.category.emoji }} {{ order.category.name_ru }}</span>
+                    </div>
+                    <div class="order-card-sm__body">
+                        <p class="order-card-sm__city">{{ order.city.name_ru }}</p>
+                        <p class="order-card-sm__date">{{ order.created_at|date:"d.m.Y" }}</p>
+                    </div>
+                    <div class="order-card-sm__actions">
+                        <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary btn--sm">Открыть</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if cancelled_orders %}
+        <div class="dashboard__section">
+            <h2>Отменённые</h2>
+            <div class="orders-list">
+                {% for order in cancelled_orders %}
+                <div class="order-card-sm">
+                    <div class="order-card-sm__header">
+                        <span class="order-card__status order-card__status--cancelled">Отменён</span>
+                        <span class="order-card__category">{{ order.category.emoji }} {{ order.category.name_ru }}</span>
+                    </div>
+                    <div class="order-card-sm__body">
+                        <p class="order-card-sm__city">{{ order.city.name_ru }}</p>
+                        <p class="order-card-sm__date">{{ order.created_at|date:"d.m.Y" }}</p>
+                    </div>
+                    <div class="order-card-sm__actions">
+                        <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary btn--sm">Открыть</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not active_orders and not in_progress_orders and not completed_orders and not cancelled_orders %}
+        <p class="empty-state">У вас пока нет заявок. <a href="{% url 'marketplace:order_create' %}">Создайте первую заявку</a></p>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Отзыв на заказ #{{ order.pk }} — ZemiPro{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Оставить отзыв мастеру</h1>
+        <p>Заказ #{{ order.pk }} · {{ order.category.name_ru }} · {{ order.worker }}</p>
+    </div>
+</section>
+
+<section class="order-form">
+    <div class="container">
+        <form method="post" class="form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="form__errors">
+                {% for error in form.non_field_errors %}
+                <p class="form__error">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="form__group">
+                <label for="id_rating" class="form__label">Оценка (от 1 до 5) *</label>
+                {{ form.rating }}
+                {% if form.rating.errors %}
+                <span class="form__error">{{ form.rating.errors.0 }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form__group">
+                <label for="id_review_text" class="form__label">Текст отзыва</label>
+                {{ form.review_text }}
+                {% if form.review_text.errors %}
+                <span class="form__error">{{ form.review_text.errors.0 }}</span>
+                {% endif %}
+                <span class="form__hint">Необязательно. Расскажите о качестве работы.</span>
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--lg">
+                Отправить отзыв
+            </button>
+            <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-left: 12px;">
+                Назад
+            </a>
+        </form>
+    </div>
+</section>
+{% endblock %}
