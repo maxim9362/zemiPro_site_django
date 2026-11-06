@@ -84,3 +84,17 @@
 - **Оставлено по roadmap:** замечание review о политике `User.is_blocked` не входит в четыре blocker-исправления этой задачи и не изменялось.
 - **Production/VPS/DNS/реальные базы/секреты:** не затронуты.
 - **Ветка/PR:** существующие `stage-01-backend-security` и PR #2; новый PR и merge не создаются.
+
+## 2026-11-06 — подэтап 01.1, структура конфигурации и окружений
+
+- **Статус:** `DONE / LOCALLY_VERIFIED`; весь этап 01 остаётся `IN_PROGRESS`, зависимости этапа 00 не объявлены завершёнными.
+- **Сделано/переиспользовано:** `ADAPT` существующего `core.settings` — публичный модуль сохранён как совместимый selector, общая конфигурация и `development/test/staging/production` вынесены в `core/config/`. Выбор выполняется через `DJANGO_ENV`; правки Python-кода для окружения не требуются.
+- **Безопасность:** staging/production требуют сильный `DJANGO_SECRET_KEY`, явные `ALLOWED_HOSTS` без `*` и явные параметры PostgreSQL; `DEBUG=False`, HTTPS redirect, secure session/CSRF cookies и HSTS включены по умолчанию. Development и test не получают production-only HTTPS-поведение.
+- **Воспроизводимость:** `.python-version` закрепляет Python 3.12.14; `zemipro_web/requirements.txt` содержит точные версии Django и транзитивных зависимостей с Windows/Linux markers. Чистая Linux-установка подтвердила Python 3.12.14, Django 5.1.15 и `pip check` без конфликтов.
+- **Документация:** добавлен корневой `README.md`; переписан актуальный `zemipro_web/DJANGO_SETUP.md`; обновлены `.env.example` и `.gitignore` для переменных окружения и защиты локальных секретов.
+- **Тесты:** PASS 20 Django tests (существующие 17 + 3 проверки окружений); PASS `manage.py check` для development и staging; PASS `manage.py check --deploy` для production; PASS чистая установка зависимостей; PASS `python -m pip check`; PASS `git diff --check`.
+- **Файлы/миграции:** конфигурация, lock-файл зависимостей, документация и ignore-правила; миграции и схема БД не изменялись.
+- **Ветка, commit, PR, merge:** `stage-01-stabilization`; изменения подэтапа фиксируются одним commit; отдельный PR для 01.1 не создаётся; merge не выполнялся.
+- **Реальная БД/VPS/DNS/секреты:** не затронуты; использована только изолированная локальная тестовая PostgreSQL.
+- **Блокеры/риски:** Docker/staging deployment, миграционный аудит, CI, backup и performance относятся к 01.2–01.6 и не выполнялись.
+- **Следующий разрешённый шаг:** остановиться после публикации ветки; 01.2 начинать только по команде владельца.

@@ -1,4 +1,10 @@
-Django>=5.1,<5.2
-psycopg2-binary>=2.9,<3.0
-python-dotenv>=1.0,<2.0
-gunicorn>=22.0,<23.0
+# Locked Django runtime for Python 3.12.x. Update pins deliberately and run the
+# full Django test suite plus `python -m pip check` before committing changes.
+Django==5.1.15
+asgiref==3.13.0
+sqlparse==0.6.1
+psycopg2-binary==2.9.13
+python-dotenv==1.2.4
+gunicorn==22.0.0; platform_system != "Windows"
+packaging==26.3; platform_system != "Windows"
+tzdata==2025.2; platform_system == "Windows"

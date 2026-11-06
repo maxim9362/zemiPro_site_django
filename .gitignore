@@ -5,6 +5,10 @@
 **/.env
 **/.env.*
 !**/.env.example
+.envrc
+*.local
+secrets/
+credentials/
 *.pem
 *.key
 *service_account*.json
