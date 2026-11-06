@@ -5,6 +5,7 @@ from django.urls import reverse
 from apps.accounts.models import User, WorkerProfile
 from apps.locations.models import City
 from apps.marketplace.models import Category, Order, Response
+from apps.marketplace.services import create_response, get_available_orders_for_worker
 
 
 class OrderSecurityTests(TestCase):
@@ -25,6 +26,14 @@ class OrderSecurityTests(TestCase):
             user=self.worker, city=self.city
         )
         self.worker_profile.skills.add(self.category)
+        self.other_worker_profile = WorkerProfile.objects.create(
+            user=self.other, city=self.city
+        )
+        self.other_worker_profile.skills.add(self.category)
+        self.owner_worker_profile = WorkerProfile.objects.create(
+            user=self.owner, city=self.city
+        )
+        self.owner_worker_profile.skills.add(self.category)
         self.private_order = Order.objects.create(
             client=self.owner,
             worker=self.worker,
@@ -33,7 +42,11 @@ class OrderSecurityTests(TestCase):
             address='Herzl 45, apartment 9',
             customer_name='Private Customer',
             customer_phone='+972-50-111-2233',
-            description='Safe public description of the requested plumbing work.',
+            description=(
+                'Call +972-50-111-2233 and come to Herzl 45, apartment 9 '
+                'to inspect the plumbing.'
+            ),
+            price='900 ₪',
             status=Order.Status.IN_PROGRESS,
         )
 
@@ -82,20 +95,28 @@ class OrderSecurityTests(TestCase):
                     description='This row must be rejected by the database constraint.',
                 )
 
-    def test_private_details_hidden_from_anonymous_and_unrelated_users(self):
+    def test_anonymous_user_cannot_view_order_by_id(self):
         url = reverse('marketplace:order_detail', args=[self.private_order.pk])
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.private_order.description)
-        self.assertNotContains(response, self.private_order.address)
-        self.assertNotContains(response, self.private_order.customer_phone)
+        self.assertRedirects(response, f'{reverse("accounts:login")}?next={url}')
+
+    def test_unassigned_worker_sees_safe_order_fields_without_free_text(self):
+        url = reverse('marketplace:order_detail', args=[self.private_order.pk])
 
         self.client.force_login(self.other)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.category.name_ru)
+        self.assertContains(response, self.city.name_ru)
+        self.assertContains(response, self.private_order.price)
+        self.assertContains(
+            response, 'Подробности будут доступны назначенному исполнителю.'
+        )
+        self.assertNotContains(response, self.private_order.description)
         self.assertNotContains(response, self.private_order.address)
         self.assertNotContains(response, self.private_order.customer_phone)
+        self.assertNotContains(response, self.private_order.customer_name)
 
     def test_private_details_visible_to_owner_assignee_and_staff(self):
         url = reverse('marketplace:order_detail', args=[self.private_order.pk])
@@ -107,6 +128,7 @@ class OrderSecurityTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, self.private_order.address)
                 self.assertContains(response, self.private_order.customer_phone)
+                self.assertContains(response, self.private_order.description)
 
     def test_unrelated_user_cannot_manage_order_by_guessing_id(self):
         order = Order.objects.create(
@@ -181,9 +203,43 @@ class OrderSecurityTests(TestCase):
 
         dashboard = self.client.get(reverse('marketplace:worker_dashboard'))
         self.assertEqual(dashboard.status_code, 200)
-        self.assertContains(dashboard, available_order.description)
+        self.assertContains(dashboard, available_order.price)
+        self.assertNotContains(dashboard, available_order.description)
         self.assertNotContains(dashboard, available_order.address)
 
         respond = self.client.get(reverse('marketplace:order_respond', args=[available_order.pk]))
         self.assertEqual(respond.status_code, 200)
+        self.assertContains(respond, available_order.price)
+        self.assertNotContains(respond, available_order.description)
         self.assertNotContains(respond, available_order.address)
+
+    def test_user_cannot_respond_to_own_order_through_view_or_service(self):
+        own_order = Order.objects.create(
+            client=self.owner,
+            category=self.category,
+            city=self.city,
+            address='Owner private address',
+            description='Owner private description with phone +972-50-999-8877.',
+        )
+        self.assertNotIn(
+            own_order,
+            list(get_available_orders_for_worker(self.owner_worker_profile)),
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('marketplace:order_respond', args=[own_order.pk]),
+            {'message': 'Trying to respond to myself'},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('marketplace:order_detail', args=[own_order.pk]),
+        )
+        self.assertFalse(
+            Response.objects.filter(order=own_order, worker=self.owner).exists()
+        )
+        with self.assertRaisesMessage(
+            ValueError, 'Нельзя откликнуться на собственную заявку.'
+        ):
+            create_response(own_order, self.owner, 'Direct service call')

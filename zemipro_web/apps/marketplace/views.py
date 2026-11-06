@@ -138,6 +138,7 @@ def order_create_view(request):
     return render(request, 'pages/order_create.html', {'form': form})
 
 
+@login_required
 def order_detail_view(request, pk):
     order = get_object_or_404(
         Order.objects.select_related('category', 'subcategory', 'city', 'client', 'worker'),
@@ -218,7 +219,11 @@ def order_accept_response_view(request, order_id, response_id):
         Response.objects.filter(order=order).exclude(pk=response.pk).values_list('worker_id', flat=True)
     )
 
-    accept_response(response)
+    try:
+        response = accept_response(response)
+    except ValueError as error:
+        messages.error(request, str(error))
+        return redirect('marketplace:order_detail', pk=order.pk)
 
     create_notification(
         recipient=response.worker,
@@ -370,6 +375,10 @@ def order_respond_view(request, pk):
         return redirect('accounts:worker_profile')
 
     order = get_object_or_404(Order, pk=pk, status=Order.Status.NEW)
+
+    if order.client_id == request.user.pk:
+        messages.error(request, 'Нельзя откликнуться на собственную заявку.')
+        return redirect('marketplace:order_detail', pk=order.pk)
 
     existing = Response.objects.filter(order=order, worker=request.user).first()
     if existing:
