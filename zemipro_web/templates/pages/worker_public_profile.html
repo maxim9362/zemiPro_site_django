@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ profile.user }} — мастер по ремонту — ZemiPro{% endblock %}
-{% block meta_description %}Профиль мастера {{ profile.user }}. Город: {{ profile.city.name_ru }}. Категории: {% for s in profile.skills.all %}{{ s.name_ru }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
+{% block meta_description %}Профиль мастера {{ profile.user }}. Город: {{ profile.city.localized_name }}. Категории: {% for s in profile.skills.all %}{{ s.name_ru }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
         <h1>{{ profile.user }}</h1>
-        <p>{{ profile.city.name_ru }} · {{ review_count }} отзывов · {{ avg_rating }}/5</p>
+        <p>{{ profile.city.localized_name }} · {{ review_count }} отзывов · {{ avg_rating }}/5</p>
     </div>
 </section>
 
@@ -17,7 +17,7 @@
         <div class="order-card">
             <div class="order-card__body">
                 <div class="order-card__field">
-                    <strong>Город:</strong> {{ profile.city.name_ru }}
+                    <strong>Город:</strong> {{ profile.city.localized_name }}
                 </div>
                 <div class="order-card__field">
                     <strong>Описание:</strong>

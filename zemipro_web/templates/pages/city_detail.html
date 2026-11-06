@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ city.name_ru }} — ZemiPro{% endblock %}
-{% block meta_description %}Мастера по ремонту в {{ city.name_ru }}. Сантехника, электрика, кондиционеры, ремонт квартир.{% endblock %}
+{% block title %}{{ city.localized_name }} — ZemiPro{% endblock %}
+{% block meta_description %}Мастера по ремонту в {{ city.localized_name }}. Сантехника, электрика, кондиционеры, ремонт квартир.{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Мастера в {{ city.name_ru }}</h1>
+        <h1>Мастера в {{ city.localized_name }}</h1>
         <p>Выберите категорию или просматривайте всех мастеров города</p>
     </div>
 </section>
@@ -65,11 +65,11 @@
         {% endif %}
 
         {% else %}
-        <p class="empty-state">Мастеров{% if selected_category %} в выбранной категории{% endif %} в {{ city.name_ru }} пока нет.</p>
+        <p class="empty-state">Мастеров{% if selected_category %} в выбранной категории{% endif %} в {{ city.localized_name }} пока нет.</p>
         {% endif %}
 
         <div class="cta-block" style="margin-top: 32px;">
-            <h2>Создать заявку в {{ city.name_ru }}</h2>
+            <h2>Создать заявку в {{ city.localized_name }}</h2>
             <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">Создать заявку</a>
         </div>
 

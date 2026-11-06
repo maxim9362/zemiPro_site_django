@@ -15,6 +15,7 @@ from .models import Category, Order, Response, Rating
 from .services import (
     get_available_orders_for_worker, create_response,
     accept_response, complete_order, cancel_order,
+    can_view_private_order_details,
 )
 
 ITEMS_PER_PAGE = 10
@@ -38,8 +39,8 @@ def category_detail(request, slug):
     workers = WorkerProfile.objects.filter(
         skills=category, user__is_active=True
     ).select_related('city', 'user').annotate(
-        avg_rating=Avg('received_ratings__rating'),
-        review_count=Count('received_ratings'),
+        avg_rating=Avg('user__received_ratings__rating'),
+        review_count=Count('user__received_ratings', distinct=True),
     ).order_by('-avg_rating')
 
     if selected_city:
@@ -69,8 +70,8 @@ def city_detail(request, slug):
     workers = WorkerProfile.objects.filter(
         city=city, user__is_active=True
     ).select_related('user').annotate(
-        avg_rating=Avg('received_ratings__rating'),
-        review_count=Count('received_ratings'),
+        avg_rating=Avg('user__received_ratings__rating'),
+        review_count=Count('user__received_ratings', distinct=True),
     ).order_by('-avg_rating')
 
     if selected_category:
@@ -107,6 +108,7 @@ def worker_public_profile_view(request, pk):
     })
 
 
+@login_required
 def order_create_view(request):
     initial = {}
     if request.user.is_authenticated:
@@ -118,18 +120,16 @@ def order_create_view(request):
         form = OrderCreateForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
-            if request.user.is_authenticated:
-                order.client = request.user
+            order.client = request.user
             order.save()
 
-            if request.user.is_authenticated:
-                create_notification(
-                    recipient=request.user,
-                    title='Заявка создана',
-                    message=f'Ваша заявка №{order.pk} успешно создана. Мастера смогут откликнуться на неё.',
-                    notification_type='order_created',
-                    related_order=order,
-                )
+            create_notification(
+                recipient=request.user,
+                title='Заявка создана',
+                message=f'Ваша заявка №{order.pk} успешно создана. Мастера смогут откликнуться на неё.',
+                notification_type='order_created',
+                related_order=order,
+            )
 
             return redirect('marketplace:order_detail', pk=order.pk)
     else:
@@ -172,6 +172,7 @@ def order_detail_view(request, pk):
         'is_owner': is_owner,
         'responses': responses,
         'existing_rating': existing_rating,
+        'can_view_private_details': can_view_private_order_details(request.user, order),
     })
 
 

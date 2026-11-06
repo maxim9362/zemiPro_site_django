@@ -68,8 +68,8 @@ class Order(models.Model):
         CANCELLED = 'cancelled', 'Отменён'
 
     client = models.ForeignKey(
-        'accounts.User', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='client_orders',
+        'accounts.User', on_delete=models.PROTECT,
+        related_name='client_orders',
         verbose_name='Заказчик'
     )
     customer_name = models.CharField(

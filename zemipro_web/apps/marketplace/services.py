@@ -1,11 +1,24 @@
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Value, When
 
 from .models import Order, Response, Rating
 
 
+def can_view_private_order_details(user, order):
+    """Allow private order data only to its owner, assignee, or staff."""
+    if not user.is_authenticated:
+        return False
+    return bool(
+        user.is_staff
+        or order.client_id == user.id
+        or order.worker_id == user.id
+    )
+
+
 def create_order(client, category, city, address, description, price='Договорная', subcategory=None):
     """Создать новую заявку."""
+    if client is None or not client.is_authenticated:
+        raise ValueError('Для создания заявки требуется авторизация.')
     order = Order.objects.create(
         client=client,
         category=category,
@@ -30,9 +43,13 @@ def get_available_orders_for_worker(worker_profile):
     )
 
     if worker_profile.city:
-        city_orders = base_qs.filter(city=worker_profile.city).order_by('-created_at')
-        other_orders = base_qs.exclude(city=worker_profile.city).order_by('-created_at')
-        return city_orders.union(other_orders)
+        return base_qs.annotate(
+            city_priority=Case(
+                When(city=worker_profile.city, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        ).order_by('city_priority', '-created_at')
 
     return base_qs.order_by('-created_at')
 
