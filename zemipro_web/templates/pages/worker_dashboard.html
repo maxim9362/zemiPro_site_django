@@ -6,7 +6,7 @@
 <section class="page-header">
     <div class="container">
         <h1>Кабинет мастера</h1>
-        <p>{{ profile.city.name_ru }} · {{ profile.skills.count }} категорий</p>
+        <p>{{ profile.city.localized_name }} · {{ profile.skills.count }} категорий</p>
     </div>
 </section>
 
@@ -23,7 +23,7 @@
 
         <div class="dashboard__profile">
             <h2>Ваш профиль</h2>
-            <p><strong>Город:</strong> {{ profile.city.name_ru }}</p>
+            <p><strong>Город:</strong> {{ profile.city.localized_name }}</p>
             <p><strong>Контакт:</strong> {{ profile.contact }}</p>
             <p><strong>Категории:</strong>
                 {% for skill in profile.skills.all %}
@@ -45,8 +45,7 @@
                         <span class="order-card__category">{{ order.category.emoji }} {{ order.category.name_ru }}</span>
                     </div>
                     <div class="order-card-sm__body">
-                        <p class="order-card-sm__city">{{ order.city.name_ru }} · {{ order.address }}</p>
-                        <p class="order-card-sm__desc">{{ order.description|truncatewords:20 }}</p>
+                        <p class="order-card-sm__city">{{ order.city.localized_name }}</p>
                         <p class="order-card-sm__price">{{ order.price }}</p>
                         <p class="order-card-sm__date">{{ order.created_at|date:"d.m.Y" }}</p>
                     </div>
@@ -89,8 +88,7 @@
                         <span class="order-card__category">{{ resp.order.category.emoji }} {{ resp.order.category.name_ru }}</span>
                     </div>
                     <div class="order-card-sm__body">
-                        <p class="order-card-sm__city">{{ resp.order.city.name_ru }}</p>
-                        <p class="order-card-sm__desc">{{ resp.order.description|truncatewords:15 }}</p>
+                        <p class="order-card-sm__city">{{ resp.order.city.localized_name }}</p>
                         <p class="order-card-sm__date">Отклик: {{ resp.created_at|date:"d.m.Y H:i" }}</p>
                     </div>
                     <div class="order-card-sm__actions">

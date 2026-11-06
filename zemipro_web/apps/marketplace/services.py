@@ -1,11 +1,24 @@
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Value, When
 
 from .models import Order, Response, Rating
 
 
+def can_view_private_order_details(user, order):
+    """Allow private order data only to its owner, assignee, or staff."""
+    if not user.is_authenticated:
+        return False
+    return bool(
+        user.is_staff
+        or order.client_id == user.id
+        or order.worker_id == user.id
+    )
+
+
 def create_order(client, category, city, address, description, price='Договорная', subcategory=None):
     """Создать новую заявку."""
+    if client is None or not client.is_authenticated:
+        raise ValueError('Для создания заявки требуется авторизация.')
     order = Order.objects.create(
         client=client,
         category=category,
@@ -27,12 +40,16 @@ def get_available_orders_for_worker(worker_profile):
     base_qs = Order.objects.filter(
         status=Order.Status.NEW,
         category__in=skills,
-    )
+    ).exclude(client=worker_profile.user)
 
     if worker_profile.city:
-        city_orders = base_qs.filter(city=worker_profile.city).order_by('-created_at')
-        other_orders = base_qs.exclude(city=worker_profile.city).order_by('-created_at')
-        return city_orders.union(other_orders)
+        return base_qs.annotate(
+            city_priority=Case(
+                When(city=worker_profile.city, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        ).order_by('city_priority', '-created_at')
 
     return base_qs.order_by('-created_at')
 
@@ -41,6 +58,9 @@ def create_response(order, worker_user, message=''):
     """Создать отклик мастера на заказ."""
     if not hasattr(worker_user, 'worker_profile'):
         raise ValueError('Пользователь не является мастером.')
+
+    if order.client_id == worker_user.pk:
+        raise ValueError('Нельзя откликнуться на собственную заявку.')
 
     if order.status != Order.Status.NEW:
         raise ValueError('Заказ уже не в статусе «В обработке».')
@@ -60,19 +80,31 @@ def create_response(order, worker_user, message=''):
 def accept_response(response):
     """Принять отклик, отклонить остальные, назначить исполнителя."""
     with transaction.atomic():
-        response.status = Response.Status.ACCEPTED
-        response.save(update_fields=['status', 'updated_at'])
+        order = Order.objects.select_for_update().get(pk=response.order_id)
+        if order.status != Order.Status.NEW:
+            raise ValueError('Исполнитель для этой заявки уже выбран.')
+
+        locked_response = Response.objects.select_for_update().select_related(
+            'worker'
+        ).get(pk=response.pk, order=order)
+        if locked_response.status != Response.Status.PENDING:
+            raise ValueError('Этот отклик уже обработан.')
+
+        locked_response.status = Response.Status.ACCEPTED
+        locked_response.save(update_fields=['status', 'updated_at'])
 
         Response.objects.filter(
-            order=response.order
+            order=order
         ).exclude(
-            pk=response.pk
+            pk=locked_response.pk
         ).update(status=Response.Status.REJECTED)
 
-        response.order.worker = response.worker
-        response.order.status = Order.Status.IN_PROGRESS
-        response.order.save(update_fields=['worker', 'status', 'updated_at'])
-    return response
+        order.worker = locked_response.worker
+        order.status = Order.Status.IN_PROGRESS
+        order.save(update_fields=['worker', 'status', 'updated_at'])
+
+        locked_response.order = order
+    return locked_response
 
 
 def complete_order(order):

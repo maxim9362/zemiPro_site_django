@@ -1,8 +1,17 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
 
 from apps.locations.models import City
 from apps.marketplace.models import Category, Rating
-from .models import ClientProfile, WorkerProfile
+from .models import ClientProfile, User, WorkerProfile
+
+
+class RegistrationForm(UserCreationForm):
+    """Registration form bound to the project's custom user model."""
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ('username',)
 
 
 class ClientProfileForm(forms.ModelForm):

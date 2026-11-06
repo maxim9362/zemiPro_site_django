@@ -20,7 +20,7 @@
                     <option value="">Все города</option>
                     {% for city in cities %}
                     <option value="{{ city.slug }}" {% if selected_city == city.slug %}selected{% endif %}>
-                        {{ city.name_ru }}
+                        {{ city.localized_name }}
                     </option>
                     {% endfor %}
                 </select>
@@ -38,7 +38,7 @@
                     {% endif %}
                 </div>
                 <div class="order-card-sm__body">
-                    <p class="order-card-sm__city">{{ wp.city.name_ru }}</p>
+                    <p class="order-card-sm__city">{{ wp.city.localized_name }}</p>
                     <p class="order-card-sm__desc">{{ wp.description|truncatewords:20 }}</p>
                 </div>
                 <div class="order-card-sm__actions">

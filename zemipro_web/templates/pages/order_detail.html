@@ -36,15 +36,24 @@
 
             <div class="order-card__body">
                 <div class="order-card__field">
-                    <strong>Город:</strong> {{ order.city.name_ru }}
+                    <strong>Город:</strong> {{ order.city.localized_name }}
                 </div>
+                {% if can_view_private_details %}
                 <div class="order-card__field">
                     <strong>Адрес:</strong> {{ order.address }}
                 </div>
+                {% endif %}
+                {% if can_view_private_details %}
                 <div class="order-card__field">
                     <strong>Описание:</strong>
                     <p>{{ order.description }}</p>
                 </div>
+                {% else %}
+                <div class="order-card__field">
+                    <strong>Описание:</strong>
+                    <p>Подробности будут доступны назначенному исполнителю.</p>
+                </div>
+                {% endif %}
                 <div class="order-card__field">
                     <strong>Бюджет:</strong> {{ order.price }}
                 </div>
@@ -55,7 +64,7 @@
                 </div>
                 {% endif %}
 
-                {% if order.worker and worker_response and worker_response.status == 'accepted' %}
+                {% if can_view_private_details %}
                 <div class="order-card__field">
                     <strong>Контакт клиента:</strong> {{ order.customer_phone }}
                 </div>
@@ -109,7 +118,7 @@
                 </span>
                 {% endif %}
 
-                {# Кнопки для неавторизованных #}
+                {# Ссылка для зарегистрированных пользователей без профиля мастера #}
                 {% if not is_owner and not has_worker_profile and order.status == 'new' %}
                 <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">
                     Создать ещё одну заявку
