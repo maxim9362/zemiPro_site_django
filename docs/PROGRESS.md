@@ -163,3 +163,14 @@
 - **Проверки:** `STATIC_CODE_REVIEW: PASS` (модели/URLs/migration/settings), `DOC_MATRIX: PREPARED`; `SQL/DRY_RUN/DJANGO_TESTS: NOT_RUN`; независимая итоговая проверка после 00.6, Codex Cloud пока не используется.
 - **Production/VPS/DNS/реальные базы/секреты:** `NOT_TOUCHED`. Сохранены нерешённые гейты 00.2–00.4.
 - **Следующий подэтап:** 00.6 — диагностический baseline; 00.1–00.5 закрывать только по критериям, не по числу коммитов.
+
+## 2026-11-10 — подэтап 00.6: диагностический baseline
+
+- **Статус:** `IN_PROGRESS / STATIC_BASELINE_PREPARED`, **не DONE**. Все подэтапы 00.1–00.6 имеют артефакты, но остаются незакрытые приёмочные критерии; 00.2 заблокирован действиями по секретам, 00.3 — отсутствием доказанного restore, 00.4 — полнотой URL/GSC.
+- **Реализация:** `scripts/stage00_static_diagnostics.py` (read-only Python AST, проверка метаданных, CSV/миграции, JSON-статусы без доступа к данным), `scripts/tests/test_stage00_static_diagnostics.py` (синтетические fixtures), `docs/STAGE_00_DIAGNOSTIC_BASELINE.md` (подтверждённые и отсутствующие проверки, риски, порядок полной приёмки).
+- **Выполненные локальные проверки:** синтетический unittest 6/6 `PASS`, `py_compile` утилиты `PASS`; проверены нужные файлы через GitHub. **Полный static baseline по checkout самого GitHub не выполнялся** в локальном runner.
+- **Среда:** runner Python 3.13.5; Django, Docker и инструменты PostgreSQL отсутствуют. Это **не** статус окружения Codex/пользователя/VPS.
+- **Не запускалось:** `manage.py check`, `check --deploy`, `makemigrations --check`, миграции и Django-тесты, восстановление PostgreSQL, Docker/HTTP smoke, скан секретов/истории и GSC. Нельзя называть результаты `PASS` без выполнения.
+- **Риски и рамки этапа 01:** сохранены `0003_require_order_owner` с возможными анонимными старыми строками, разделённые settings 01.1 в другой ветке, отсутствие CI/staging readiness, модели ролей и пустой Django SEO. Полный список: `docs/STAGE_00_DIAGNOSTIC_BASELINE.md`.
+- **Безопасность:** secrets, production, DNS, Cloudflare, реальные DB, Telegram/PSEO и PR `NOT_TOUCHED`.
+- **Следующий шаг:** подтвердить блокеры 00.2–00.4, затем провести **одну итоговую** проверку этапа 00 в изолированном окружении, как поручил владелец. Финальный PR/merge не выполнять до достижения гейта и разрешения.
