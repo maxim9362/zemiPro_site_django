@@ -27,7 +27,7 @@
 
 | Источник | Как использовать |
 |---|---|
-| [Основной Django-репозиторий](https://github.com/maxim9362/zemiPro_site_django) | Разработка внутри `zemipro_web/`; старый Telegram-бот, `TECHNICAL_REPORT.md`, `DJANGO_SETUP.md` — источники логики и миграционных решений |
+| [Основной Django-репозиторий](https://github.com/maxim9362/zemiPro_site_django) | Разработка внутри `zemipro_web/`; старый Telegram runtime удалён из `stage-00-audit`, не импортировать и не использовать. `TECHNICAL_REPORT.md` и `DJANGO_SETUP.md` — исторические документы, не актуальная архитектура |
 | [ZemiPro PSEO — приватный](https://github.com/maxim9362/zemipro_site_pseo) | Проверять только нужные `app.py`, `data/categories.py`, `data/regions.py`, `templates/`, `index_site/`, генераторы, реальный SEO-контент и публичные URL |
 | [Действующий сайт](https://zemipro.co.il/) | Проверять фактические адреса и индексацию; не считать публичные страницы автоматически Django-страницами |
 | [Profi.ru](https://profi.ru/) | Анализ функциональных сценариев и удобства; **не копировать** код, тексты, изображения, бренд или данные |
