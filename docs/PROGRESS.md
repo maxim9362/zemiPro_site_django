@@ -152,3 +152,14 @@
 - **Решение:** только REVIEW адресов; никакого переноса Flask/PSEO, автоматических редиректов или массовой генерации URL. Новые страницы и маршруты будут утверждены отдельно.
 - **Проверки:** уникальность/домен/статусы CSV — `PASS`; Django tests, миграции, production, DNS/Cloudflare, GSC и редиректы — `NOT_RUN / NOT_TOUCHED`.
 - **Следующий подэтап:** 00.5 — архитектурная карта Django-only и стратегия URL-перехода без миграции Telegram/PSEO. Codex Cloud использовать только после завершения этапа 00.
+
+## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
+
+- **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.
+- **Решение:** один Django backend `zemipro_web/`, один PostgreSQL на окружение, один `accounts.User`, текущие ORM/миграции переиспользуются. Legacy Telegram и Flask/PSEO не импортировать; единственный переносимый ориентир — публичные URL после GSC/HTTP и точной карты переходов.
+- **Артефакты:** `docs/DECISIONS/ADR-0003-DJANGO-ONLY-SINGLE-DATABASE.md`, `docs/STAGE_00_ARCHITECTURE_MIGRATION_PLAN.md`, `docs/STAGE_00_SOURCE_TARGET_MATRIX.csv`.
+- **Выявлено:** `User.role` пока одно значение (мультирольность отдельный 03.1), `Order.client` обязательный и `0003_require_order_owner` блокирует legacy `client=NULL`, `apps.seo` ещё заглушка. Старые региональные slugs нельзя бездумно трактовать как новые города.
+- **План dry-run:** только изолированная Django PostgreSQL с проверенным backup; counts/migrations/constraints и проверка URL-списка на GSC/HTTP/redirect loops. **Ни одна работающая БД не импортировалась, никаких 301 не создавалось.**
+- **Проверки:** `STATIC_CODE_REVIEW: PASS` (модели/URLs/migration/settings), `DOC_MATRIX: PREPARED`; `SQL/DRY_RUN/DJANGO_TESTS: NOT_RUN`; независимая итоговая проверка после 00.6, Codex Cloud пока не используется.
+- **Production/VPS/DNS/реальные базы/секреты:** `NOT_TOUCHED`. Сохранены нерешённые гейты 00.2–00.4.
+- **Следующий подэтап:** 00.6 — диагностический baseline; 00.1–00.5 закрывать только по критериям, не по числу коммитов.
