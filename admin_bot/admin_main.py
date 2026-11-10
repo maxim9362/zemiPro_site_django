@@ -102,10 +102,10 @@ class AdminService:
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
 API_TOKEN = os.getenv("API_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
-PROXY_URL = "socks5://root:El60T882FZ@170.168.100.47:1080"
+PROXY_URL = os.getenv("ADMIN_BOT_PROXY_URL", "")
 
 # Используем SOCKS5 если нужно
-admin_session = Socks5Session(proxy_url=PROXY_URL)
+admin_session = Socks5Session(proxy_url=PROXY_URL) if PROXY_URL else AiohttpSession()
 bot = Bot(token=ADMIN_BOT_TOKEN, session=admin_session)
 client_bot = Bot(token=API_TOKEN, session=admin_session)
 
