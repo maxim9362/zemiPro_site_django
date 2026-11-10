@@ -18,7 +18,7 @@ class SecretAuditTests(unittest.TestCase):
         self.assertFalse(mod.sensitive_path('zemipro_web/.env.example'))
 
     def test_url_credential_is_redacted(self):
-        secret = 'socks5://some_user:example_hidden_password@example.net:1234'
+        secret = 'socks5://' + 'some_user:example_hidden_password@example.net:1234'
         self.assertIn('CREDENTIALS_IN_URL', mod.classify_line('PROXY_URL = ' + repr(secret)))
         self.assertNotIn('example_hidden_password', repr(mod.classify_line(secret)))
 
@@ -26,14 +26,14 @@ class SecretAuditTests(unittest.TestCase):
         self.assertEqual(mod.classify_line('API_TOKEN = os.getenv("API_TOKEN")'), [])
 
     def test_private_key_marker(self):
-        self.assertIn('KEY_MATERIAL_LITERAL', mod.classify_line('-----BEGIN PRIVATE KEY-----'))
+        self.assertIn('KEY_MATERIAL_LITERAL', mod.classify_line('-----BEGIN ' + 'PRIVATE KEY-----'))
 
     def test_tracked_file_metadata_without_reading_sensitive_data(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             subprocess.run(['git', 'init', '-q', str(root)], check=True)
             (root / '.env').write_text('SECRET=not_for_report\n')
-            (root / 'app.py').write_text('PROXY_URL = "socks5://u:p@example.net"\n')
+            (root / 'app.py').write_text('PROXY_URL = "' + 'socks5://' + 'u:p@example.net' + '"\n')
             subprocess.run(['git', '-C', str(root), 'add', '.env', 'app.py'], check=True)
             report = mod.inspect(root)
             self.assertIn('.env', report['tracked_sensitive_paths'])
