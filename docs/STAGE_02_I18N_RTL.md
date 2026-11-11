@@ -63,3 +63,6 @@ in 02.6 with owner approval, but not silently labelled PASS.
 
 Do not edit the four approved frontend HTML reference files. No VPS,
 Cloudflare, DNS, real user migration, production deploy or PR merge.
+
+
+**Current GitHub queue (2026-11-11):** repository head `9e35c3c2d5bca09071f67adc3bf6412740580ea0`; Django CI run [#43096430693](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43096430693) and ephemeral staging smoke [#43096430710](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43096430710) show `queued`, not PASS or FAIL. Do not advance acceptance automatically before actual test results. The completed 02.1/02.2 CI evidence remains valid only for their corresponding commits.
