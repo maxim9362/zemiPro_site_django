@@ -3,7 +3,6 @@ from django.db import models
 from django.utils.translation import get_language
 
 
-
 WORK_MODE_CHOICES = [
     ('onsite', 'Выезд'),
     ('online', 'Онлайн'),

@@ -22,7 +22,9 @@ ITEMS_PER_PAGE = 10
 
 
 def home(request):
-    categories = Category.objects.filter(is_active=True).order_by('sort_order')
+    categories = Category.objects.filter(is_active=True).filter(
+        Q(section__isnull=True) | Q(section__is_active=True)
+    ).order_by('sort_order', 'pk')
     return render(request, 'pages/home.html', {'categories': categories})
 
 
@@ -90,7 +92,9 @@ def cities_list(request):
 
 def city_detail(request, slug):
     city = get_object_or_404(City, slug=slug, is_active=True)
-    categories = Category.objects.filter(is_active=True).order_by('sort_order')
+    categories = Category.objects.filter(is_active=True).filter(
+        Q(section__isnull=True) | Q(section__is_active=True)
+    ).order_by('sort_order', 'pk')
     selected_category = request.GET.get('category')
 
     workers = WorkerProfile.objects.filter(

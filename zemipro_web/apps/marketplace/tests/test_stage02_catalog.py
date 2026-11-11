@@ -7,7 +7,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.marketplace.models import Category, Order, ServiceSection, Subcategory
+from apps.marketplace.models import Category, ServiceSection, Subcategory
 from .factories import make_category, make_city, make_order, make_user
 
 
@@ -136,6 +136,9 @@ class Stage02CatalogSeedTests(TestCase):
                 self.assertEqual(tutoring.localized_name, category_name)
                 self.assertTrue(service.localized_name)
         self.assertEqual(tutoring.work_mode, 'both')
+        section.name_he = ''
+        with override('he'):
+            self.assertEqual(section.localized_name, section.name_ru)
 
 
 class Stage02CatalogPagesTests(TestCase):
@@ -157,7 +160,7 @@ class Stage02CatalogPagesTests(TestCase):
         section.is_active = False
         section.save(update_fields=['is_active'])
         listing = self.client.get(reverse('marketplace:categories_list'))
-        self.assertNotContains(listing, 'Website Development')
+        self.assertNotContains(listing, 'Разработка сайтов')
         self.assertEqual(self.client.get(
             reverse('marketplace:category_detail', args=[category.slug])
         ).status_code, 404)
