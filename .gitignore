@@ -39,3 +39,16 @@ Thumbs.db
 *.dump
 *.bak
 *.sql.gz
+
+# Additional local secrets and data formats (stage 00 security hardening)
+.envrc
+*.local
+secrets/
+credentials/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.p12
+*.pfx
+*.pkcs12
