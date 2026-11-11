@@ -717,3 +717,36 @@ msgstr "categories"
 
 msgid "Открыть заявку №"
 msgstr "Open request no. "
+
+msgid "Спам"
+msgstr "Spam"
+
+msgid "Мошенничество"
+msgstr "Fraud"
+
+msgid "Неприемлемый контент"
+msgstr "Inappropriate content"
+
+msgid "Фейковый профиль"
+msgstr "Fake profile"
+
+msgid "Плохое качество услуги"
+msgstr "Poor service quality"
+
+msgid "Другое"
+msgstr "Other"
+
+msgid "Причина жалобы"
+msgstr "Report reason"
+
+msgid "Описание"
+msgstr "Description"
+
+msgid "Опишите проблему подробнее"
+msgstr "Describe the issue in detail"
+
+msgid "Жалоба отправлена. Спасибо!"
+msgstr "Report sent. Thank you!"
+
+msgid "Новая жалоба"
+msgstr "New report"
