@@ -341,3 +341,12 @@
 - **В уже проверенном GitHub run** `43026841102` / Django CI / SHA `8ed9c3797fd5a9016bfece64b1333a3f4d81b76f` статус `success` (отдельно подтверждён инструментом GitHub).
 - **Не затронуты:** существующие VPS, DNS, Cloudflare, production и настоящие данные/секреты. В PR #7 нет разрешения на merge.
 - **Остаётся зависимость от владельца:** назвать и разрешить отдельный staging host/domain, параметры DNS и защищённое off-host место хранения; провести внешний alert и real TLS, browser/mobile RTL, performance с реалистичными данными, проверить GitHub branch protection (админ-интерфейс).
+
+## 2026-11-11 — GitHub Actions synthetic staging smoke verified (PR #7)
+
+- **Tested SHA:** `c2e159f96254ffd0005b790050a273da7f11bfdf`.
+- **Django CI run #9:** [43028406270](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406270) — **SUCCESS**.
+- **Isolated staging smoke run #1:** [43028406371](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406371) — **SUCCESS** (GitHub hosted runner, `localhost` with Caddy *internal* CA, synthetic credentials). Actual output confirms HTTPS readiness, static 200/media 404, HTTP redirect/HSTS, migration persistence across DB restart, `pg_dump` + checksum and `pg_restore --list`.
+- **Timing baseline:** 100 sequential requests to empty `/categories/`: p50 **15.5 ms**, p95 **16.6 ms**, loopback-only. This **does not meet** representative 100/1000-workers or real staging p95/RSS/mobile gates.
+- **Main blocker:** no owner-designated separate staging host/domain and no authority to change real Cloudflare/DNS/VPS; off-host backup + delivered alert, branch protection administration and 320px/HE/RTL visual checks remain `BLOCKED/NOT_RUN`.
+- **PR:** [Draft #7](https://github.com/maxim9362/zemiPro_site_django/pull/7) remains **OPEN / NOT MERGED**. Stage 01 remains `IN_PROGRESS`; passing disposable CI does not satisfy the publicly trusted HTTPS or off-host disaster recovery conditions.

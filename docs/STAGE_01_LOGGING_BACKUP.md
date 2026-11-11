@@ -1,6 +1,6 @@
 # ZemiPro — 01.5: безопасные логи, health и backup/restore
 
-**Статус:** `IMPLEMENTED / RUNTIME_AND_RESTORE_NOT_RUN`. Этот документ
+**Статус:** `SYNTHETIC_BACKUP_AND_RESTORE_PASS / OFF_HOST_AND_ALERT_PENDING`. Этот документ
 описывает код и проверяемую процедуру; он не утверждает, что расписание
 уже установлено, резервная копия создана, восстановление проверено или
 оповещения настроены на действующем сервере.
@@ -145,11 +145,11 @@ counts и синтетические ID, категории/города/зак�
 
 | Условие | Статус 2026-11-11 |
 | --- | --- |
-| Django redacted JSON logger + health endpoints в коде | IMPLEMENTED / TESTS_NOT_RUN |
-| Backup service и скрипт с guard | IMPLEMENTED / CONTAINER_NOT_RUN |
+| Django redacted JSON logger + health endpoints в коде | PASS (Codex, synthetic PostgreSQL) |
+| Backup service и скрипт с guard | PASS (Codex + GitHub runner) |
 | Cron template и 5-минутный monitor script | PREPARED / NOT_INSTALLED |
-| Реальная запись staging backup + checksum | NOT_RUN |
-| Synthetic restore + schema/count parity | NOT_RUN |
+| Synthetic staging dump and checksum | PASS (GitHub CI #43028406371); external staging backup NOT_RUN |
+| Synthetic restore + schema/count parity | PASS (Codex isolated test) |
 | Off-host encrypted backup storage | NOT_CONFIGURED |
 | Ошибка health 503 вызывает доставленный мониторинг-alert | NOT_RUN |
 | Production/VPS/DNS/реальные PostgreSQL | NOT_TOUCHED |
@@ -157,3 +157,11 @@ counts и синтетические ID, категории/города/зак�
 Stage 01.5 остаётся `IN_PROGRESS`, пока тест восстановленной базы
 и сигнал отказа не будут подтверждены фактически. Полный этап 01
 дополнительно требует всего 01.1–01.6 и итоговый Codex review.
+
+### Добавленная независимая CI-проверка
+На GitHub Actions [run #1](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406371)
+создание *synthetic* staging backup, `pg_restore --list` и SHA256
+**PASS**. Ранее Codex отдельно выполнил восстановление на новой синтетической
+БД и сверил строки/миграции — **PASS**. **НЕ выполнены** off-host
+зашифрованный backup и фактически доставленный alarm: эти операции требуют
+отдельного согласованного staging окружения и канала уведомлений.

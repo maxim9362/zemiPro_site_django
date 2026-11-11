@@ -1,6 +1,6 @@
 # ZemiPro — 01.6: performance, cache, errors, mobile and abuse baseline
 
-**Status: IMPLEMENTED / BENCHMARK_NOT_RUN.** No unexecuted SQL timings,
+**Status: CODE_AND_SYNTHETIC_CI_PASS / REPRESENTATIVE_BENCHMARK_NOT_RUN.** No unexecuted SQL timings,
 latencies, worker RSS, device layouts or CI checks are presented as successes.
 
 ## SQL query improvements and reproducible checks
@@ -91,14 +91,14 @@ stage and remains a prelaunch acceptance requirement.
 
 | Gate | Status |
 | --- | --- |
-| Code changes to N+1 sites and sorting | STATIC_REVIEW |
-| 1-vs-9 query count regressions on PostgreSQL | NOT_RUN |
-| Full Django/CI/migration suite on current commit | NOT_CONFIRMED |
+| Code changes to N+1 sites and sorting | PASS (Codex review and tests) |
+| 1-vs-9 query count regressions on PostgreSQL | PASS (Codex 75/75 suite) |
+| Full Django/CI/migration suite on commit c2e159f | PASS (GitHub Actions run #9) |
 | p50/p95, DB time, Gunicorn memory RSS | NOT_RUN |
 | Real 320px/mobile and Hebrew RTL inspection | NOT_RUN |
-| Django safe 404/500/cache tests | NOT_RUN |
+| Django safe 404/500/cache tests | PASS (Codex repeat review) |
 | Multi-worker and reverse-proxy throttle behavior | NOT_RUN |
-| Atomic PostgreSQL counter model and migration | IMPLEMENTED / NOT_YET_RERUN |
+| Atomic PostgreSQL counter model and migration | PASS (Codex repeat review) |
 | Distributed multiworker staging acceptance | NOT_RUN |
 | VPS/DNS/Cloudflare/production | NOT_TOUCHED |
 
@@ -106,3 +106,10 @@ After 01.6 implementation, all six Stage 01 code substages exist on
 `stage-01-development`, but Stage 01 **is not DONE**.
 Owner must separately authorize independent Codex review, final stage PR,
 and merge/deployment. No automatic production actions.
+
+### Isolated GitHub runner measurement (NOT an SLO)
+[Stage 01 smoke run #1](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406371)
+completed 100 sequential `/categories/` localhost HTTPS requests on an
+**empty catalog**: p50 **15.5 ms**, p95 **16.6 ms**. No 100/1000-worker
+fixture, remote connection, real mobile browser or RSS trend was measured,
+so the representative performance gate remains **NOT_RUN**.

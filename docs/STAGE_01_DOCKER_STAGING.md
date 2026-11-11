@@ -1,6 +1,6 @@
 # ZemiPro — этап 01.4: Docker Compose и отдельный staging
 
-**Статус:** IMPLEMENTED / DEPLOYMENT_NOT_RUN. Код и конфигурации не являются
+**Статус:** DEV_RUNTIME_VERIFIED / EPHEMERAL_STAGING_SMOKE_PASS / REAL_STAGING_TLS_NOT_RUN. Код и конфигурации не являются
 подтверждением рабочего HTTPS или сохранности PostgreSQL после рестарта.
 **Без разрешения владельца нельзя запускать это на VPS, менять домен,
 Cloudflare, DNS, production, существующие тома и реальные базы.**
@@ -121,12 +121,18 @@ redirect и trusted `X-Forwarded-Proto` корректны **только чер
 | Контроль | Сейчас |
 | --- | --- |
 | Review Dockerfile / Compose / Caddy / entrypoint | STATIC_REVIEW |
-| Docker Compose dev/staging `config --quiet` | NOT_RUN пока не запущен |
-| Build non-root image / `.dockerignore` exclusion | NOT_RUN |
-| PostgreSQL readiness / web health | NOT_RUN |
-| Migrated clean synthetic DB, restart + data persistence | NOT_RUN |
-| Staging HTTPS with approved domain/TLS | BLOCKED (нет разрешения на staging deployment) |
+| Docker Compose dev/staging `config --quiet` | PASS (Codex и GitHub CI) |
+| Build non-root image / `.dockerignore` exclusion | PASS (Codex isolated build / dev runtime); dedicated real-host build NOT_RUN |
+| PostgreSQL readiness / web health | PASS (synthetic isolated CI smoke) |
+| Migrated clean synthetic DB, restart + data persistence | PASS (Codex and isolated CI smoke) |
+| Staging HTTPS with approved domain/TLS | BLOCKED: only localhost/internal CA was tested; separate approved host/domain still missing |
 | Production/DNS/VPS/реальные секреты | NOT_TOUCHED |
 
 Приёмка 01.4: только после реального build/config, restart/persistence
 прогона в изолированном окружении и подтверждённого HTTPS staging.
+
+### Обновление проверки 2026-11-11
+Одноразовый GitHub Actions staging smoke [run #1](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406371)
+**PASS**: локальный HTTPS с внутренним Caddy CA, HSTS, статика, запрет media,
+PostgreSQL persist/restart и backup integrity. Публично доверенный HTTPS на
+выделенном staging host **NOT_RUN**. Это не разрешение на выкладку на VPS.

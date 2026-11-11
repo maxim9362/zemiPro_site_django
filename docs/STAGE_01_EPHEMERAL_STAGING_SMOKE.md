@@ -2,7 +2,7 @@
 
 **Scope:** separate job `Stage 01 isolated staging smoke`, using disposable
 GitHub-hosted Ubuntu runner only, no production/DNS/VPS/Cloudflare actions.
-**Status on addition:** `IMPLEMENTED / WORKFLOW_NOT_YET_VERIFIED`.
+**Status after run:** `PASS / EPHEMERAL_CI_ONLY`.
 It cannot replace an owner-approved publicly trusted HTTPS staging host.
 
 The workflow sets **synthetic** staging credentials, binds Caddy to
@@ -41,3 +41,21 @@ Sensitive environment output and container logs are intentionally omitted.
 Treat `PASS` on this job as *only* isolated smoke verification, not the
 Stage 01 `DONE` gate. The approved staging host and name remain to be
 chosen and explicitly authorized by the owner.
+
+## Verified GitHub Actions evidence — 2026-11-11
+
+- Commit: `c2e159f96254ffd0005b790050a273da7f11bfdf`.
+- Workflow: [Stage 01 isolated staging smoke, run #1](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406371).
+- Job: `staging-https-loopback-and-backup` — **SUCCESS**.
+- Output: `staging_backup=PASS`, archive `sha256sum: OK`,
+  `PASS: disposable staging loopback TLS, health, static/media, DB
+  persistence, backup integrity`.
+- One-hundred sequential localhost requests to **empty** `/categories/`
+  recorded `ephemeral_ci_p50_ms=15.5` and `ephemeral_ci_p95_ms=16.6`.
+  These are synthetic loopback results, **not** real staging/mobile SLOs.
+- Django CI on the same commit also **SUCCESS**:
+  [Django CI run #9](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406270).
+
+There is **no** publicly trusted TLS/domain validation, no actual off-host
+encrypted backup nor delivered alert in this run. No existing external service
+was changed, and PR #7 remains Draft / not merged.
