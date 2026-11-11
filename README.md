@@ -61,5 +61,15 @@ The historic Compose file is **not** staging/production ready; Docker health,
 persistence, resources, and real staging are covered by substage **01.4**.
 Do not deploy or rebuild a live site from this README.
 
+## Continuous integration
+
+The [Django CI workflow](.github/workflows/django-ci.yml) runs on stage-01-development
+pushes and PRs targeting main. It uses isolated PostgreSQL 17, Django system/
+migration checks, linting, the full test suite and a service coverage gate.
+Install additional dev-only tools using
+`python -m pip install -r zemipro_web/requirements-ci.txt` from the repository
+root (after installing Django runtime requirements). Details and merge-gate
+requirements: [01.3 CI acceptance](docs/STAGE_01_CI_ACCEPTANCE.md).
+
 Project rules: [AGENTS.md](AGENTS.md). Implementation and acceptance status:
 [roadmap](docs/ROADMAP.md), [progress](docs/PROGRESS.md).

@@ -264,3 +264,16 @@
 - **Миграции:** 2 новых, без удаления старых и без правок production. Вставка данных/вызовы внешних сервисов отсутствуют.
 - **Риски:** 01.1 Django 5.2 dependencies ещё требуют регрессионных тестов; статусные ограничения не применены в БД; настройка тестовой БД и миграционная репетиция должны быть выполнены в изолированной среде. Действующие базы, DNS, Cloudflare, VPS, секреты: `NOT_TOUCHED`.
 - **Следующий шаг:** после команды владельца — 01.3, сохраняя оба предыдущих подэтапа `IN_PROGRESS` до выполненных критериев и независимого этапного Codex review.
+
+## 2026-11-11 — 01.3: базовые Django тесты, фабрики и CI через GPT
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / CI_VERIFICATION_PENDING`. Это не `DONE` без реального успешного CI и проверки blocking required status.
+- **Рабочая ветка:** `stage-01-development` на базе предыдущего 01.2 коммита `6ce67ca0b62013f0d56a4864fa2cfb307e9d1179`; один этап, одна ветка и один итоговый PR. `main` не изменяется.
+- **Реализовано:** `.github/workflows/django-ci.yml` запускает Ubuntu/Python 3.12, отдельную PostgreSQL 17, pinned dependencies, `pip check`, Ruff и `compileall`, Django check, `makemigrations --check`, clean migrate, `migrate --check`, полный набор Django TestCase и coverage критичного сервисного слоя, а также синтетический `check --deploy` без сетевого production доступа.
+- **Переиспользовано:** исходные 17 Django тестов этапа 00, 7 конфигурационных тестов из 01.1, 8 тестов схемы PostgreSQL из 01.2. Добавлены 6 тестов сервисного happy path/отрицательных сценариев и фабрики синтетических users/categories/cities/orders; новые тесты используют данные только своего тестового PostgreSQL.
+- **Файлы:** `.github/workflows/django-ci.yml`, `zemipro_web/requirements-ci.txt`, `zemipro_web/pyproject.toml`, `zemipro_web/.coveragerc`, `zemipro_web/apps/marketplace/tests/factories.py`, `zemipro_web/apps/marketplace/tests/test_service_workflow.py`, `docs/STAGE_01_CI_ACCEPTANCE.md` и записи ROADMAP/PROGRESS.
+- **Порог покрытия:** 60% только для `apps.marketplace.services`; не заявлено глобальное покрытие Django.
+- **Тесты:** `PASS` — подготовительный просмотр текущих файлов GitHub и синтаксиса конфигураций статически; GitHub Actions, Django tests, покрытие и настоящий PostgreSQL `NOT_RUN` до появления результата запусков после push. Контейнер ChatGPT без Django/PostgreSQL и без сетевого доступа к PyPI.
+- **Приёмка/блокер:** branch ruleset для main должен требовать GitHub Actions check `django-postgresql`; наличие YAML в Git не гарантирует запрет merge. Проверить перед PR и записать доказательство.
+- **Миграции/production:** миграции в 01.3 не добавлены; staging/VPS/DNS/prod/секреты/реальные БД не затронуты.
+- **Следующий подэтап:** 01.4 только по команде владельца, не объявляя 01.1–01.3 `DONE` до соответствующих проверок.
