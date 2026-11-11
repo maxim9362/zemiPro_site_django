@@ -426,3 +426,13 @@
 - **Alias collision hardening:** canonical City.slug and CityAlias.slug cross-table conflicts rejected by admin form validation and seed guards; test added. No production input or site changes.
 - **Status:** `02.2 CODE_DONE / CI_VERIFIED / NATIONAL_COVERAGE_PENDING`. Technical service-zone and remote search functionality verified. 25 cities are an explicit pilot subset, **not** a claim of complete Israeli locality coverage; need official complete registry and editorial RU/EN/HE translations, plus full UI localization in 02.3.
 - **Next:** 02.3 three-language interface and mobile Hebrew RTL, within same stage branch / one Draft PR. No merge or deploy.
+
+## 2026-11-11 — Stage 02.3 Django i18n/RTL implementation, CI pending
+
+- **Draft PR #8**, `stage-02-catalog-localization`; single stage branch unchanged. `main`, VPS, production, DNS, existing orders and original 4 approved frontend mockups untouched.
+- **Language layer:** existing `LocaleMiddleware` + `LOCALE_PATHS`, Django `set_language` via CSRF-protected POST/cookie and current path/query `next`; do not introduce `/ru/` prefixes until 02.4. Page language/dir is set server-side.
+- **Translation catalogs:** Django RU source strings in main templates, compiled `locale/en,he/LC_MESSAGES/django.mo` and corresponding editable `.po`; form labels/choices/validation and notification templates use active language at render time. User-supplied text remains in original language, with `dir=auto`; no automatic translation of personal chat/requests.
+- **RTL CSS:** logical margins/padding, neutral phone/email/budget bidi, responsive 390/768 width baseline; **static CSS checks only**, not actual screenshots or device/browser measurements. Approved 4 front-end mockups remain untouched.
+- **Safety:** category dependent select uses localized public JSON endpoint and DOM `new Option` rather than untrusted HTML; order prices stored with canonical legacy fallback unchanged; notification event translations do not rewrite stored notification rows.
+- **Tests:** 8 targeted trilingual regression tests added (home/catalog/cities/registration, safe switch redirect, forms validation and localized choices, API JSON, user data invariance, system notification, static RTL selectors).
+- **Status:** `IMPLEMENTED / CI_PENDING / MOBILE_VISUAL_PENDING / HEBREW_EDITORIAL_PENDING`. Do not call 02.3 DONE until GitHub Actions PASS and mobile screenshot/content gates resolved or accepted for later 02.6.

@@ -110,6 +110,10 @@ jobs:
           python manage.py seed_israel_cities --check
           python manage.py shell -c "from apps.locations.models import District, City, CityAlias; counts = (District.objects.count(), City.objects.count(), CityAlias.objects.count()); assert counts == (6, 25, 4), counts; print('STAGE_02_2_GEO_SEED_PASS', counts)"
 
+      - name: Stage 02.3 English/Hebrew locale regression tests
+        run: |
+          python manage.py test core.tests.test_i18n
+
       - name: Run Django suite with service coverage gate
         run: |
           python -m coverage run manage.py test
