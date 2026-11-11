@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.translation import gettext as _
 
 from apps.notifications.services import create_notification
 from .forms import ComplaintForm
@@ -49,7 +50,7 @@ def complaint_create_view(request):
                     notification_type='system',
                 )
 
-            messages.success(request, 'Жалоба отправлена. Спасибо!')
+            messages.success(request, _('Жалоба отправлена. Спасибо!'))
             return redirect('marketplace:home')
     else:
         form = ComplaintForm()

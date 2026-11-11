@@ -116,6 +116,16 @@ class TrilingualInterfaceTests(TestCase):
                 invalid.errors['description']
             ))
 
+    def test_complaint_reason_choice_labels_translate_without_changing_values(self):
+        from apps.moderation.forms import ComplaintForm
+
+        with translation.override('he'):
+            form = ComplaintForm()
+            options = list(form.fields['reason'].choices)
+            self.assertIn(('spam', 'ספאם'), options)
+            self.assertIn(('fraud', 'הונאה'), options)
+            self.assertEqual(str(form.fields['reason'].label), 'סיבת הדיווח')
+
     def test_subcategory_json_returns_localized_name_without_private_data(self):
         url = reverse('marketplace:api_subcategories', args=[self.category.pk])
         for lang, expected in (

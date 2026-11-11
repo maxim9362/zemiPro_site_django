@@ -56,7 +56,7 @@ class Notification(models.Model):
     def localized_title(self):
         """Localize known system events at display time, not at write time."""
         if self.notification_type == self.Type.SYSTEM:
-            return self.title
+            return _(self.title)
         title_map = {
             self.Type.ORDER_CREATED: 'Заявка создана',
             self.Type.NEW_RESPONSE: 'Новый отклик',
