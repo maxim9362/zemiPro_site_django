@@ -395,3 +395,13 @@
 - **Coverage added:** idempotency, no changes to existing order/category PKs, Admin edit preservation, duplicate and section-conflict guards, three-language fallback, public visibility, legacy repair command repeatability.
 - **Status:** `IMPLEMENTED / CI_PENDING / LOCAL_CODEX_NOT_RUN`. No local Docker/PG tests run by ChatGPT; GitHub Actions to validate after push. New service taxonomy and Hebrew/English editorial quality require owner review before production; full RTL Stage 02.3.
 - **No actions:** no production/DNS/VPS/Cloudflare/real data migration, no PR, no merge.
+
+## 2026-11-11 — Stage 02.1 independent GitHub QA verified, code accepted
+
+- **One shared Draft PR:** [#8](https://github.com/maxim9362/zemiPro_site_django/pull/8), same `stage-02-catalog-localization` branch for all 02.1–02.6; no merge.
+- **Verified code SHA:** `91e665791ea832c64a1dd239865c7f3091eb1800`.
+- **GitHub Django CI:** [#43086273717](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273717) **SUCCESS**; Ruff/compileall, Django checks and `makemigrations --check --dry-run` PASS, isolated PostgreSQL `marketplace.0005_catalog_hierarchy` migration PASS; Django **92/92 tests PASS** including 11 new catalog tests. Service-only coverage `apps.marketplace.services` **89.5%**, not project-wide.
+- **Independent live seed execution on *ephemeral CI PostgreSQL*, never production:** `seed_service_catalog --plan` → 12/19/88; first seed created (12 sections, 19 categories, 88 services), second seed created (0,0,0); `--check` PASS twice; explicit SQL/model count assertion `STAGE_02_1_CATALOG_SEED_PASS (12,19,88)`.
+- **Docker staging smoke:** [#43086273848](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273848) **SUCCESS**, isolated localhost Caddy/PostgreSQL/backup checks.
+- **Acceptance:** `02.1 CODE_DONE / CI_VERIFIED`. Technical scope complete on synthetic CI database. `EDITORIAL_REVIEW_PENDING` for the 11 newly proposed categories and translated catalog wording (native Hebrew proofread before public release). No real-user database import, no deployment, no PR merge.
+- **Next:** 02.2 city/geographic coverage and service zones; reuse stage branch and Draft PR #8. Test suite may expand; full stage 02 acceptance only after 02.6.

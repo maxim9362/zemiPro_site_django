@@ -1,6 +1,6 @@
 # ZemiPro — Stage 02.1: Django catalog hierarchy and seed
 
-**Status:** `IMPLEMENTED / CI_PENDING / LOCAL_VERIFICATION_PENDING`; all work lives on
+**Status:** `CODE_DONE / CI_VERIFIED / EDITORIAL_REVIEW_PENDING`; all work lives on
 `stage-02-catalog-localization`. This is **not** a production deployment.
 
 ## Scope and source of truth
@@ -82,3 +82,16 @@ localized URLs are Stage 02.4; no PR or merge until Stage 02 completion.
 
 The separate four approved frontend HTML mockups are **not edited**.
 No production/VPS/DNS/Cloudflare/data-import operations are authorized.
+
+## GitHub Actions evidence — 2026-11-11
+
+- Code SHA: `91e665791ea832c64a1dd239865c7f3091eb1800`.
+- [Django CI #43086273717](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273717): **SUCCESS**, 92/92 Django tests, Ruff, model/migration check, `marketplace.0005` on fresh PostgreSQL; coverage of **service layer only** 89.5%.
+- On the same isolated PostgreSQL: `seed_service_catalog --plan` returned 12/19/88, first seed created 12/19/88, subsequent seed **created 0** in all groups; two independent `--check` executions PASS; count assertion PASS.
+- [Staging smoke #43086273848](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273848): **SUCCESS** on disposable GitHub runner, not a real public staging server.
+- Shared [Draft PR #8](https://github.com/maxim9362/zemiPro_site_django/pull/8) remains OPEN / NOT MERGED.
+
+**Technical work accepted for 02.1.** All 11 extra categories and translated
+RU/EN/HE editorial names are provisional seed content; native Hebrew proofread
+and owner/content validation must be completed before public publishing.
+Stage 02 remains `IN_PROGRESS`; 02.2 starts next, without separate PR.
