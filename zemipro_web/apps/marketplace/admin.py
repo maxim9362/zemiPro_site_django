@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import Category, Subcategory, Order, Response, Rating
+from .models import Category, ServiceSection, Subcategory, Order, Response, Rating
+
+
+@admin.register(ServiceSection)
+class ServiceSectionAdmin(admin.ModelAdmin):
+    list_display = ('name_ru', 'slug', 'is_active', 'sort_order')
+    list_filter = ('is_active',)
+    search_fields = ('name_ru', 'name_en', 'name_he', 'slug')
+    prepopulated_fields = {'slug': ('name_en',)}
+    ordering = ('sort_order', 'pk')
 
 
 class SubcategoryInline(admin.TabularInline):
@@ -11,8 +20,9 @@ class SubcategoryInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name_ru', 'emoji', 'slug', 'is_active', 'sort_order')
-    list_filter = ('is_active',)
+    list_display = ('name_ru', 'section', 'emoji', 'slug', 'work_mode', 'is_active', 'sort_order')
+    list_filter = ('section', 'work_mode', 'is_active')
+    list_select_related = ('section',)
     search_fields = ('name_ru', 'name_en', 'name_he')
     prepopulated_fields = {'slug': ('name_en',)}
     inlines = [SubcategoryInline]
@@ -20,9 +30,9 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Subcategory)
 class SubcategoryAdmin(admin.ModelAdmin):
-    list_display = ('name_ru', 'category', 'slug', 'is_active', 'sort_order')
-    list_filter = ('category', 'is_active')
-    search_fields = ('name_ru', 'name_en')
+    list_display = ('name_ru', 'category', 'slug', 'work_mode', 'is_active', 'sort_order')
+    list_filter = ('category', 'work_mode', 'is_active')
+    search_fields = ('name_ru', 'name_en', 'name_he', 'slug')
     prepopulated_fields = {'slug': ('name_en',)}
 
 

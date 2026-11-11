@@ -23,8 +23,8 @@
             {% for cat in categories %}
             <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
                 <span class="category-card__emoji">{{ cat.emoji }}</span>
-                <h3 class="category-card__title">{{ cat.name }}</h3>
-                <p class="category-card__desc">{{ cat.description }}</p>
+                <h3 class="category-card__title">{{ cat.localized_name }}</h3>
+                <p class="category-card__desc">{{ cat.localized_description }}</p>
             </a>
             {% endfor %}
         </div>

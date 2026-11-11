@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 
 from apps.locations.models import City
 from .models import Category, Order, Response, Subcategory
@@ -22,7 +23,9 @@ class OrderCreateForm(forms.ModelForm):
         }),
     )
     category = forms.ModelChoiceField(
-        queryset=Category.objects.filter(is_active=True),
+        queryset=Category.objects.filter(is_active=True).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ),
         label='Категория',
         empty_label='Выберите категорию',
     )
@@ -74,7 +77,7 @@ class OrderCreateForm(forms.ModelForm):
             try:
                 cat_id = int(self.data.get('category'))
                 self.fields['subcategory'].queryset = Subcategory.objects.filter(
-                    category_id=cat_id, is_active=True
+                    category_id=cat_id, is_active=True, category__is_active=True
                 )
             except (ValueError, TypeError):
                 pass

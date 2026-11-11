@@ -385,3 +385,13 @@
 - **Sequence:** 02.1 catalog `Category/Subcategory`, verified RU/EN/HE fields and idempotent synthetic seed; 02.2 city/service geography; 02.3 translations & Hebrew RTL; 02.4 localized public catalogue URLs; 02.5 editable service questions; 02.6 import/i18n regression tests and integration review.
 - **Constraints:** no import from Telegram, PSEO or legacy DB; no lost IDs, slugs or existing orders; no arbitrary modifications to the four approved frontend HTML designs; keep public SEO pages accessible; register to create orders; preserve privacy; no production/DNS/VPS/Cloudflare or real-data migrations. Changes are incremental within the single stage branch, with targeted tests and docs per substage.
 - **02.1 state:** `NOT_IMPLEMENTED` (branch and plan prepared only). Need inspect normative catalog TЗ and existing seed/model before proposing code changes; do not assume a category list from incomplete context.
+
+## 2026-11-11 — Stage 02.1: Django catalog baseline implemented, independent QA pending
+
+- **Branch:** `stage-02-catalog-localization`, stage rule one branch / one final PR.
+- **Schema:** additive `marketplace.0005_catalog_hierarchy`; 12-section `ServiceSection`; `Category.section` nullable for legacy preservation; localized names/descriptions/SEO and work modes at all three levels. Existing FK relations and IDs untouched.
+- **Seed:** explicit `seed_service_catalog`, pure manifest, 12 sections, 19 categories (including unchanged 8 pre-existing repair slugs), 88 services (including unchanged 56); --plan/--check, atomic get_or_create, fill-only blanks, fail-closed reparent and duplicate detection. Existing repair-only command stops mutating global seed data.
+- **UI/Admin:** section-grouped catalog with existing unassigned categories as fallback, localized label properties, inactive sections excluded from public catalog/order form, Django Admin editing. The four approved frontend HTML mockups are not changed.
+- **Coverage added:** idempotency, no changes to existing order/category PKs, Admin edit preservation, duplicate and section-conflict guards, three-language fallback, public visibility, legacy repair command repeatability.
+- **Status:** `IMPLEMENTED / CI_PENDING / LOCAL_CODEX_NOT_RUN`. No local Docker/PG tests run by ChatGPT; GitHub Actions to validate after push. New service taxonomy and Hebrew/English editorial quality require owner review before production; full RTL Stage 02.3.
+- **No actions:** no production/DNS/VPS/Cloudflare/real data migration, no PR, no merge.

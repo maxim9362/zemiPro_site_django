@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ category.name_ru }} — ZemiPro{% endblock %}
-{% block meta_description %}{{ category.description }}. Найдите мастера по категории «{{ category.name_ru }}» в Израиле.{% endblock %}
+{% block title %}{{ category.localized_name }} — ZemiPro{% endblock %}
+{% block meta_description %}{{ category.localized_description }}. Найдите мастера по категории «{{ category.name_ru }}» в Израиле.{% endblock %}
 
 {% block content %}
 <section class="page-header">
@@ -13,6 +13,17 @@
 
 <section class="category-content">
     <div class="container">
+
+        {% if subcategories %}
+        <section aria-label="Виды услуг">
+            <h2>Виды услуг</h2>
+            <ul class="catalog-services">
+                {% for service in subcategories %}
+                <li>{{ service.localized_name }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
 
         <div class="filter-bar">
             <form method="get" class="filter-form">

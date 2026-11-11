@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, F
+from django.db.models import Avg, Count, F, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import render, get_object_or_404, redirect
 
@@ -11,7 +11,7 @@ from apps.accounts.services import get_client_profile, get_worker_profile
 from apps.locations.models import City
 from apps.notifications.services import create_notification
 from .forms import OrderCreateForm, ResponseCreateForm
-from .models import Category, Order, Response, Rating
+from .models import Category, ServiceSection, Subcategory, Order, Response, Rating
 from .services import (
     get_available_orders_for_worker, create_response,
     accept_response, complete_order, cancel_order,
@@ -27,12 +27,33 @@ def home(request):
 
 
 def categories_list(request):
-    categories = Category.objects.filter(is_active=True).order_by('sort_order')
-    return render(request, 'pages/categories.html', {'categories': categories})
+    categories = Category.objects.filter(
+        is_active=True
+    ).filter(Q(section__isnull=True) | Q(section__is_active=True)).order_by(
+        'sort_order', 'pk'
+    )
+    sections = ServiceSection.objects.filter(is_active=True).prefetch_related(
+        Prefetch(
+            'categories',
+            queryset=Category.objects.filter(is_active=True).order_by(
+                'sort_order', 'pk'
+            ),
+        )
+    )
+    unassigned_categories = categories.filter(section__isnull=True)
+    return render(request, 'pages/categories.html', {
+        'categories': categories,
+        'sections': sections,
+        'unassigned_categories': unassigned_categories,
+    })
 
 
 def category_detail(request, slug):
-    category = get_object_or_404(Category, slug=slug, is_active=True)
+    category = get_object_or_404(
+        Category.objects.filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ), slug=slug, is_active=True,
+    )
     cities = City.objects.filter(is_active=True).order_by('name_ru')
     selected_city = request.GET.get('city')
 
@@ -49,7 +70,12 @@ def category_detail(request, slug):
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
 
+    subcategories = Subcategory.objects.filter(
+        category=category, is_active=True
+    ).order_by('sort_order', 'pk')
+
     return render(request, 'pages/category_detail.html', {
+        'subcategories': subcategories,
         'category': category,
         'page_obj': page,
         'cities': cities,
