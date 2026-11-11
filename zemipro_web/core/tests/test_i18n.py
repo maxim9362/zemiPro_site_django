@@ -1,4 +1,7 @@
 """Stage 02.3: Django gettext, language switch, forms, locale-safe content."""
+import ast
+import gettext
+import re
 from pathlib import Path
 
 from django.conf import settings
@@ -184,6 +187,27 @@ class TrilingualInterfaceTests(TestCase):
         notice.refresh_from_db()
         self.assertEqual(notice.title, 'Новый отклик')
         self.assertIn('Мастер откликнулся', notice.message)
+
+    def test_compiled_mo_catalogs_exactly_match_editable_po_sources(self):
+        root = Path(settings.BASE_DIR) / 'locale'
+        for language in ('en', 'he'):
+            with self.subTest(language=language):
+                folder = root / language / 'LC_MESSAGES'
+                po = (folder / 'django.po').read_text(encoding='utf-8')
+                with (folder / 'django.mo').open('rb') as handle:
+                    compiled = gettext.GNUTranslations(handle)
+                entries = re.findall(
+                    r'^msgid (".*")\nmsgstr (".*")',
+                    po, flags=re.MULTILINE,
+                )
+                self.assertGreaterEqual(len(entries), 200)
+                for source, translated in entries:
+                    key = ast.literal_eval(source)
+                    if key:
+                        self.assertEqual(
+                            compiled.gettext(key), ast.literal_eval(translated),
+                            f'{language}: {key}',
+                        )
 
     def test_rtl_mobile_css_has_logical_properties_and_isolated_user_content(self):
         css = (Path(settings.BASE_DIR) / 'static/css/style.css').read_text(
