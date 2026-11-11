@@ -146,6 +146,8 @@ flowchart TD
 
 **Локальный Codex Windows-review 2026-11-11:** `CHANGES_REQUIRED` на `8365d7c`, несмотря на успешные 75/75 Django tests и изолированные dev/staging/backup/health проверки. Устранены обнаруженные `CRLF` shell scripts (новая `.gitattributes`), отсутствующий Gunicorn HOME и неограниченный размер кабинета клиента (10 заказов/страницу в каждом из 4 статусов). Исправлена динамическая разметка `lang/dir`; полная локализация и визуальный RTL остаются в 02.3. **GitHub CI нового кодового коммита `7e07079` PASS (81/81, Ruff, миграции, сервисное покрытие 89,5%) и isolated staging smoke PASS**; Windows-прогон CRLF, Gunicorn HOME и лимита HTML после пересборки на ноутбуке ещё `NOT_RUN`. Без него нет полной локальной приёмки. Off-host backup, delivered alert, branch protection и real trusted staging TLS остаются внешними гейтами.
 
+**Повторный локальный Codex 2026-11-11 по `7109420`:** Windows LF, Docker rebuild, Gunicorn HOME, 1000 синтетических заказов (HTML 39 661 Б; HTTPS p95 101,79 мс), приватность и lang/dir RU/EN/HE **PASS**; Windows Django 81/81, Ruff и миграции PASS. Только Docker suite 80/81 из-за теста, ожидавшего корневой `.gitattributes` вне Docker build context: исправлена условная проверка наличия, без отключения фактической LF/HOME проверки. **Повторный CI и Docker suite на новом SHA ожидаются**. Внешние off-host backup, доставленные оповещения, GitHub branch protection и publicly trusted staging TLS не подтверждены.
+
 **Решение по этапу 01:** закрывать только после выполненных подэтапов (или документированного `DEFERRED` с подтверждением), адресных проверок, необходимых интеграционных тестов и принятия единственного этапного PR.
 
 ### Этап 02. Категории, география, три языка
