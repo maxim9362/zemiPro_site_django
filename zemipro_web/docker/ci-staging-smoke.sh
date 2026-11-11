@@ -35,6 +35,11 @@ wait_ready() {
 }
 
 wait_ready
+# Regression: the built image has no repository-root .gitattributes, but
+# shell LF and Gunicorn HOME checks must still run inside the container.
+"${compose[@]}" exec -T web python manage.py test \
+  core.tests.test_container_config.ContainerConfigurationTests.test_shell_scripts_use_lf_and_django_has_writable_home \
+  --noinput
 curl --insecure --fail --silent --output /dev/null \
   "https://localhost:18443/"
 curl --insecure --fail --silent --output /dev/null \
