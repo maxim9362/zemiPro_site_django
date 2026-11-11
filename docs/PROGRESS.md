@@ -277,3 +277,13 @@
 - **Приёмка/блокер:** branch ruleset для main должен требовать GitHub Actions check `django-postgresql`; наличие YAML в Git не гарантирует запрет merge. Проверить перед PR и записать доказательство.
 - **Миграции/production:** миграции в 01.3 не добавлены; staging/VPS/DNS/prod/секреты/реальные БД не затронуты.
 - **Следующий подэтап:** 01.4 только по команде владельца, не объявляя 01.1–01.3 `DONE` до соответствующих проверок.
+
+## 2026-11-11 — 01.4: Docker Compose и staging (GPT)
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / DEPLOYMENT_NOT_RUN` — требования описаны и код добавлен, но Docker build и реальное staging HTTPS ещё не подтверждены.
+- **Ветка:** `stage-01-development`, исходный commit `1f2b6313467fe9c375bd797dc23ce98f0a833319`. Один этап/одна ветка/один итоговый PR, без merge.
+- **Что сделано:** обновлён non-root Python 3.12 Dockerfile; безопасный `entrypoint.sh` запускает Django migrations только для явных `development/staging`, `collectstatic` на persistent static volume, Gunicorn. Development Compose: PostgreSQL 17, healthcheck DB/web, volumes для PostgreSQL/static/media, порты только loopback. Отдельный staging Compose: физически независимые БД/тома/сеть, нет опубликованного DB/web порта, ограничение памяти и 1 worker, Caddy TLS proxy для заранее согласованного домена, запрет прямого доступа `/media/*`; `.env.staging.example` без реальных секретов.
+- **Проверки:** добавлены 5 статических Django-тестов безопасности конфигурации и CI `docker compose config --quiet` с синтетическими переменными. Фактические Docker build/run, PostgreSQL persistence, HTTPS smoke и тесты Django пока `NOT_RUN` / staging `BLOCKED` до изолированного окружения и согласования.
+- **Файлы:** `zemipro_web/Dockerfile.django`, `docker-compose.django.yml`, `docker-compose.staging.yml`, `Caddyfile.staging`, `docker/entrypoint.sh`, `.env.staging.example`, `core/tests/test_container_config.py`, CI workflow, README, `docs/STAGE_01_DOCKER_STAGING.md`, ROADMAP, PROGRESS.
+- **Риски и rollback:** старые volumes не удаляются/не подключаются, новые секреты не использованы; полноценный rollback зависит от 01.5 backup/restore. Окружение с Gunicorn TCP health проверяет лишь процесс, а не функциональную готовность Django/DB. До пробного HTTPS нужен отдельный staging host, DNS и разрешение владельца.
+- **Production, VPS, DNS/Cloudflare, реальные БД и медиа:** `NOT_TOUCHED`. Дальше 01.5 только после команды владельца.

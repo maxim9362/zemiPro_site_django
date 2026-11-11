@@ -57,9 +57,25 @@ use separate PostgreSQL credentials and physical data. Never use production cred
 for local tests. See [Django setup](zemipro_web/DJANGO_SETUP.md) for full commands,
 settings, and safe deployment validation.
 
-The historic Compose file is **not** staging/production ready; Docker health,
-persistence, resources, and real staging are covered by substage **01.4**.
-Do not deploy or rebuild a live site from this README.
+## Docker and staging (01.4)
+
+The [development Compose file](zemipro_web/docker-compose.django.yml) binds
+the web and PostgreSQL ports to **127.0.0.1** and stores DB/static/media in
+separate named volumes. On a verified disposable machine, run from
+`zemipro_web/`:
+
+```bash
+docker compose -f docker-compose.django.yml config --quiet
+docker compose -f docker-compose.django.yml up --build -d
+```
+
+A separate [staging Compose](zemipro_web/docker-compose.staging.yml) uses
+PostgreSQL 17, Caddy automatic HTTPS, distinct credentials/volumes, and private
+media. **Do not deploy staging** until the owner approves a dedicated host,
+staging domain, DNS and credentials. Follow the
+[01.4 runbook](docs/STAGE_01_DOCKER_STAGING.md); build, HTTPS and persistence
+remain unverified until an isolated rehearsal. Do not point any Compose
+configuration at production data.
 
 ## Continuous integration
 

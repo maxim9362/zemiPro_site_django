@@ -1,0 +1,20 @@
+# Caddy provisions HTTPS only when the staging domain resolves to an authorized
+# isolated host with publicly reachable ports 80/443. Never share production.
+{$STAGING_DOMAIN} {
+    encode zstd gzip
+
+    # Uploaded media may contain private order attachments. Never serve raw
+    # MEDIA_ROOT directly; access-controlled downloads belong to stage 07.
+    handle /media/* {
+        respond 404
+    }
+
+    handle /static/* {
+        root * /srv
+        file_server
+    }
+
+    handle {
+        reverse_proxy web:8000
+    }
+}

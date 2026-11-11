@@ -1,0 +1,89 @@
+# Isolated staging stack on a SEPARATE authorized host only.
+# Never run this on the production VPS or reuse production secrets/volumes.
+name: zemipro-staging
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zemipro_staging
+      POSTGRES_USER: zemipro_staging
+      POSTGRES_PASSWORD: ${STAGING_DB_PASSWORD:?Set a NEW staging PostgreSQL password}
+    volumes:
+      - staging_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: ${STAGING_DB_MEMORY:-320m}
+    networks:
+      - backend
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    restart: unless-stopped
+    environment:
+      DJANGO_ENV: staging
+      DJANGO_SECRET_KEY: ${STAGING_DJANGO_SECRET_KEY:?Set a NEW staging Django secret}
+      DJANGO_ALLOWED_HOSTS: ${STAGING_DOMAIN:?Set the staging HTTPS host}
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${STAGING_DOMAIN:?Set the staging HTTPS host}
+      DJANGO_TRUST_X_FORWARDED_PROTO: "true"
+      DB_NAME: zemipro_staging
+      DB_USER: zemipro_staging
+      DB_PASSWORD: ${STAGING_DB_PASSWORD:?Set a NEW staging PostgreSQL password}
+      DB_HOST: db
+      DB_PORT: "5432"
+      RUN_MIGRATIONS: "1"
+      WEB_CONCURRENCY: "1"
+    volumes:
+      - staging_static:/app/staticfiles
+      - staging_media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 3).close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    mem_limit: ${STAGING_WEB_MEMORY:-384m}
+    networks:
+      - backend
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      STAGING_DOMAIN: ${STAGING_DOMAIN:?Set the staging HTTPS host}
+    ports:
+      - "${STAGING_BIND_IP:-0.0.0.0}:${STAGING_HTTP_PORT:-80}:80"
+      - "${STAGING_BIND_IP:-0.0.0.0}:${STAGING_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile.staging:/etc/caddy/Caddyfile:ro
+      - staging_static:/srv/static:ro
+      - staging_caddy_data:/data
+      - staging_caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    mem_limit: ${STAGING_PROXY_MEMORY:-96m}
+    networks:
+      - backend
+      - edge
+
+networks:
+  backend:
+    internal: true
+  edge:
+
+volumes:
+  staging_postgres:
+  staging_static:
+  staging_media:
+  staging_caddy_data:
+  staging_caddy_config:

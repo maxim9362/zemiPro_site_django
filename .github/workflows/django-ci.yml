@@ -71,6 +71,15 @@ jobs:
           python -m compileall -q apps core manage.py
           python -m ruff check apps core manage.py
 
+      - name: Validate development and staging Compose (no containers started)
+        env:
+          STAGING_DOMAIN: ci-staging.example.invalid
+          STAGING_DB_PASSWORD: ci-only-synthetic-staging-password
+          STAGING_DJANGO_SECRET_KEY: ci-only-synthetic-staging-secret-W8k2P7q4R6s1V3x5Z7c9B2n4M6a8D0
+        run: |
+          docker compose -f docker-compose.django.yml config --quiet
+          docker compose -f docker-compose.staging.yml config --quiet
+
       - name: Check Django and migration/model consistency
         run: |
           python manage.py check
