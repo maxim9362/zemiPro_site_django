@@ -20,7 +20,7 @@
                     <option value="">Все категории</option>
                     {% for cat in categories %}
                     <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>
-                        {{ cat.emoji }} {{ cat.name_ru }}
+                        {{ cat.emoji }} {{ cat.localized_name }}
                     </option>
                     {% endfor %}
                 </select>
@@ -41,7 +41,7 @@
                     <p class="order-card-sm__desc">{{ wp.description|truncatewords:20 }}</p>
                     <p>
                         {% for skill in wp.skills.all %}
-                        <span class="tag">{{ skill.emoji }} {{ skill.name_ru }}</span>
+                        <span class="tag">{{ skill.emoji }} {{ skill.localized_name }}</span>
                         {% endfor %}
                     </p>
                 </div>

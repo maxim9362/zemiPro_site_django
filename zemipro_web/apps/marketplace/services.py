@@ -1,7 +1,8 @@
 from django.db import transaction
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, Exists, IntegerField, OuterRef, Q, Value, When
 
-from .models import Order, Response
+from apps.accounts.models import WorkerProfile
+from .models import Category, Order, Response
 
 
 def can_view_private_order_details(user, order):
@@ -31,29 +32,66 @@ def create_order(client, category, city, address, description, price='Догов
     return order
 
 
+
+def workers_serving_city(queryset, city, *, category=None):
+    """Apply explicit service zones, legacy home-city fallback, and online opt-in.
+
+    EXISTS subqueries prevent duplicated profile rows and inflated rating counts
+    when a worker serves many cities or has multiple matching skills.
+    """
+    through = WorkerProfile.service_cities.through
+    zones = through.objects.filter(workerprofile_id=OuterRef('pk'))
+    serving = zones.filter(city_id=city.pk)
+    queryset = queryset.alias(
+        _has_explicit_zones=Exists(zones),
+        _serves_selected_city=Exists(serving),
+    )
+    allowed = (
+        Q(_serves_selected_city=True)
+        | Q(_has_explicit_zones=False, city_id=city.pk)
+    )
+    if category is not None:
+        if category.work_mode in ('online', 'both'):
+            allowed |= Q(offers_remote=True)
+    else:
+        online_categories = Category.objects.filter(
+            workers__pk=OuterRef('pk'), is_active=True,
+            work_mode__in=('online', 'both'),
+        ).filter(Q(section__isnull=True) | Q(section__is_active=True))
+        queryset = queryset.alias(
+            _has_remote_skill=Exists(online_categories)
+        )
+        allowed |= Q(offers_remote=True, _has_remote_skill=True)
+    return queryset.filter(allowed)
+
+
 def get_available_orders_for_worker(worker_profile):
-    """Получить заявки, подходящие мастеру по городу и категориям."""
-    skills = worker_profile.skills.all()
+    """New orders only in selected zones or eligible opted-in online skills."""
+    skills = worker_profile.skills.filter(is_active=True).filter(
+        Q(section__isnull=True) | Q(section__is_active=True)
+    )
     if not skills.exists():
         return Order.objects.none()
 
-    # These related objects are rendered on every card.
     base_qs = Order.objects.select_related('category', 'city').filter(
-        status=Order.Status.NEW,
-        category__in=skills,
+        status=Order.Status.NEW, category__in=skills, city__is_active=True,
     ).exclude(client_id=worker_profile.user_id)
 
-    if worker_profile.city:
-        return base_qs.annotate(
-            city_priority=Case(
-                When(city=worker_profile.city, then=Value(0)),
-                default=Value(1),
-                output_field=IntegerField(),
-            )
-        ).order_by('city_priority', '-created_at', '-pk')
+    # A worker without an explicit area inherits only the historical home city;
+    # no default nationwide visibility for new or legacy profiles.
+    zones = worker_profile.service_cities.filter(is_active=True)
+    zone_filter = Q(city__in=zones)
+    if not worker_profile.service_cities.exists() and worker_profile.city_id:
+        zone_filter = Q(city_id=worker_profile.city_id)
+    if worker_profile.offers_remote:
+        zone_filter |= Q(category__work_mode__in=('online', 'both'))
 
-    return base_qs.order_by('-created_at', '-pk')
-
+    return base_qs.filter(zone_filter).annotate(
+        city_priority=Case(
+            When(city_id=worker_profile.city_id, then=Value(0)),
+            default=Value(1), output_field=IntegerField(),
+        )
+    ).order_by('city_priority', '-created_at', '-pk')
 
 def create_response(order, worker_user, message=''):
     """Создать отклик мастера на заказ."""

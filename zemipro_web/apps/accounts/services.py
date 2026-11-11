@@ -46,6 +46,12 @@ def create_or_update_worker_profile(user, form_data):
     if skills is not None:
         profile.skills.set(skills)
 
+    if 'service_cities' in form_data:
+        profile.service_cities.set(form_data['service_cities'])
+    if 'offers_remote' in form_data:
+        profile.offers_remote = bool(form_data['offers_remote'])
+        profile.save(update_fields=['offers_remote', 'updated_at'])
+
     if created or user.role != User.Role.WORKER:
         user.role = User.Role.WORKER
         user.save(update_fields=['role'])

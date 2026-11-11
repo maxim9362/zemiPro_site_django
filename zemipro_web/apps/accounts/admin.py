@@ -31,8 +31,11 @@ class ClientProfileAdmin(admin.ModelAdmin):
 
 @admin.register(WorkerProfile)
 class WorkerProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'city', 'is_verified', 'receive_notifications', 'created_at')
-    list_filter = ('city', 'is_verified', 'receive_notifications')
+    list_display = (
+        'user', 'city', 'offers_remote', 'is_verified',
+        'receive_notifications', 'created_at',
+    )
+    list_filter = ('city', 'offers_remote', 'is_verified', 'receive_notifications')
     search_fields = ('user__username', 'user__email', 'contact', 'description')
     raw_id_fields = ('user', 'city')
-    filter_horizontal = ('skills',)
+    filter_horizontal = ('skills', 'service_cities')

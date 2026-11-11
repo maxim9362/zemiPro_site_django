@@ -62,6 +62,8 @@ def worker_profile_view(request):
                 'contact': profile.contact,
                 'description': profile.description,
                 'skills': profile.skills.all(),
+                'service_cities': profile.service_cities.all(),
+                'offers_remote': profile.offers_remote,
                 'receive_notifications': profile.receive_notifications,
             }
         form = WorkerProfileForm(initial=initial)

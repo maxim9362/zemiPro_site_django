@@ -20,6 +20,19 @@
                     <strong>Город:</strong> {{ profile.city.localized_name }}
                 </div>
                 <div class="order-card__field">
+                    <strong>Города обслуживания:</strong>
+                    {% for service_city in profile.service_cities.all %}
+                    <span class="tag">{{ service_city.localized_name }}</span>
+                    {% empty %}
+                    {{ profile.city.localized_name }}
+                    {% endfor %}
+                </div>
+                {% if profile.offers_remote %}
+                <div class="order-card__field">
+                    <strong>Формат:</strong> Возможна работа онлайн
+                </div>
+                {% endif %}
+                <div class="order-card__field">
                     <strong>Описание:</strong>
                     <p>{{ profile.description }}</p>
                 </div>

@@ -15,7 +15,7 @@ from .models import Category, ServiceSection, Subcategory, Order, Response, Rati
 from .services import (
     get_available_orders_for_worker, create_response,
     accept_response, complete_order, cancel_order,
-    can_view_private_order_details,
+    can_view_private_order_details, workers_serving_city,
 )
 
 ITEMS_PER_PAGE = 10
@@ -67,7 +67,11 @@ def category_detail(request, slug):
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
 
     if selected_city:
-        workers = workers.filter(city__slug=selected_city)
+        target_city = City.objects.filter(is_active=True, slug=selected_city).first()
+        if target_city is None:
+            workers = workers.none()
+        else:
+            workers = workers_serving_city(workers, target_city, category=category)
 
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
@@ -86,7 +90,9 @@ def category_detail(request, slug):
 
 
 def cities_list(request):
-    cities = City.objects.filter(is_active=True).order_by('name_ru')
+    cities = City.objects.filter(is_active=True).select_related(
+        'district'
+    ).order_by('name_ru', 'pk')
     return render(request, 'pages/cities.html', {'cities': cities})
 
 
@@ -98,14 +104,21 @@ def city_detail(request, slug):
     selected_category = request.GET.get('category')
 
     workers = WorkerProfile.objects.filter(
-        city=city, user__is_active=True, user__is_blocked=False
+        user__is_active=True, user__is_blocked=False
     ).select_related('user').prefetch_related('skills').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
 
     if selected_category:
-        workers = workers.filter(skills__slug=selected_category)
+        category = categories.filter(slug=selected_category).first()
+        if category is None:
+            workers = workers.none()
+        else:
+            workers = workers.filter(skills=category)
+            workers = workers_serving_city(workers, city, category=category)
+    else:
+        workers = workers_serving_city(workers, city)
 
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
@@ -122,7 +135,7 @@ def worker_public_profile_view(request, pk):
     profile = get_object_or_404(
         WorkerProfile.objects.filter(
             user__is_active=True, user__is_blocked=False
-        ).select_related('city', 'user').prefetch_related('skills'),
+        ).select_related('city', 'user').prefetch_related('skills', 'service_cities'),
         pk=pk,
     )
     reviews = Rating.objects.filter(

@@ -96,6 +96,13 @@ class WorkerProfile(models.Model):
         'marketplace.Category', blank=True,
         related_name='workers', verbose_name='Навыки'
     )
+    service_cities = models.ManyToManyField(
+        'locations.City', blank=True,
+        related_name='service_workers', verbose_name='Города обслуживания',
+    )
+    offers_remote = models.BooleanField(
+        default=False, verbose_name='Работаю онлайн',
+    )
     receive_notifications = models.BooleanField(
         default=True, verbose_name='Получать уведомления'
     )

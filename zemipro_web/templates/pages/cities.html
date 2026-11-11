@@ -16,6 +16,7 @@
             {% for city in cities %}
             <a href="{% url 'marketplace:city_detail' slug=city.slug %}" class="city-card">
                 <h3 class="city-card__title">{{ city.localized_name }}</h3>
+                {% if city.district %}<p>{{ city.district.localized_name }}</p>{% endif %}
             </a>
             {% endfor %}
         </div>

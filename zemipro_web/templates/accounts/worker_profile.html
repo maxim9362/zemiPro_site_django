@@ -59,6 +59,32 @@
             </div>
 
             <div class="form__group">
+                <label class="form__label" for="id_service_cities">Города обслуживания</label>
+                <p class="form__hint">
+                    Выберите города, где принимаете заказы.
+                    Если ничего не выбрано, используется ваш основной город.
+                </p>
+                <div class="checkbox-grid">{{ form.service_cities }}</div>
+                {% for error in form.service_cities.errors %}
+                <span class="form__error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form__group">
+                <label class="form__label">
+                    {{ form.offers_remote }}
+                    Выполняю услуги онлайн
+                </label>
+                <p class="form__hint">
+                    Онлайн-заявки доступны только для категорий,
+                    где разрешён онлайн-формат.
+                </p>
+                {% for error in form.offers_remote.errors %}
+                <span class="form__error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form__group">
                 <label class="form__label">Категории работ *</label>
                 <div class="checkbox-grid">
                     {{ form.skills }}
