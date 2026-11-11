@@ -702,3 +702,18 @@ msgstr "Pages of completed requests"
 
 msgid "Страницы отменённых заявок"
 msgstr "Pages of cancelled requests"
+
+msgid "Поиск специалистов в городе"
+msgstr "Find professionals in"
+
+msgid "Специалисты в городе"
+msgstr "Professionals in"
+
+msgid "Пока нет подходящих специалистов"
+msgstr "No matching professionals yet"
+
+msgid "категорий"
+msgstr "categories"
+
+msgid "Открыть заявку №"
+msgstr "Open request no. "
