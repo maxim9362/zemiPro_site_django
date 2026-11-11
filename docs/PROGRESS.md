@@ -252,3 +252,15 @@
 - **Миграции:** нет; схемы и реальные данные не изменялись.
 - **Риски:** поддерживаемый Django 5.2 ещё требует полноценного regression run; проверка Python package pins/совместимости и реальный clean start не завершены; до production старые credentials должны быть отозваны отдельно владельцем.
 - **Далее:** после подтверждения доступных тестов и решения по DoD 01.1 переход к 01.2 только по команде владельца. Production, VPS, Cloudflare, DNS и действующие БД `NOT_TOUCHED`.
+
+## 2026-11-11 — 01.2: PostgreSQL constraints and migration rehearsal (GPT)
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / RUNTIME_NOT_RUN`, не `DONE`: миграции и тесты написаны, но полноценный PostgreSQL/Django runtime недоступен в этой среде.
+- **Ветка:** `stage-01-development`; исходный предыдущий этапный коммит `9c34753e058d9953d65478138678e18c7a4f1977`. Один этап — одна ветка — один итоговый PR; этот подэтап не создаёт PR.
+- **Проверено:** `accounts`, `marketplace`, `locations`, `moderation`, `notifications`, `analytics`: сохранены исходные миграции, модель пользователя, связи `PROTECT/SET_NULL/CASCADE`, уникальность категорий/городов/откликов/подкатегорий, существующие индексы. Правила каскада и политики удаления личных данных не менялись без продуктового решения.
+- **Реализовано:** модельные и миграционные PostgreSQL CHECK constraints для `Order.status`, `Response.status`, `Complaint.status`, с предварительной блокировкой несовместимых legacy значений и без записи/удаления данных; добавлены адресные тесты графа миграций, статусных ограничений, уникальности и защиты владельца. Файлы: `marketplace/models.py`, `marketplace/migrations/0004_status_constraints.py`, `moderation/models.py`, `moderation/migrations/0002_status_constraint.py`, `marketplace/tests/test_schema_constraints.py`, `docs/STAGE_01_MIGRATION_REHEARSAL.md`.
+- **Решение по legacy:** новые тестовые PostgreSQL создаются с нуля. Старые Telegram/PSEO/SQLite базы/данные не импортируются; для текущего Django — только сохранение существующей истории миграций и synthetic backup/restore.
+- **Проверки:** `PASS` — GitHub-статическая проверка моделей, имён/зависимостей миграций и сохранения исходных файлов; `NOT_RUN` — Django migration loader, `makemigrations --check`, `migrate`, PostgreSQL CHECK enforcement, synthetic restore + row counts, Django tests (зависимости и изолированный PostgreSQL не доступны).
+- **Миграции:** 2 новых, без удаления старых и без правок production. Вставка данных/вызовы внешних сервисов отсутствуют.
+- **Риски:** 01.1 Django 5.2 dependencies ещё требуют регрессионных тестов; статусные ограничения не применены в БД; настройка тестовой БД и миграционная репетиция должны быть выполнены в изолированной среде. Действующие базы, DNS, Cloudflare, VPS, секреты: `NOT_TOUCHED`.
+- **Следующий шаг:** после команды владельца — 01.3, сохраняя оба предыдущих подэтапа `IN_PROGRESS` до выполненных критериев и независимого этапного Codex review.

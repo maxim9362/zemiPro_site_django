@@ -121,6 +121,12 @@ class Order(models.Model):
             models.Index(fields=['city', 'status'], name='order_city_status_idx'),
             models.Index(fields=['category', 'status'], name='order_category_status_idx'),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(status__in=['new', 'in_progress', 'completed', 'cancelled']),
+                name='order_status_allowed',
+            ),
+        ]
 
     def __str__(self):
         return f'Заказ #{self.pk} — {self.category.name_ru} ({self.get_status_display()})'
@@ -160,7 +166,11 @@ class Response(models.Model):
             models.UniqueConstraint(
                 fields=['order', 'worker'],
                 name='unique_response_per_worker_per_order'
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['pending', 'accepted', 'rejected', 'cancelled']),
+                name='response_status_allowed',
+            ),
         ]
 
     def __str__(self):
