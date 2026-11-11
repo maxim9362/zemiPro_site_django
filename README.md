@@ -100,9 +100,10 @@ activated or verified yet.** These require a separately authorized host.
 
 Catalog queries and private dashboards use joins, prefetch and aggregate
 response counts; dynamic HTML is `private, no-store`. Login and registration
-POSTs have basic per-IP cache throttling. The built-in memory cache is
-**per worker, not distributed**: a shared or edge limiter must be validated
-before production. Safe 404/500 templates and a minimal narrow-screen CSS
+POSTs now use PostgreSQL-backed atomic fixed-window counters shared across
+Gunicorn workers (one isolated DB per environment). This fixes the previous
+per-process cache bypass; concurrent worker tests and multi-worker staging
+acceptance are still required before production. Safe 404/500 templates and a minimal narrow-screen CSS
 fallback affect only the current Django views, not the four approved separate
 frontend designs. Details and unverified targets:
 [01.6 performance baseline](docs/STAGE_01_PERFORMANCE_BASELINE.md).

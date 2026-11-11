@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.db.models import Case, IntegerField, Value, When
 
-from .models import Order, Response, Rating
+from .models import Order, Response
 
 
 def can_view_private_order_details(user, order):

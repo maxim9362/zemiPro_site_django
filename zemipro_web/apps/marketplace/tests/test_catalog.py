@@ -73,3 +73,47 @@ class CatalogPageTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Явне')
+
+    def test_blocked_and_inactive_workers_not_publicly_visible(self):
+        for blocked, active in ((True, True), (False, False)):
+            with self.subTest(blocked=blocked, active=active):
+                self.worker_user.is_blocked = blocked
+                self.worker_user.is_active = active
+                self.worker_user.save(update_fields=['is_blocked', 'is_active'])
+                profile = reverse(
+                    'marketplace:worker_public_profile', args=[self.profile.pk]
+                )
+                self.assertEqual(self.client.get(profile).status_code, 404)
+                self.assertNotContains(
+                    self.client.get(reverse(
+                        'marketplace:city_detail', args=[self.city.slug]
+                    )), 'rated-worker',
+                )
+                self.assertNotContains(
+                    self.client.get(reverse(
+                        'marketplace:category_detail', args=[self.category.slug]
+                    )), 'rated-worker',
+                )
+                self.worker_user.is_blocked = False
+                self.worker_user.is_active = True
+                self.worker_user.save(update_fields=['is_blocked', 'is_active'])
+
+    def test_rated_worker_sorts_before_unrated_with_stable_tiebreak(self):
+        for number in range(2):
+            user = User.objects.create_user(username=f'zz-unrated-{number}')
+            profile = WorkerProfile.objects.create(user=user, city=self.city)
+            profile.skills.add(self.category)
+
+        for url in (
+            reverse('marketplace:city_detail', args=[self.city.slug]),
+            reverse('marketplace:category_detail', args=[self.category.slug]),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                profiles = list(response.context['page_obj'].object_list)
+                self.assertEqual(profiles[0].user_id, self.worker_user.pk)
+                self.assertEqual(
+                    [p.user.username for p in profiles[1:]],
+                    ['zz-unrated-0', 'zz-unrated-1'],
+                )

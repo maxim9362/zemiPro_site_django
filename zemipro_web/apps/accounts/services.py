@@ -1,5 +1,3 @@
-from django.db import transaction
-
 from .models import User, ClientProfile, WorkerProfile
 
 

@@ -1,8 +1,9 @@
 """No-store, safe errors and basic throttle regression tests."""
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
-from django.core.cache import cache
-from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.db import DatabaseError, connections, close_old_connections
+from django.test import Client, RequestFactory, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.views.defaults import server_error
 
@@ -45,21 +46,7 @@ class ErrorAndCacheHeadersTests(TestCase):
             self.assertEqual(throttle_client_ip(Request()), '203.0.113.3')
 
 
-@override_settings(
-    CACHES={
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'stage-01-6-isolated-throttle',
-        },
-    },
-)
 class SensitiveEndpointThrottleTests(TestCase):
-    def setUp(self):
-        cache.clear()
-
-    def tearDown(self):
-        cache.clear()
-
     def test_login_blocks_after_12_posts_without_leaking_input(self):
         url = reverse('accounts:login')
         for _ in range(12):
@@ -99,11 +86,37 @@ class SensitiveEndpointThrottleTests(TestCase):
             200,
         )
 
-    def test_failed_cache_does_not_unlimit_login(self):
-        with patch('core.middleware.cache.add', side_effect=RuntimeError('test')):
+    def test_failed_database_does_not_unlimit_login(self):
+        with patch('core.middleware.increment_attempt_counter',
+                   side_effect=DatabaseError('private-db-error')):
             response = self.client.post(
                 reverse('accounts:login'), {'username': 'synthetic'},
                 REMOTE_ADDR='192.0.2.14',
             )
         self.assertEqual(response.status_code, 503)
-        self.assertNotIn('test', response.content.decode())
+        self.assertNotIn('private-db-error', response.content.decode())
+
+
+class SharedPostThrottleTransactionTests(TransactionTestCase):
+    """Independent DB connections simulate workers with one PostgreSQL counter."""
+
+    def test_13_parallel_login_posts_have_one_global_limit(self):
+        url = reverse('accounts:login')
+
+        def send(_):
+            close_old_connections()
+            try:
+                client = Client()
+                return client.post(
+                    url,
+                    {'username': 'synthetic-worker', 'password': 'invalid'},
+                    REMOTE_ADDR='192.0.2.29',
+                ).status_code
+            finally:
+                connections.close_all()
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            statuses = list(pool.map(send, range(13)))
+
+        self.assertEqual(statuses.count(200), 12, statuses)
+        self.assertEqual(statuses.count(429), 1, statuses)

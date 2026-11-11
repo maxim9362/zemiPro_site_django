@@ -1,5 +1,4 @@
-from django.contrib import admin, messages
-from django.utils import timezone
+from django.contrib import admin
 
 from .models import Complaint
 from .services import resolve_complaint, dismiss_complaint, block_user, unblock_user

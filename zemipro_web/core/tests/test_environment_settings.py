@@ -87,3 +87,12 @@ class EnvironmentSettingsTests(SimpleTestCase):
         result = self.run_check(environment)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('ALLOWED_HOSTS must contain explicit hosts', result.stderr)
+    def test_hsts_must_be_positive_in_secure_environments(self):
+        for env_name in ('staging', 'production'):
+            for seconds in ('0', '-1', 'not-a-number'):
+                with self.subTest(environment=env_name, seconds=seconds):
+                    environment = self.secure_environment(env_name)
+                    environment['DJANGO_SECURE_HSTS_SECONDS'] = seconds
+                    result = self.run_check(environment)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('must be a positive integer', result.stderr)

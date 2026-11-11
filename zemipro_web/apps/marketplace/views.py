@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, F
 from django.http import Http404
 from django.shortcuts import render, get_object_or_404, redirect
 
@@ -37,11 +37,11 @@ def category_detail(request, slug):
     selected_city = request.GET.get('city')
 
     workers = WorkerProfile.objects.filter(
-        skills=category, user__is_active=True
+        skills=category, user__is_active=True, user__is_blocked=False
     ).select_related('city', 'user').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
-    ).order_by('-avg_rating', 'pk')
+    ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
 
     if selected_city:
         workers = workers.filter(city__slug=selected_city)
@@ -68,11 +68,11 @@ def city_detail(request, slug):
     selected_category = request.GET.get('category')
 
     workers = WorkerProfile.objects.filter(
-        city=city, user__is_active=True
+        city=city, user__is_active=True, user__is_blocked=False
     ).select_related('user').prefetch_related('skills').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
-    ).order_by('-avg_rating', 'pk')
+    ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
 
     if selected_category:
         workers = workers.filter(skills__slug=selected_category)
@@ -90,7 +90,9 @@ def city_detail(request, slug):
 
 def worker_public_profile_view(request, pk):
     profile = get_object_or_404(
-        WorkerProfile.objects.select_related('city', 'user').prefetch_related('skills'),
+        WorkerProfile.objects.filter(
+            user__is_active=True, user__is_blocked=False
+        ).select_related('city', 'user').prefetch_related('skills'),
         pk=pk,
     )
     reviews = Rating.objects.filter(

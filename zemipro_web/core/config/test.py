@@ -2,6 +2,7 @@
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F403
+from .base import DATABASES as DATABASES
 
 
 ENVIRONMENT = 'test'

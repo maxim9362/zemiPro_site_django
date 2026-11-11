@@ -1,20 +1,23 @@
-"""Safety middleware: per-process basic throttling and private HTML cache headers.
+"""Sensitive HTTP safeguards: durable PostgreSQL counters and no-store HTML.
 
-The default Django LocMemCache is NOT shared across workers. A verified
-distributed/edge limiter is required before public production launch.
+PostgreSQL INSERT .. ON CONFLICT .. RETURNING is atomic and shared by all
+Gunicorn workers connected to the same isolated Django PostgreSQL database.
 """
+from datetime import datetime, timezone
 import hashlib
 import hmac
 import ipaddress
 
 from django.conf import settings
-from django.core.cache import cache
+from django.db import DatabaseError, connection
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
+from apps.accounts.models import SensitivePostCounter
+
 
 class DynamicHtmlNoStoreMiddleware:
-    """Protect all dynamic HTML, including error pages, from shared caches."""
+    """Protect dynamic HTML (including errors) from shared caches."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -27,7 +30,7 @@ class DynamicHtmlNoStoreMiddleware:
 
 
 def throttle_client_ip(request):
-    """Never trust user-controlled forwarded headers by default."""
+    """Never trust client-provided X-Real-IP unless a trusted proxy overwrites it."""
     address = request.META.get('REMOTE_ADDR', '')
     if getattr(settings, 'THROTTLE_TRUST_X_REAL_IP', False):
         address = request.META.get('HTTP_X_REAL_IP') or address
@@ -37,8 +40,23 @@ def throttle_client_ip(request):
         return None
 
 
+def increment_attempt_counter(key, expires_at):
+    """One atomic PostgreSQL upsert: global counter across web processes."""
+    table = connection.ops.quote_name(SensitivePostCounter._meta.db_table)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'INSERT INTO {table} (bucket_hash, attempts, expires_at) '
+            'VALUES (%s, 1, %s) '
+            'ON CONFLICT (bucket_hash) DO UPDATE '
+            'SET attempts = accounts_sensitive_post_counter.attempts + 1 '
+            'RETURNING attempts',
+            [key, expires_at],
+        )
+        return cursor.fetchone()[0]
+
+
 class SensitivePostThrottleMiddleware(MiddlewareMixin):
-    """Basic POST limit for login and registration, before form validation."""
+    """Enforce one fixed-window threshold via shared PostgreSQL counters."""
 
     RULES = {
         '/accounts/login/': (12, 300),
@@ -56,23 +74,18 @@ class SensitivePostThrottleMiddleware(MiddlewareMixin):
             return HttpResponse('Temporarily unavailable', status=503)
 
         limit, window = rule
-        digest = hmac.new(
+        now = datetime.now(timezone.utc)
+        bucket = int(now.timestamp() // window)
+        key = hmac.new(
             settings.SECRET_KEY.encode('utf-8'),
-            f'{request.path_info}:{address}'.encode('utf-8'),
+            f'{request.path_info}:{address}:{bucket}'.encode('utf-8'),
             hashlib.sha256,
         ).hexdigest()
-        key = f'zemipro:post:v1:{digest}'
+        expires_at = datetime.fromtimestamp((bucket + 1) * window, tz=timezone.utc)
         try:
-            if cache.add(key, 1, timeout=window):
-                count = 1
-            else:
-                try:
-                    count = cache.incr(key)
-                except ValueError:
-                    # Expired between add and increment: restart the window.
-                    count = 1 if cache.add(key, 1, timeout=window) else cache.incr(key)
-        except Exception:
-            # Fail closed on cache errors without exposing internals.
+            count = increment_attempt_counter(key, expires_at)
+        except DatabaseError:
+            # Sensitive actions fail closed during any DB outage.
             return HttpResponse('Temporarily unavailable', status=503)
 
         if count > limit:

@@ -11,7 +11,7 @@ runtime or legacy-data import.
 - Django **5.2.19 LTS**; exact runtime pins in `requirements.txt`.
 - PostgreSQL (local development/test database). Do not use production hosts,
   credentials, real customer data, or pre-existing server volumes.
-- Docker/staging acceptance, backups, and CI belong to later 01.x substages.
+- Docker/staging and CI configurations were implemented in 01.3–01.5; required real-world acceptance is still pending.
 
 ## Linux
 
@@ -121,7 +121,10 @@ environment. Test DB privileges must allow creation and deletion of a
   keys, service-account JSON, DB dumps, local media or private logs.
 - `.gitignore` protects Git; `zemipro_web/.dockerignore` additionally
   excludes local secrets and data from the existing Docker build context.
-- Existing Docker Compose lacks full staging readiness/health/persistence:
-  **01.4** will verify/rebuild this. No actual Docker deployment in 01.1.
+- Separate dev and staging Compose files now provide PostgreSQL 17 health checks
+  and persistent volumes. Staging HTTPS and disaster recovery are **not yet
+  accepted**. See [01.4 Docker/staging](../docs/STAGE_01_DOCKER_STAGING.md)
+  and [01.5 backup/restore](../docs/STAGE_01_LOGGING_BACKUP.md).
+  Do not deploy to the current VPS without explicit owner permission.
 - Historical credentials must be revoked by the owner before production;
   deleting their files from Git HEAD does not revoke credentials.

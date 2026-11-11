@@ -37,14 +37,14 @@ def required_env(name):
     return value
 
 
-def env_nonnegative_int(name, default):
+def env_positive_int(name, default):
     value = env(name, str(default))
     try:
         parsed = int(value)
     except (ValueError, TypeError) as exc:
-        raise ImproperlyConfigured(f'{name} must be an integer >= 0.') from exc
-    if parsed < 0:
-        raise ImproperlyConfigured(f'{name} must be an integer >= 0.')
+        raise ImproperlyConfigured(f'{name} must be a positive integer.') from exc
+    if parsed <= 0:
+        raise ImproperlyConfigured(f'{name} must be a positive integer.')
     return parsed
 
 

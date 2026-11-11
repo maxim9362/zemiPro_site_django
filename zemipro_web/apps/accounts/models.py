@@ -112,3 +112,17 @@ class WorkerProfile(models.Model):
 
     def __str__(self):
         return f'Мастер: {self.user}'
+
+class SensitivePostCounter(models.Model):
+    """Opaque time-window counters shared atomically between Gunicorn workers.
+
+    Only HMAC digests are stored; raw IP addresses and submitted credentials
+    must never be written to this table.
+    """
+
+    bucket_hash = models.CharField(max_length=64, primary_key=True)
+    attempts = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = 'accounts_sensitive_post_counter'

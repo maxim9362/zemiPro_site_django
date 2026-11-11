@@ -310,3 +310,15 @@
 - **Tests:** synthetic SQL scaling, 404/500, cache headers, POST limit and source-IP trust behavior added to existing CI test suite. Current environment lacks Django/PostgreSQL, so test execution and real device/latency/memory figures remain `NOT_RUN`.
 - **Data/infra:** no schema migrations, no external services or libraries, no Docker starts, no VPS/DNS/Cloudflare/production or real data changes. See `docs/STAGE_01_PERFORMANCE_BASELINE.md`.
 - **Stage 01 acceptance:** requires independent Codex Cloud review, full verified GitHub CI with PostgreSQL/migrations/tests, branch protection, isolated Docker HTTPS staging, backup/restore + alert drill, performance/mobile checks and production-grade abuse-control decision. Do not claim Stage 01 DONE or merge until verified and authorized.
+
+## 2026-11-11 — Stage 01 independent Codex review: ZP-01-001–006 remediation
+
+- **Reviewed SHA:** `3b06a647bca3cdba1c70aca6c2e02a23d89f552b`; Codex verdict `CHANGES REQUIRED`. Independent synthetic PostgreSQL: Django `69/69 PASS` twice, `pip check` PASS, `manage.py check` PASS, `makemigrations --check` PASS, `29` migrations PASS, schema restore and backup/verification PASS, coverage `89.5%` of `apps.marketplace.services`. GitHub CI `FAIL` from 16 F401 + 2 F405; these are **pre-remediation** results, not post-change passes.
+- **ZP-01-001 HIGH:** remove 16 confirmed unused imports across Django source and historic no-op stubs; make `DATABASES` explicit in test settings so Ruff F405 does not trigger. Do not turn lint rules off.
+- **ZP-01-002 MEDIUM:** staging/production reject `DJANGO_SECURE_HSTS_SECONDS <= 0`, add invalid-value test.
+- **ZP-01-003 HIGH:** replace per-process LocMemCache throttle with atomic PostgreSQL `INSERT ... ON CONFLICT ... RETURNING` HMAC window counters, new `accounts.0003_sensitive_post_counter` schema, expiring records and operator-scheduled pruning, concurrency test across independent DB connections. No Redis, queue or paid service.
+- **ZP-01-004 HIGH:** public catalogue and direct worker URL require both `user.is_active=True` and `is_blocked=False`, new tests assert 404 and no public profile listing.
+- **ZP-01-005 MEDIUM:** `NULLS LAST` descending rating with stable PK tie-break and rating test.
+- **ZP-01-006 LOW:** rewrite obsolete Compose description in `DJANGO_SETUP.md`.
+- **Verification status:** remediation prepared in the same existing stage branch, but new Django/PostgreSQL suite, migrations, Ruff and GitHub Actions require **fresh** execution. Do not infer PASS from Codex's pre-fix 69/69. No PR, merge, production DB, VPS, DNS, Cloudflare or secret changes.
+- **Remaining gates:** real staging HTTPS, off-host backup+monitor alert, branch protection, representative p95/RSS, mobile HE/RTL and authorized deployment decisions. All 01 substages remain `IN_PROGRESS` until acceptance.

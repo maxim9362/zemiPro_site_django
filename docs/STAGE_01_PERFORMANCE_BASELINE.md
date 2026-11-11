@@ -62,13 +62,18 @@ overwrites `X-Real-IP` with `{remote_host}`, and Django trusts it only
 when `ZEMIPRO_TRUST_X_REAL_IP=true` on an internal network that cannot be
 accessed directly. Reverify if Cloudflare or upstream topology changes.
 
-**Explicit limitation:** built-in LocMemCache is per Python worker,
-not shared. Traffic may bypass the limit through different workers,
-and multiple users behind one NAT/proxy can share a quota.
-This is a basic temporary protection, **not a production-ready
-brute-force defense**. Before launch require and test a shared
-limiter or verified edge/WAF policy, plus false-positive testing.
-No Redis or paid external service has been silently added.
+**Review fix (ZP-01-003):** POST counters are now stored in the
+existing isolated PostgreSQL, with one atomic `INSERT ... ON CONFLICT ...
+RETURNING` query per attempt. All workers share a counter, so the old
+per-process LocMemCache bypass no longer applies. The migration
+`accounts.0003_sensitive_post_counter` creates only an opaque HMAC key,
+count and expiry; no raw IP, password or customer data are stored.
+A dedicated command `prune_sensitive_post_counters` removes counters
+expired over 24 hours ago. Enable housekeeping on an authorized host
+only; this is not auto-deployed. Fixed-window boundaries, rotating IPs,
+shared NATs, and large botnet traffic remain risk scenarios. Distributed
+staging concurrency and edge/WAF false-positive checks are still required
+before production. No Redis or paid service was added.
 
 ## Narrow-screen and accessibility baseline
 
@@ -93,7 +98,8 @@ stage and remains a prelaunch acceptance requirement.
 | Real 320px/mobile and Hebrew RTL inspection | NOT_RUN |
 | Django safe 404/500/cache tests | NOT_RUN |
 | Multi-worker and reverse-proxy throttle behavior | NOT_RUN |
-| Shared production-grade abuse control | BLOCKED |
+| Atomic PostgreSQL counter model and migration | IMPLEMENTED / NOT_YET_RERUN |
+| Distributed multiworker staging acceptance | NOT_RUN |
 | VPS/DNS/Cloudflare/production | NOT_TOUCHED |
 
 After 01.6 implementation, all six Stage 01 code substages exist on

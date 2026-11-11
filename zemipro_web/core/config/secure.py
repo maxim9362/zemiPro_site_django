@@ -5,7 +5,7 @@ from .env import (
     database_config,
     env_bool,
     env_list,
-    env_nonnegative_int,
+    env_positive_int,
     explicit_allowed_hosts,
     strong_secret_key,
 )
@@ -22,7 +22,7 @@ def build_secure_settings(default_hsts_seconds, include_subdomains, preload):
             raise ImproperlyConfigured(
                 f'{variable} must be true for staging and production.'
             )
-    hsts_seconds = env_nonnegative_int(
+    hsts_seconds = env_positive_int(
         'DJANGO_SECURE_HSTS_SECONDS', default_hsts_seconds
     )
     return {
