@@ -12,7 +12,7 @@ from apps.accounts.forms import WorkerProfileForm
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import create_or_update_worker_profile
 from apps.locations.models import City, CityAlias, District
-from apps.marketplace.models import Category, Order
+from apps.marketplace.models import Category
 from apps.marketplace.services import get_available_orders_for_worker
 from apps.marketplace.tests.factories import make_city, make_order, make_user
 
