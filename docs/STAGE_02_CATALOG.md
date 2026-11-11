@@ -75,10 +75,13 @@ Target regressions:
 5. Correct migration state on clean and existing synthetic PostgreSQL 17
    databases. Zero legacy imports.
 
-**Still pending:** independent local Windows/Docker Codex verification,
-editorial approval of new taxonomy and native-speaking review of Hebrew
-translations. Full translated interface and RTL UX is Stage 02.3; public
-localized URLs are Stage 02.4; no PR or merge until Stage 02 completion.
+**Still pending:** editorial approval of the proposed taxonomy and
+native-speaking proofreading of Hebrew names/descriptions before public release.
+Laptop checks are not required for Stage 02.1 code acceptance because Django,
+PostgreSQL, seed round-trip and isolated Docker smoke have all passed in
+GitHub Actions. Actual-device visual RTL and the full translated UI belong to
+Stage 02.3/02.6. The **single** Stage 02 Draft PR #8 already exists but must
+not be merged until the owner approves completion of Stage 02.
 
 The separate four approved frontend HTML mockups are **not edited**.
 No production/VPS/DNS/Cloudflare/data-import operations are authorized.
