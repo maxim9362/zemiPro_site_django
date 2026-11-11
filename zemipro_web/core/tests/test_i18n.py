@@ -162,12 +162,13 @@ class TrilingualInterfaceTests(TestCase):
         )
         with translation.override('he'):
             self.assertEqual(notice.localized_title, 'תגובה חדשה')
+            self.client.force_login(self.owner)
             listing = self.client.get(
                 reverse('notifications:notification_list'),
                 HTTP_ACCEPT_LANGUAGE='he',
             )
-            # With a signed-in user the page must show translated notifications.
-            self.assertEqual(listing.status_code, 302)
+            self.assertContains(listing, 'תגובה חדשה')
+            self.assertContains(listing, 'איש מקצוע הגיב')
             self.assertIn(str(order.pk), notice.localized_message)
             self.assertIn('איש מקצוע', notice.localized_message)
         notice.refresh_from_db()
