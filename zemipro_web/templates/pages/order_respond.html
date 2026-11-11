@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% trans 'Откликнуться' %} на заказ #{{ order.pk }} — ZemiPro{% endblock %}
+{% block title %}{% trans 'Откликнуться на заявку' %} #{{ order.pk }} — ZemiPro{% endblock %}
 
 {% block content %}
 <section class="page-header">
@@ -22,7 +22,7 @@
                     <strong>{% trans 'Город:' %}</strong> {{ order.city.localized_name }}
                 </div>
                 <div class="order-card__field">
-                    <strong>{% trans 'Бюджет:' %}</strong> {{ order.price }}
+                    <strong>{% trans 'Бюджет:' %}</strong> {% trans order.price %}
                 </div>
             </div>
         </div>
@@ -54,7 +54,7 @@
                     <button type="submit" class="btn btn--primary btn--lg">
                         {% trans 'Отправить отклик' %}
                     </button>
-                    <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-left: 12px;">
+                    <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-inline-start: 12px;">
                         {% trans 'Назад' %}
                     </a>
                 </form>

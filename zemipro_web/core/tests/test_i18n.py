@@ -57,6 +57,7 @@ class TrilingualInterfaceTests(TestCase):
                     self.assertContains(response, nav)
                     self.assertContains(response, cities)
                 self.assertContains(responses[0], heading)
+                self.assertContains(responses[0], {'ru': 'Найдите мастера по ремонту в Израиле', 'en': 'Find a professional in Israel', 'he': 'מצאו איש מקצוע בישראל'}[lang])
                 self.assertContains(responses[-1], register)
 
     def test_set_language_preserves_path_query_and_changes_cookie(self):
@@ -161,6 +162,12 @@ class TrilingualInterfaceTests(TestCase):
         )
         with translation.override('he'):
             self.assertEqual(notice.localized_title, 'תגובה חדשה')
+            listing = self.client.get(
+                reverse('notifications:notification_list'),
+                HTTP_ACCEPT_LANGUAGE='he',
+            )
+            # With a signed-in user the page must show translated notifications.
+            self.assertEqual(listing.status_code, 302)
             self.assertIn(str(order.pk), notice.localized_message)
             self.assertIn('איש מקצוע', notice.localized_message)
         notice.refresh_from_db()

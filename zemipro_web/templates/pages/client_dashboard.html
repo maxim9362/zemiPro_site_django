@@ -55,7 +55,7 @@
                 {% endfor %}
             </div>
             {% if active_orders.has_other_pages %}
-            <nav class="pagination" aria-label="Страницы активных заявок">
+            <nav class="pagination" aria-label="{% trans 'Страницы активных заявок' %}">
                 {% if active_orders.has_previous %}
                 <a href="?active_page={{ active_orders.previous_page_number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">← {% trans 'Назад' %}</a>
                 {% endif %}
@@ -93,7 +93,7 @@
                 {% endfor %}
             </div>
             {% if in_progress_orders.has_other_pages %}
-            <nav class="pagination" aria-label="Страницы заявок в процессе">
+            <nav class="pagination" aria-label="{% trans 'Страницы заявок в процессе' %}">
                 {% if in_progress_orders.has_previous %}
                 <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.previous_page_number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">← {% trans 'Назад' %}</a>
                 {% endif %}
@@ -127,7 +127,7 @@
                 {% endfor %}
             </div>
             {% if completed_orders.has_other_pages %}
-            <nav class="pagination" aria-label="Страницы завершённых заявок">
+            <nav class="pagination" aria-label="{% trans 'Страницы завершённых заявок' %}">
                 {% if completed_orders.has_previous %}
                 <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.previous_page_number }}&amp;cancelled_page={{ cancelled_orders.number }}">← {% trans 'Назад' %}</a>
                 {% endif %}
@@ -161,7 +161,7 @@
                 {% endfor %}
             </div>
             {% if cancelled_orders.has_other_pages %}
-            <nav class="pagination" aria-label="Страницы отменённых заявок">
+            <nav class="pagination" aria-label="{% trans 'Страницы отменённых заявок' %}">
                 {% if cancelled_orders.has_previous %}
                 <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.previous_page_number }}">← {% trans 'Назад' %}</a>
                 {% endif %}

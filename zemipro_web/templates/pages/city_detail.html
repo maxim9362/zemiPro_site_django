@@ -2,12 +2,12 @@
 {% load i18n %}
 
 {% block title %}{{ city.localized_name }} — ZemiPro{% endblock %}
-{% block meta_description %}{% trans 'Мастер' %}а по ремонту в {{ city.localized_name }}. Сантехника, электрика, кондиционеры, ремонт квартир.{% endblock %}
+{% block meta_description %}{% trans 'Поиск специалистов в городе' %} {{ city.localized_name }}.{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>{% trans 'Мастер' %}а в {{ city.localized_name }}</h1>
+        <h1>{% trans 'Специалисты в городе' %} {{ city.localized_name }}</h1>
         <p>{% trans 'Выберите категорию или просматривайте всех мастеров города' %}</p>
     </div>
 </section>
@@ -66,11 +66,11 @@
         {% endif %}
 
         {% else %}
-        <p class="empty-state">{% trans 'Мастер' %}ов{% if selected_category %} в выбранной категории{% endif %} в {{ city.localized_name }} {% trans 'пока нет.' %}</p>
+        <p class="empty-state">{% trans 'Пока нет подходящих специалистов' %} — {{ city.localized_name }}</p>
         {% endif %}
 
         <div class="cta-block" style="margin-top: 32px;">
-            <h2>{% trans 'Создать заявку' %} в {{ city.localized_name }}</h2>
+            <h2>{% trans 'Создать заявку' %} — {{ city.localized_name }}</h2>
             <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
         </div>
 
