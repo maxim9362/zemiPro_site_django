@@ -130,7 +130,7 @@ def fill_missing(instance, fields, *, check):
     """Keep admin edits, is_active, IDs, slugs and sort order unchanged."""
     missing = []
     for name in (
-        'name_en', 'name_he', 'description_ru', 'description_en', 'description_he',
+        'name_en', 'name_he', 'description', 'description_ru', 'description_en', 'description_he',
         'seo_title_ru', 'seo_title_en', 'seo_title_he',
         'seo_description_ru', 'seo_description_en', 'seo_description_he',
     ):

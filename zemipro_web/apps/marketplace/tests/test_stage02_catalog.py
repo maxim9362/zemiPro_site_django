@@ -93,6 +93,7 @@ class Stage02CatalogSeedTests(TestCase):
         self.assertEqual(old_service.name_ru, 'Локальный термин')
         self.assertEqual(old_cat.section.slug, 'repairs')
         self.assertTrue(old_cat.name_en and old_cat.name_he)
+        self.assertTrue(old_cat.description)
         self.assertTrue(old_service.name_en and old_service.name_he)
 
         # Operator edits must not be reset by an idempotent re-run.
