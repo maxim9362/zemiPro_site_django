@@ -100,29 +100,36 @@
     </div>
 </section>
 
+{% trans '— Не выбрана —' as unselected_label %}
+{% trans '— Загрузка... —' as loading_label %}
 <script>
-document.getElementById('id_category').addEventListener('change', function() {
-    var categoryId = this.value;
-    var subcategorySelect = document.getElementById('id_subcategory');
-    subcategorySelect.innerHTML = '<option value="">— Загрузка... —</option>';
+(function () {
+    const category = document.getElementById('id_category');
+    const subcategory = document.getElementById('id_subcategory');
+    if (!category || !subcategory) return;
 
-    if (!categoryId) {
-        subcategorySelect.innerHTML = '<option value="">— Не выбрана —</option>';
-        return;
-    }
+    const notSelected = '{{ unselected_label|escapejs }}';
+    const loading = '{{ loading_label|escapejs }}';
+    category.addEventListener('change', function () {
+        const selectedId = category.value;
+        subcategory.replaceChildren(new Option(selectedId ? loading : notSelected, ''));
+        if (!selectedId) return;
 
-    fetch('/api/subcategories/' + categoryId + '/')
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            var html = '<option value="">— Не выбрана —</option>';
-            data.forEach(function(item) {
-                html += '<option value="' + item.id + '">' + item.name + '</option>';
+        fetch('/api/subcategories/' + encodeURIComponent(selectedId) + '/')
+            .then(function (response) {
+                if (!response.ok) throw new Error('Request failed');
+                return response.json();
+            })
+            .then(function (items) {
+                subcategory.replaceChildren(new Option(notSelected, ''));
+                items.forEach(function (item) {
+                    subcategory.add(new Option(item.name, String(item.id)));
+                });
+            })
+            .catch(function () {
+                subcategory.replaceChildren(new Option(notSelected, ''));
             });
-            subcategorySelect.innerHTML = html;
-        })
-        .catch(function() {
-            subcategorySelect.innerHTML = '<option value="">— Не выбрана —</option>';
-        });
-});
+    });
+}());
 </script>
 {% endblock %}

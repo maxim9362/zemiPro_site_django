@@ -21,7 +21,7 @@
                 <a href="{% url 'marketplace:client_dashboard' %}">{% trans 'Кабинет клиента' %}</a>
                 <a href="{% url 'marketplace:worker_dashboard' %}">{% trans 'Кабинет мастера' %}</a>
                 <a href="{% url 'notifications:notification_list' %}" class="nav__notif">
-                    Уведомления
+                    {% trans 'Уведомления' %}
                     {% if unread_notifications_count %}
                     <span class="notif-badge">{{ unread_notifications_count }}</span>
                     {% endif %}

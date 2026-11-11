@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{{ profile.user }} — мастер по ремонту — ZemiPro{% endblock %}
-{% block meta_description %}{% trans 'Профиль мастера' %} {{ profile.user }}. {% trans 'Город:' %} {{ profile.city.localized_name }}. {% trans 'Категории:' %} {% for s in profile.skills.all %}{{ s.name_ru }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
+{% block title %}{{ profile.user }} — ZemiPro{% endblock %}
+{% block meta_description %}{% trans 'Профиль мастера' %} {{ profile.user }}. {% trans 'Город:' %} {{ profile.city.localized_name }}. {% trans 'Категории:' %} {% for s in profile.skills.all %}{{ s.localized_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
 
 {% block content %}
 <section class="page-header">

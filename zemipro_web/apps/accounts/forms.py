@@ -1,4 +1,6 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
+from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
 
@@ -18,10 +20,10 @@ class RegistrationForm(UserCreationForm):
 class ClientProfileForm(forms.ModelForm):
     """Форма профиля клиента."""
 
-    city = forms.ModelChoiceField(
+    city = LocalizedModelChoiceField(
         queryset=City.objects.filter(is_active=True),
-        label='Город',
-        empty_label='Выберите город',
+        label=_('Город'),
+        empty_label=_('Выберите город'),
     )
 
     class Meta:
@@ -29,7 +31,7 @@ class ClientProfileForm(forms.ModelForm):
         fields = ['city', 'contact']
         widgets = {
             'contact': forms.TextInput(attrs={
-                'placeholder': '+972-XX-XXX-XXXX или @username',
+                'placeholder': _('+972-XX-XXX-XXXX или @username'),
             }),
         }
 
@@ -37,28 +39,28 @@ class ClientProfileForm(forms.ModelForm):
 class WorkerProfileForm(forms.ModelForm):
     """Форма профиля мастера."""
 
-    city = forms.ModelChoiceField(
+    city = LocalizedModelChoiceField(
         queryset=City.objects.filter(is_active=True),
-        label='Город',
-        empty_label='Выберите город',
+        label=_('Город'),
+        empty_label=_('Выберите город'),
     )
-    skills = forms.ModelMultipleChoiceField(
+    skills = LocalizedModelMultipleChoiceField(
         queryset=Category.objects.filter(is_active=True).filter(
             Q(section__isnull=True) | Q(section__is_active=True)
         ),
-        label='Категории работ',
+        label=_('Категории работ'),
         widget=forms.CheckboxSelectMultiple,
     )
 
-    service_cities = forms.ModelMultipleChoiceField(
+    service_cities = LocalizedModelMultipleChoiceField(
         queryset=City.objects.filter(is_active=True).order_by('name_ru', 'pk'),
-        label='Города обслуживания (можно выбрать несколько)',
+        label=_('Города обслуживания (можно выбрать несколько)'),
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )
     offers_remote = forms.BooleanField(
         required=False,
-        label='Выполняю подходящие услуги онлайн',
+        label=_('Выполняю подходящие услуги онлайн'),
     )
 
     class Meta:
@@ -69,11 +71,11 @@ class WorkerProfileForm(forms.ModelForm):
         ]
         widgets = {
             'contact': forms.TextInput(attrs={
-                'placeholder': '+972-XX-XXX-XXXX или @username',
+                'placeholder': _('+972-XX-XXX-XXXX или @username'),
             }),
             'description': forms.Textarea(attrs={
                 'rows': 4,
-                'placeholder': 'Опишите ваш опыт, инструменты, особенности работы (минимум 20 символов)',
+                'placeholder': _('Опишите ваш опыт, инструменты, особенности работы (минимум 20 символов)'),
             }),
         }
 
@@ -92,7 +94,7 @@ class WorkerProfileForm(forms.ModelForm):
     def clean_description(self):
         desc = self.cleaned_data.get('description', '')
         if len(desc) < 20:
-            raise forms.ValidationError('Описание должно содержать минимум 20 символов.')
+            raise forms.ValidationError(_('Описание должно содержать минимум 20 символов.'))
         return desc
 
 
@@ -108,7 +110,7 @@ class RatingCreateForm(forms.ModelForm):
             }),
             'review_text': forms.Textarea(attrs={
                 'rows': 4,
-                'placeholder': 'Расскажите о качестве работы (необязательно)',
+                'placeholder': _('Расскажите о качестве работы (необязательно)'),
             }),
         }
         labels = {

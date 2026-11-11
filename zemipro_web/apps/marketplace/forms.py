@@ -1,4 +1,6 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
+from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 from django.db.models import Q
 
 from apps.locations.models import City
@@ -10,56 +12,56 @@ class OrderCreateForm(forms.ModelForm):
 
     customer_name = forms.CharField(
         max_length=120,
-        label='Ваше имя',
+        label=_('Ваше имя'),
         widget=forms.TextInput(attrs={
-            'placeholder': 'Иван',
+            'placeholder': _('Иван'),
         }),
     )
     customer_phone = forms.CharField(
         max_length=30,
-        label='Телефон',
+        label=_('Телефон'),
         widget=forms.TextInput(attrs={
             'placeholder': '+972-XX-XXX-XXXX',
         }),
     )
-    category = forms.ModelChoiceField(
+    category = LocalizedModelChoiceField(
         queryset=Category.objects.filter(is_active=True).filter(
             Q(section__isnull=True) | Q(section__is_active=True)
         ),
-        label='Категория',
-        empty_label='Выберите категорию',
+        label=_('Категория'),
+        empty_label=_('Выберите категорию'),
     )
-    subcategory = forms.ModelChoiceField(
+    subcategory = LocalizedModelChoiceField(
         queryset=Subcategory.objects.none(),
-        label='Подкатегория',
+        label=_('Подкатегория'),
         required=False,
-        empty_label='— Не выбрана —',
+        empty_label=_('— Не выбрана —'),
     )
-    city = forms.ModelChoiceField(
+    city = LocalizedModelChoiceField(
         queryset=City.objects.filter(is_active=True),
-        label='Город',
-        empty_label='Выберите город',
+        label=_('Город'),
+        empty_label=_('Выберите город'),
     )
     address = forms.CharField(
         max_length=255,
-        label='Адрес',
+        label=_('Адрес'),
         widget=forms.TextInput(attrs={
-            'placeholder': 'Herzl 45, Тель-Авив',
+            'placeholder': _('Herzl 45, Тель-Авив'),
         }),
     )
     description = forms.CharField(
-        label='Описание задачи',
+        label=_('Описание задачи'),
         widget=forms.Textarea(attrs={
             'rows': 5,
-            'placeholder': 'Подробно опишите задачу (минимум 30 символов)',
+            'placeholder': _('Подробно опишите задачу (минимум 30 символов)'),
         }),
     )
     price = forms.CharField(
         max_length=50,
         required=False,
-        label='Бюджет',
+        label=_('Бюджет'),
         widget=forms.TextInput(attrs={
-            'placeholder': '500 ₪ или Договорная',
+            'placeholder': _('500 ₪ или Договорная'),
         }),
     )
 
@@ -85,19 +87,19 @@ class OrderCreateForm(forms.ModelForm):
     def clean_description(self):
         desc = self.cleaned_data.get('description', '')
         if len(desc) < 30:
-            raise forms.ValidationError('Описание должно содержать минимум 30 символов.')
+            raise forms.ValidationError(_('Описание должно содержать минимум 30 символов.'))
         return desc
 
     def clean_customer_phone(self):
         phone = self.cleaned_data.get('customer_phone', '')
         if len(phone) < 7:
-            raise forms.ValidationError('Введите корректный номер телефона (минимум 7 символов).')
+            raise forms.ValidationError(_('Введите корректный номер телефона (минимум 7 символов).'))
         return phone
 
     def clean_price(self):
         price = self.cleaned_data.get('price', '').strip()
         if not price:
-            return 'Договорная'
+            return _('Договорная')
         return price
 
 
@@ -110,7 +112,7 @@ class ResponseCreateForm(forms.ModelForm):
         widgets = {
             'message': forms.Textarea(attrs={
                 'rows': 4,
-                'placeholder': 'Напишите короткое сообщение клиенту: когда сможете приехать, опыт, ориентировочная цена.',
+                'placeholder': _('Напишите короткое сообщение клиенту: когда сможете приехать, опыт, ориентировочная цена.'),
                 'maxlength': 1000,
             }),
         }
