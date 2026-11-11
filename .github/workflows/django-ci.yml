@@ -79,6 +79,8 @@ jobs:
         run: |
           docker compose -f docker-compose.django.yml config --quiet
           docker compose -f docker-compose.staging.yml config --quiet
+          docker compose --profile maintenance -f docker-compose.staging.yml config --quiet
+          sh -n docker/staging-backup.sh docker/check-staging-health.sh
 
       - name: Check Django and migration/model consistency
         run: |

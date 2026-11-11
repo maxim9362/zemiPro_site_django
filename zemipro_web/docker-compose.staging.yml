@@ -55,6 +55,27 @@ services:
     networks:
       - backend
 
+  backup:
+    image: postgres:17-alpine
+    profiles: ["maintenance"]
+    restart: "no"
+    entrypoint: ["/bin/sh", "/opt/backup/staging-backup.sh"]
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: zemipro_staging
+      PGDATABASE: zemipro_staging
+      PGPASSWORD: ${STAGING_DB_PASSWORD:?Set a NEW staging PostgreSQL password}
+    volumes:
+      - staging_backups:/backups
+      - ./docker/staging-backup.sh:/opt/backup/staging-backup.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 128m
+    networks:
+      - backend
+
   proxy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -82,6 +103,7 @@ networks:
   edge:
 
 volumes:
+  staging_backups:
   staging_postgres:
   staging_static:
   staging_media:

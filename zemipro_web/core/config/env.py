@@ -70,6 +70,8 @@ def database_config(require_credentials=False):
             'PASSWORD': password,
             'HOST': getter('DB_HOST') if require_credentials else env('DB_HOST', 'localhost'),
             'PORT': port,
+            # Fail a stalled DB connection promptly, including readiness probes.
+            'OPTIONS': {'connect_timeout': 3},
         }
     }
 

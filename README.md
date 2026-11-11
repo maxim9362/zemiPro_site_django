@@ -87,5 +87,14 @@ Install additional dev-only tools using
 root (after installing Django runtime requirements). Details and merge-gate
 requirements: [01.3 CI acceptance](docs/STAGE_01_CI_ACCEPTANCE.md).
 
+## Observability and backups (01.5)
+
+Django exposes `GET /health/live/` and `GET /health/ready/`, and writes
+redacted JSON events to its console. The optional staging backup service,
+synthetic restore procedure, cron schedule template, and monitor script
+are documented in [01.5 logging and recovery](docs/STAGE_01_LOGGING_BACKUP.md).
+**No scheduled backups, monitoring alerts or staging restore have been
+activated or verified yet.** These require a separately authorized host.
+
 Project rules: [AGENTS.md](AGENTS.md). Implementation and acceptance status:
 [roadmap](docs/ROADMAP.md), [progress](docs/PROGRESS.md).
