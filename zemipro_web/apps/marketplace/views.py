@@ -185,22 +185,37 @@ def client_dashboard_view(request):
     if not profile:
         return redirect('accounts:client_profile')
 
+    # Four independent, bounded slices: 1000 historical orders must not
+    # inflate a single HTML response or disclose another client's orders.
     my_orders = Order.objects.filter(
         client=request.user
     ).select_related('category', 'city', 'worker').order_by('-created_at', '-pk')
 
-    active_orders = my_orders.filter(status=Order.Status.NEW)
-    in_progress_orders = my_orders.filter(status=Order.Status.IN_PROGRESS)
-    completed_orders = my_orders.filter(status=Order.Status.COMPLETED)
-    cancelled_orders = my_orders.filter(status=Order.Status.CANCELLED)
+    active_orders = Paginator(
+        my_orders.filter(status=Order.Status.NEW).annotate(
+            response_count=Count('responses')
+        ),
+        ITEMS_PER_PAGE,
+    ).get_page(request.GET.get('active_page'))
 
-    # Constant query count: aggregate response totals for all open orders.
-    visible_orders = my_orders.filter(
-        status__in=[Order.Status.NEW, Order.Status.IN_PROGRESS]
-    ).annotate(response_count=Count('responses'))
+    in_progress_orders = Paginator(
+        my_orders.filter(status=Order.Status.IN_PROGRESS),
+        ITEMS_PER_PAGE,
+    ).get_page(request.GET.get('progress_page'))
+
+    completed_orders = Paginator(
+        my_orders.filter(status=Order.Status.COMPLETED),
+        ITEMS_PER_PAGE,
+    ).get_page(request.GET.get('completed_page'))
+
+    cancelled_orders = Paginator(
+        my_orders.filter(status=Order.Status.CANCELLED),
+        ITEMS_PER_PAGE,
+    ).get_page(request.GET.get('cancelled_page'))
+
     orders_with_responses = [
         {'order': order, 'response_count': order.response_count}
-        for order in visible_orders
+        for order in active_orders
     ]
 
     return render(request, 'pages/client_dashboard.html', {
@@ -211,7 +226,6 @@ def client_dashboard_view(request):
         'cancelled_orders': cancelled_orders,
         'orders_with_responses': orders_with_responses,
     })
-
 
 @login_required
 def order_accept_response_view(request, order_id, response_id):

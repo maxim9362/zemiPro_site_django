@@ -1,0 +1,7 @@
+# Shell scripts must stay LF on Windows (including when core.autocrlf=true).
+*.sh text eol=lf
+*.bash text eol=lf
+Dockerfile* text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.gitattributes text eol=lf

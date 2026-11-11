@@ -61,3 +61,21 @@ class ContainerConfigurationTests(SimpleTestCase):
         self.assertIn('"127.0.0.1:', contents)
         self.assertIn('dev_postgres:', contents)
         self.assertIn('dev_media:', contents)
+
+    def test_shell_scripts_use_lf_and_django_has_writable_home(self):
+        attributes = (self.root.parent / '.gitattributes').read_text(encoding='utf-8')
+        self.assertIn('*.sh text eol=lf', attributes)
+        for script in (
+            'docker/entrypoint.sh',
+            'docker/staging-backup.sh',
+            'docker/check-staging-health.sh',
+            'docker/ci-staging-smoke.sh',
+        ):
+            with self.subTest(path=script):
+                data = (self.root / script).read_bytes()
+                self.assertNotIn(b'\r\n', data)
+
+        dockerfile = (self.root / 'Dockerfile.django').read_text(encoding='utf-8')
+        self.assertIn('HOME=/home/django', dockerfile)
+        self.assertIn('--create-home --home-dir /home/django', dockerfile)
+        self.assertIn('chmod 0700 /home/django', dockerfile)

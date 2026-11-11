@@ -117,3 +117,10 @@ class CatalogPageTests(TestCase):
                     [p.user.username for p in profiles[1:]],
                     ['zz-unrated-0', 'zz-unrated-1'],
                 )
+
+    def test_root_html_language_and_direction_follow_active_locale(self):
+        url = reverse('marketplace:categories_list')
+        for language, direction in (('ru', 'ltr'), ('en', 'ltr'), ('he', 'rtl')):
+            with self.subTest(language=language):
+                response = self.client.get(url, HTTP_ACCEPT_LANGUAGE=language)
+                self.assertContains(response, f'<html lang="{language}" dir="{direction}">')
