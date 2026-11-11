@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import get_language
 
@@ -58,6 +59,13 @@ class City(models.Model):
             return self.name_en
         return self.name_ru
 
+    def clean(self):
+        super().clean()
+        if self.slug and CityAlias.objects.filter(slug=self.slug).exists():
+            raise ValidationError({
+                'slug': 'Канонический slug города уже используется как алиас.'
+            })
+
     def __str__(self):
         return self.localized_name
 
@@ -75,6 +83,13 @@ class CityAlias(models.Model):
         verbose_name = 'Алиас города'
         verbose_name_plural = 'Алиасы городов'
         ordering = ['slug']
+
+    def clean(self):
+        super().clean()
+        if self.slug and City.objects.filter(slug=self.slug).exists():
+            raise ValidationError({
+                'slug': 'Алиас не должен совпадать с каноническим slug города.'
+            })
 
     def __str__(self):
         return f'{self.slug} → {self.city.slug}'

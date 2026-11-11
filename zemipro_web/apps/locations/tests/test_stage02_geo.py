@@ -108,6 +108,17 @@ class Stage02GeographySeedTests(TestCase):
                 self.run_seed()
         self.assertFalse(City.objects.exists())
 
+    def test_admin_validation_rejects_alias_and_city_slug_collisions(self):
+        from django.core.exceptions import ValidationError
+
+        self.run_seed()
+        ashdod = City.objects.get(slug='ashdod')
+        with self.assertRaises(ValidationError):
+            CityAlias(slug='ashdod', city=ashdod).full_clean()
+
+        with self.assertRaises(ValidationError):
+            City(slug='petah-tiqwa', name_ru='Коллизия').full_clean()
+
     def test_hebrew_and_english_district_names(self):
         self.run_seed()
         ashkelon = City.objects.get(slug='ashkelon')
