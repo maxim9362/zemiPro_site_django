@@ -48,7 +48,7 @@ python manage.py test core.tests.test_i18n
 python manage.py test
 ```
 
-The test should cover RU/EN/HE headings/menus, HTML language/direction,
+The test also checks localized moderation reason choices without changing stored identifiers. It should cover RU/EN/HE headings/menus, HTML language/direction,
 page/query retention and cookie via `set_language`, external redirect
 blocking, localized city/category form choices, Hebrew validation errors,
 safe JSON, original content preservation, localized notification details,
