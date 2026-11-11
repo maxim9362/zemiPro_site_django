@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext as _
 
 
 class Notification(models.Model):
@@ -50,6 +51,41 @@ class Notification(models.Model):
             models.Index(fields=['notification_type'], name='notif_type_idx'),
             models.Index(fields=['-created_at'], name='notif_created_idx'),
         ]
+
+    @property
+    def localized_title(self):
+        """Localize known system events at display time, not at write time."""
+        if self.notification_type == self.Type.SYSTEM:
+            return self.title
+        title_map = {
+            self.Type.ORDER_CREATED: 'Заявка создана',
+            self.Type.NEW_RESPONSE: 'Новый отклик',
+            self.Type.RESPONSE_ACCEPTED: 'Вас выбрали',
+            self.Type.RESPONSE_REJECTED: 'Выбран другой мастер',
+            self.Type.ORDER_CANCELLED: 'Заявка отменена',
+            self.Type.ORDER_COMPLETED: 'Заявка завершена',
+            self.Type.REVIEW_CREATED: 'Новый отзыв',
+        }
+        return _(title_map.get(self.notification_type, self.title))
+
+    @property
+    def localized_message(self):
+        """Reconstruct only predefined notifications without changing stored text."""
+        if not self.related_order_id:
+            return self.message
+        templates = {
+            self.Type.ORDER_CREATED: 'Ваша заявка №%(number)s успешно создана. Мастера смогут откликнуться на неё.',
+            self.Type.NEW_RESPONSE: 'Мастер откликнулся на вашу заявку №%(number)s.',
+            self.Type.RESPONSE_ACCEPTED: 'Клиент выбрал вас исполнителем по заявке №%(number)s.',
+            self.Type.RESPONSE_REJECTED: 'По заявке №%(number)s клиент выбрал другого мастера.',
+            self.Type.ORDER_CANCELLED: 'Заявка №%(number)s, на которую вы откликались, была отменена клиентом.',
+            self.Type.ORDER_COMPLETED: 'Клиент отметил заявку №%(number)s как выполненную.',
+            self.Type.REVIEW_CREATED: 'Клиент оставил отзыв по заявке №%(number)s.',
+        }
+        message_id = templates.get(self.notification_type)
+        if message_id is None:
+            return self.message
+        return _(message_id) % {'number': self.related_order_id}
 
     def __str__(self):
         return f'{self.title} → {self.recipient}'

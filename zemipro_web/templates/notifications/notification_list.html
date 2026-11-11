@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
-{% load i18n %}
 
-{% block title %}{% trans 'Уведомления — ZemiPro' %}{% endblock %}
+{% block title %}Уведомления — ZemiPro{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>{% trans 'Уведомления' %}</h1>
+        <h1>Уведомления</h1>
     </div>
 </section>
 
@@ -18,27 +17,27 @@
             <form method="post" action="{% url 'notifications:notification_mark_all_read' %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn--secondary btn--sm">
-                    {% trans 'Отметить все прочитанными' %}
+                    Отметить все прочитанными
                 </button>
             </form>
         </div>
 
         <div class="orders-list">
             {% for notif in page_obj %}
-            <div class="order-card-sm" style="{% if not notif.is_read %}border-left: 3px solid var(--color-primary);{% endif %}">
+            <div class="order-card-sm" style="{% if not notif.is_read %}border-inline-start: 3px solid var(--color-primary);{% endif %}">
                 <div class="order-card-sm__header">
-                    <span class="order-card__category">{{ notif.title }}</span>
+                    <span class="order-card__category">{{ notif.localized_title }}</span>
                     <span style="font-size: 0.8125rem; color: var(--color-text-light);">
                         {{ notif.created_at|date:"d.m.Y H:i" }}
                     </span>
                 </div>
                 <div class="order-card-sm__body">
-                    <p class="order-card-sm__desc">{{ notif.message }}</p>
+                    <p class="order-card-sm__desc">{{ notif.localized_message }}</p>
                     {% if not notif.is_read %}
                     <form method="post" action="{% url 'notifications:notification_mark_read' pk=notif.pk %}" style="margin-top: 8px;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn--secondary btn--sm">
-                            {% trans 'Отметить прочитанным' %}
+                            Отметить прочитанным
                         </button>
                     </form>
                     {% endif %}
@@ -46,7 +45,7 @@
                 {% if notif.related_order %}
                 <div class="order-card-sm__actions">
                     <a href="{% url 'marketplace:order_detail' pk=notif.related_order.pk %}" class="btn btn--primary btn--sm">
-                        {% trans 'Открыть' %} заявку №{{ notif.related_order.pk }}
+                        Открыть заявку №{{ notif.related_order.pk }}
                     </a>
                 </div>
                 {% endif %}
@@ -57,17 +56,17 @@
         {% if page_obj.has_other_pages %}
         <div class="pagination">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" class="btn btn--secondary btn--sm">← {% trans 'Назад' %}</a>
+            <a href="?page={{ page_obj.previous_page_number }}" class="btn btn--secondary btn--sm">← Назад</a>
             {% endif %}
-            <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
+            <span class="pagination__current">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}" class="btn btn--secondary btn--sm">{% trans 'Далее' %} →</a>
+            <a href="?page={{ page_obj.next_page_number }}" class="btn btn--secondary btn--sm">Далее →</a>
             {% endif %}
         </div>
         {% endif %}
 
         {% else %}
-        <p class="empty-state">{% trans 'У вас пока нет уведомлений.' %}</p>
+        <p class="empty-state">У вас пока нет уведомлений.</p>
         {% endif %}
 
     </div>

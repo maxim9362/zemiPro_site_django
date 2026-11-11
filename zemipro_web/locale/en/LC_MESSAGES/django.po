@@ -585,3 +585,120 @@ msgstr "Example name"
 
 msgid "Напишите короткое сообщение клиенту: когда сможете приехать, опыт, ориентировочная цена."
 msgstr "Write a short message about availability, experience and estimated price."
+
+msgid "Города обслуживания (можно выбрать несколько)"
+msgstr "Service cities (choose more than one)"
+
+msgid "Выполняю подходящие услуги онлайн"
+msgstr "I provide online services where available"
+
+msgid "Опишите ваш опыт, инструменты, особенности работы (минимум 20 символов)"
+msgstr "Describe your experience and services (at least 20 characters)"
+
+msgid "Расскажите о качестве работы (необязательно)"
+msgstr "Describe the quality of the work (optional)"
+
+msgid "+972-XX-XXX-XXXX или @username"
+msgstr "+972-XX-XXX-XXXX or @username"
+
+msgid "Найдите мастера по категории"
+msgstr "Find a professional in this category"
+
+msgid "Заявка отменена."
+msgstr "Request cancelled."
+
+msgid "Заявка отмечена как выполненная!"
+msgstr "Request marked as completed!"
+
+msgid "Вы уже оставили отзыв на этот заказ."
+msgstr "You already submitted a review for this request."
+
+msgid "Невозможно оставить отзыв: исполнитель не выбран."
+msgstr "Cannot leave a review: no professional was assigned."
+
+msgid "Отзыв сохранён!"
+msgstr "Review saved!"
+
+msgid "Сначала заполните профиль мастера."
+msgstr "Please complete your professional profile first."
+
+msgid "Нельзя откликнуться на собственную заявку."
+msgstr "You cannot respond to your own request."
+
+msgid "Вы уже откликались на этот заказ."
+msgstr "You already responded to this request."
+
+msgid "Отклик отправлен!"
+msgstr "Response sent!"
+
+msgid "Мастер %(worker)s выбран!"
+msgstr "Professional %(worker)s selected!"
+
+msgid "Для создания заявки требуется авторизация."
+msgstr "Please sign in to create a request."
+
+msgid "Пользователь не является мастером."
+msgstr "This user does not have a professional profile."
+
+msgid "Заказ уже не в статусе «В обработке»."
+msgstr "This request is no longer open."
+
+msgid "Исполнитель для этой заявки уже выбран."
+msgstr "A professional has already been selected for this request."
+
+msgid "Этот отклик уже обработан."
+msgstr "This response has already been processed."
+
+msgid "Вас выбрали"
+msgstr "You were selected"
+
+msgid "Выбран другой мастер"
+msgstr "Another professional was selected"
+
+msgid "Заявка отменена"
+msgstr "Request cancelled"
+
+msgid "Заявка завершена"
+msgstr "Request completed"
+
+msgid "Новый отзыв"
+msgstr "New review"
+
+msgid "Новый отклик"
+msgstr "New response"
+
+msgid "Системное"
+msgstr "System notification"
+
+msgid "Ваша заявка №%(number)s успешно создана. Мастера смогут откликнуться на неё."
+msgstr "Your request no. %(number)s was created. Professionals can now respond."
+
+msgid "Мастер откликнулся на вашу заявку №%(number)s."
+msgstr "A professional responded to your request no. %(number)s."
+
+msgid "Клиент выбрал вас исполнителем по заявке №%(number)s."
+msgstr "A customer selected you for request no. %(number)s."
+
+msgid "По заявке №%(number)s клиент выбрал другого мастера."
+msgstr "The customer selected another professional for request no. %(number)s."
+
+msgid "Заявка №%(number)s, на которую вы откликались, была отменена клиентом."
+msgstr "Request no. %(number)s that you responded to was cancelled by the customer."
+
+msgid "Клиент отметил заявку №%(number)s как выполненную."
+msgstr "The customer marked request no. %(number)s as completed."
+
+msgid "Клиент оставил отзыв по заявке №%(number)s."
+msgstr "A customer left a review for request no. %(number)s."
+
+msgid "Страницы активных заявок"
+msgstr "Pages of active requests"
+
+msgid "Страницы заявок в процессе"
+msgstr "Pages of requests in progress"
+
+msgid "Страницы завершённых заявок"
+msgstr "Pages of completed requests"
+
+msgid "Страницы отменённых заявок"
+msgstr "Pages of cancelled requests"
