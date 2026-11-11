@@ -377,3 +377,11 @@
 - **Приёмочный статус:** `LOCAL_VERIFIED / ACCEPTED_FOR_STAGE_02`. Это подтверждение пригодности для продолжения локальной разработки, **не** `DONE` всей внешней/production инфраструктуры.
 - **Обязательства при будущей подготовке к релизу:** off-host зашифрованный backup и восстановление, реальная доставка alert, branch protection для `main`, публичный staging HTTPS/TLS, реальные p50/p95/RSS на сервере и визуальный HE RTL. Всё `DEFERRED / NOT_VERIFIED`, а не `PASS`.
 - **Ограничения:** Merge только кода, никакого автоматического deploy, миграций на VPS, DNS/Cloudflare, изменения prod БД или создания настоящего staging без отдельного разрешения.
+
+## 2026-11-11 — Stage 01 merged; Stage 02 branch kickoff
+
+- **Stage 01:** PR [#7](https://github.com/maxim9362/zemiPro_site_django/pull/7) **MERGED** into `main`, merge SHA `7202ce1f8f1a6697d9bc6db878666ee719de7017`. Before merge, GitHub Django CI #43080172545 and staging smoke #43080172542 **PASS** on `e5cfbf2`. Stage 01 remains `LOCAL_VERIFIED / ACCEPTED_FOR_STAGE_02`, with external production gates not yet verified and deliberately deferred.
+- **Stage 02:** created branch `stage-02-catalog-localization` **directly from merged main** at `7202ce1`. One branch for all stage 02 substages, one final PR at stage completion; do not open a PR for every substage. Work continues in this ChatGPT development chat; isolated Windows Codex runs tests/reviews.
+- **Sequence:** 02.1 catalog `Category/Subcategory`, verified RU/EN/HE fields and idempotent synthetic seed; 02.2 city/service geography; 02.3 translations & Hebrew RTL; 02.4 localized public catalogue URLs; 02.5 editable service questions; 02.6 import/i18n regression tests and integration review.
+- **Constraints:** no import from Telegram, PSEO or legacy DB; no lost IDs, slugs or existing orders; no arbitrary modifications to the four approved frontend HTML designs; keep public SEO pages accessible; register to create orders; preserve privacy; no production/DNS/VPS/Cloudflare or real-data migrations. Changes are incremental within the single stage branch, with targeted tests and docs per substage.
+- **02.1 state:** `NOT_IMPLEMENTED` (branch and plan prepared only). Need inspect normative catalog TЗ and existing seed/model before proposing code changes; do not assume a category list from incomplete context.
