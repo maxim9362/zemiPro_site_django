@@ -1,0 +1,53 @@
+name: Stage 01 isolated staging smoke
+
+# Strictly synthetic, disposable runner only. No VPS, Cloudflare or real DNS.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/stage01-staging-smoke.yml"
+      - "zemipro_web/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-smoke:
+    name: staging-https-loopback-and-backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      STAGING_DOMAIN: localhost
+      STAGING_BIND_IP: 127.0.0.1
+      STAGING_HTTP_PORT: "18080"
+      STAGING_HTTPS_PORT: "18443"
+      STAGING_DB_PASSWORD: ci-synthetic-isolated-staging-password
+      STAGING_DJANGO_SECRET_KEY: ci-isolated-only-staging-secret-9hW8k2P7q4R6s1V3x5Z7c9B2n4M6a8D0
+
+    defaults:
+      run:
+        working-directory: zemipro_web
+        shell: bash
+
+    steps:
+      - name: Checkout tested PR revision
+        uses: actions/checkout@v4
+
+      - name: Check isolated Docker Compose and script
+        run: |
+          docker compose -f docker-compose.staging.yml config --quiet
+          bash -n docker/ci-staging-smoke.sh
+
+      - name: Build disposable staging and exercise HTTP TLS DB backup
+        run: bash docker/ci-staging-smoke.sh
+
+      - name: Final service diagnostics if smoke failed
+        if: failure()
+        run: |
+          # Synthetic environment only; omit container logs and secrets.
+          docker compose -f docker-compose.staging.yml ps --all || true
+
+      - name: Tear down disposable staging (preserve unknown volumes)
+        if: always()
+        run: docker compose -f docker-compose.staging.yml down --remove-orphans || true

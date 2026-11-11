@@ -142,6 +142,8 @@ flowchart TD
 
 **Повторный Codex-review 2026-11-11 по `c8591a553b59412c56c85ab2b2b584b4f5718719`:** `CODE_REVIEW_PASS` — ZP-01-001–006 устранены, Ruff PASS, GitHub Actions PASS, новая `accounts.0003` PASS, 75/75 Django tests дважды, 89,5% покрытия сервиса заказов, атомарный общий rate limiter PASS. Документация обновляется отдельным commit; инфраструктурные проверки (staging HTTPS, off-host backup/alert, branch protection, p95/RSS, mobile HE/RTL) остаются `BLOCKED/NOT_RUN`. PR можно открыть как Draft, **без merge** и без закрытия этапа.
 
+**Изолированная CI smoke-репетиция (2026-11-11):** добавляется `Stage 01 isolated staging smoke`, запускающая staging Compose на временном GitHub runner только через `localhost`: локальный TLS, health, статические файлы/запрет media, DB persistence, синтетический backup и HTTP timing. `WORKFLOW_NOT_YET_VERIFIED` до фактического run. Это не real DNS/TLS staging, не off-host backup/alert, не mobile RTL и не branch-protection gate.
+
 **Решение по этапу 01:** закрывать только после выполненных подэтапов (или документированного `DEFERRED` с подтверждением), адресных проверок, необходимых интеграционных тестов и принятия единственного этапного PR.
 
 ### Этап 02. Категории, география, три языка
