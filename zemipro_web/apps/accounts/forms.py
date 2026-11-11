@@ -1,8 +1,9 @@
 from django import forms
-from django.utils.translation import gettext_lazy as _
-from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
+
+from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 
 from apps.locations.models import City
 from apps.marketplace.models import Category, Rating
@@ -29,6 +30,7 @@ class ClientProfileForm(forms.ModelForm):
     class Meta:
         model = ClientProfile
         fields = ['city', 'contact']
+        labels = {'contact': _('Контакт для связи')}
         widgets = {
             'contact': forms.TextInput(attrs={
                 'placeholder': _('+972-XX-XXX-XXXX или @username'),
@@ -69,6 +71,11 @@ class WorkerProfileForm(forms.ModelForm):
             'city', 'contact', 'description', 'skills', 'service_cities',
             'offers_remote', 'receive_notifications',
         ]
+        labels = {
+            'contact': _('Контакт для связи'),
+            'description': _('Описание услуг'),
+            'receive_notifications': _('Получать уведомления о новых заявках'),
+        }
         widgets = {
             'contact': forms.TextInput(attrs={
                 'placeholder': _('+972-XX-XXX-XXXX или @username'),
@@ -87,7 +94,7 @@ class WorkerProfileForm(forms.ModelForm):
                 work_mode__in=('online', 'both')
             ).exists():
                 raise forms.ValidationError(
-                    'Для онлайн-работы выберите хотя бы одну услугу с онлайн-форматом.'
+                    _('Для онлайн-работы выберите хотя бы одну услугу с онлайн-форматом.')
                 )
         return data
 
@@ -114,6 +121,6 @@ class RatingCreateForm(forms.ModelForm):
             }),
         }
         labels = {
-            'rating': 'Оценка (от 1 до 5)',
-            'review_text': 'Текст отзыва',
+            'rating': _('Оценка (от 1 до 5)'),
+            'review_text': _('Текст отзыва'),
         }

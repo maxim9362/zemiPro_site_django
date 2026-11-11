@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block title %}{{ category.localized_name }} — ZemiPro{% endblock %}
-{% block meta_description %}{{ category.localized_description }}. Найдите мастера по категории «{{ category.localized_name }}» в Израиле.{% endblock %}
+{% block meta_description %}{{ category.localized_description }}. {% trans 'Найдите мастера по категории' %} {{ category.localized_name }}.{% endblock %}
 
 {% block content %}
 <section class="page-header">

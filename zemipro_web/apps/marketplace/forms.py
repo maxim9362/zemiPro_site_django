@@ -1,7 +1,8 @@
 from django import forms
-from django.utils.translation import gettext_lazy as _
-from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
+
+from core.forms import LocalizedModelChoiceField
 
 from apps.locations.models import City
 from .models import Category, Order, Response, Subcategory
@@ -99,7 +100,7 @@ class OrderCreateForm(forms.ModelForm):
     def clean_price(self):
         price = self.cleaned_data.get('price', '').strip()
         if not price:
-            return _('Договорная')
+            return 'Договорная'
         return price
 
 
@@ -117,5 +118,5 @@ class ResponseCreateForm(forms.ModelForm):
             }),
         }
         labels = {
-            'message': 'Сообщение клиенту',
+            'message': _('Сообщение клиенту'),
         }

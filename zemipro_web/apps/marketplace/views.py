@@ -2,8 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, F, Prefetch, Q
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.translation import gettext as _
 
 from apps.accounts.forms import RatingCreateForm
 from apps.accounts.models import WorkerProfile
@@ -48,6 +49,26 @@ def categories_list(request):
         'sections': sections,
         'unassigned_categories': unassigned_categories,
     })
+
+
+
+def api_subcategories(request, category_id):
+    """Public localized dependent choices; no free-text or private data."""
+    if request.method != 'GET':
+        raise Http404
+    get_object_or_404(
+        Category.objects.filter(is_active=True).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ),
+        pk=category_id,
+    )
+    choices = Subcategory.objects.filter(
+        category_id=category_id, is_active=True,
+    ).order_by('sort_order', 'pk')
+    return JsonResponse([
+        {'id': item.pk, 'name': item.localized_name}
+        for item in choices
+    ], safe=False)
 
 
 def category_detail(request, slug):
@@ -285,7 +306,7 @@ def order_accept_response_view(request, order_id, response_id):
     try:
         response = accept_response(response)
     except ValueError as error:
-        messages.error(request, str(error))
+        messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
 
     create_notification(
@@ -311,7 +332,7 @@ def order_accept_response_view(request, order_id, response_id):
         except User.DoesNotExist:
             continue
 
-    messages.success(request, f'Мастер {response.worker} выбран!')
+    messages.success(request, _('Мастер %(worker)s выбран!') % {'worker': response.worker})
     return redirect('marketplace:order_detail', pk=order.pk)
 
 
@@ -342,7 +363,7 @@ def order_cancel_view(request, pk):
         except User.DoesNotExist:
             continue
 
-    messages.success(request, 'Заявка отменена.')
+    messages.success(request, _('Заявка отменена.'))
     return redirect('marketplace:order_detail', pk=pk)
 
 
@@ -363,7 +384,7 @@ def order_complete_view(request, pk):
             related_order=order,
         )
 
-    messages.success(request, 'Заявка отмечена как выполненная!')
+    messages.success(request, _('Заявка отмечена как выполненная!'))
     return redirect('marketplace:order_detail', pk=pk)
 
 
@@ -374,11 +395,11 @@ def rating_create_view(request, pk):
     )
 
     if Rating.objects.filter(order=order).exists():
-        messages.info(request, 'Вы уже оставили отзыв на этот заказ.')
+        messages.info(request, _('Вы уже оставили отзыв на этот заказ.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if not order.worker:
-        messages.error(request, 'Невозможно оставить отзыв: исполнитель не выбран.')
+        messages.error(request, _('Невозможно оставить отзыв: исполнитель не выбран.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if request.method == 'POST':
@@ -398,7 +419,7 @@ def rating_create_view(request, pk):
                 related_order=order,
             )
 
-            messages.success(request, 'Отзыв сохранён!')
+            messages.success(request, _('Отзыв сохранён!'))
             return redirect('marketplace:order_detail', pk=pk)
     else:
         form = RatingCreateForm()
@@ -434,7 +455,7 @@ def worker_dashboard_view(request):
 def order_respond_view(request, pk):
     profile = get_worker_profile(request.user)
     if not profile:
-        messages.warning(request, 'Сначала заполните профиль мастера.')
+        messages.warning(request, _('Сначала заполните профиль мастера.'))
         return redirect('accounts:worker_profile')
 
     order = get_object_or_404(
@@ -443,12 +464,12 @@ def order_respond_view(request, pk):
     )
 
     if order.client_id == request.user.pk:
-        messages.error(request, 'Нельзя откликнуться на собственную заявку.')
+        messages.error(request, _('Нельзя откликнуться на собственную заявку.'))
         return redirect('marketplace:order_detail', pk=order.pk)
 
     existing = Response.objects.filter(order=order, worker=request.user).first()
     if existing:
-        messages.info(request, 'Вы уже откликались на этот заказ.')
+        messages.info(request, _('Вы уже откликались на этот заказ.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if request.method == 'POST':
@@ -470,10 +491,10 @@ def order_respond_view(request, pk):
                         related_order=order,
                     )
 
-                messages.success(request, 'Отклик отправлен!')
+                messages.success(request, _('Отклик отправлен!'))
                 return redirect('marketplace:order_detail', pk=pk)
             except ValueError as e:
-                messages.error(request, str(e))
+                messages.error(request, _(str(e)))
     else:
         form = ResponseCreateForm()
 

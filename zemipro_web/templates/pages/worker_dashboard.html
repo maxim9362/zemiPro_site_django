@@ -47,7 +47,7 @@
                     </div>
                     <div class="order-card-sm__body">
                         <p class="order-card-sm__city">{{ order.city.localized_name }}</p>
-                        <p class="order-card-sm__price">{{ order.price }}</p>
+                        <p class="order-card-sm__price">{% trans order.price %}</p>
                         <p class="order-card-sm__date">{{ order.created_at|date:"d.m.Y" }}</p>
                     </div>
                     <div class="order-card-sm__actions">

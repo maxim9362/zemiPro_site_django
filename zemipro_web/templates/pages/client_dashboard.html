@@ -27,7 +27,7 @@
             <p><strong>{% trans 'Город:' %}</strong> {{ profile.city.localized_name }}</p>
             <p><strong>{% trans 'Контакт:' %}</strong> {{ profile.contact }}</p>
             <a href="{% url 'accounts:client_profile' %}" class="btn btn--secondary">{% trans 'Редактировать профиль' %}</a>
-            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary" style="margin-left: 8px;">{% trans 'Создать заявку' %}</a>
+            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary" style="margin-inline-start: 8px;">{% trans 'Создать заявку' %}</a>
         </div>
 
         {% if active_orders %}
@@ -44,7 +44,7 @@
                     <div class="order-card-sm__body">
                         <p class="order-card-sm__city">{{ item.order.city.localized_name }} · {{ item.order.address }}</p>
                         <p class="order-card-sm__desc">{{ item.order.description|truncatewords:20 }}</p>
-                        <p class="order-card-sm__price">{{ item.order.price }}</p>
+                        <p class="order-card-sm__price">{% trans item.order.price %}</p>
                         <p class="order-card-sm__date">{% trans 'Откликов:' %} {{ item.response_count }}</p>
                     </div>
                     <div class="order-card-sm__actions">
@@ -81,7 +81,7 @@
                     <div class="order-card-sm__body">
                         <p class="order-card-sm__city">{{ order.city.localized_name }} · {{ order.address }}</p>
                         <p class="order-card-sm__desc">{{ order.description|truncatewords:20 }}</p>
-                        <p class="order-card-sm__price">{{ order.price }}</p>
+                        <p class="order-card-sm__price">{% trans order.price %}</p>
                         {% if order.worker %}
                         <p class="order-card-sm__date">{% trans 'Мастер:' %} {{ order.worker }}</p>
                         {% endif %}

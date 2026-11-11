@@ -7,7 +7,7 @@
 <section class="page-header">
     <div class="container">
         <h1>{% trans 'Заказ' %} #{{ order.pk }}</h1>
-        <p>{% trans 'Заявка создана' %} {{ order.created_at|date:"d.m.Y в H:i" }}</p>
+        <p>{% trans 'Заявка создана' %} {{ order.created_at|date:"d.m.Y H:i" }}</p>
     </div>
 </section>
 
@@ -41,13 +41,13 @@
                 </div>
                 {% if can_view_private_details %}
                 <div class="order-card__field">
-                    <strong>{% trans 'Адрес:' %}</strong> {{ order.address }}
+                    <strong>{% trans 'Адрес:' %}</strong> <bdi dir="auto">{{ order.address }}</bdi>
                 </div>
                 {% endif %}
                 {% if can_view_private_details %}
                 <div class="order-card__field">
                     <strong>{% trans 'Описание:' %}</strong>
-                    <p>{{ order.description }}</p>
+                    <p dir="auto">{{ order.description }}</p>
                 </div>
                 {% else %}
                 <div class="order-card__field">
@@ -56,7 +56,7 @@
                 </div>
                 {% endif %}
                 <div class="order-card__field">
-                    <strong>{% trans 'Бюджет:' %}</strong> {{ order.price }}
+                    <strong>{% trans 'Бюджет:' %}</strong> {% trans order.price %}
                 </div>
 
                 {% if order.worker and is_owner %}
@@ -67,7 +67,7 @@
 
                 {% if can_view_private_details %}
                 <div class="order-card__field">
-                    <strong>{% trans 'Контакт клиента:' %}</strong> {{ order.customer_phone }}
+                    <strong>{% trans 'Контакт клиента:' %}</strong> <bdi dir="ltr">{{ order.customer_phone }}</bdi>
                 </div>
                 {% endif %}
             </div>
