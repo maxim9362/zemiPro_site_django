@@ -1,12 +1,12 @@
 # ZemiPro — 00.3: реестр источников и контрольной точки
 
-**Дата:** 2026-11-10 · **Статус:** STATICALLY_INVENTORIED / RUNTIME_UNVERIFIED
+**Дата:** 2026-11-11 · **Статус:** READY_FOR_OWNER_ACTION / SYNTHETIC_RESTORE_PASS
 
 ## Контрольная точка исходного кода
 
 | Актив | Ревизия/местоположение | Проверено |
 | --- | --- | --- |
-| Основной Django + архивный Telegram | `maxim9362/zemiPro_site_django`, `main` @ `ba337737c6912ebaa922ae9b5cafebc722cbd71b` | Git SHA известен; runtime DB не открывалась |
+| Основной Django | `maxim9362/zemiPro_site_django`, `stage-00-audit` @ `94526454ff0b1102e038f5a74ab5aeb3d3be67f9` до текущих правок | Единственный runtime; рабочая DB не открывалась |
 | Подэтап Django 01.1 (в отдельной ветке) | `stage-01-stabilization` — коммит `5cdb19c6a790031d32234dbaad21353bf489bafb` включён в историю | Код существует в Git, не развёрнут |
 | PSEO (удалён владельцем; исторические метаданные) | Был `maxim9362/zemipro_site_pseo`, tree `def493642dbb86ffe7543efecb81f08fecf50e60` | GitHub API сейчас 404; запись историческая, не доступный репозиторий |
 | Документация об обязательности этапа 13 | PR #5, v1.3.0, пока отдельная ветка | Не объединено в `main` на момент фиксации |
@@ -15,11 +15,11 @@
 
 | Источник | Указано в конфигурации или Git | Подтверждённое наличие/размер | Сохранение/восстановление |
 | --- | --- | --- | --- |
-| Django PostgreSQL | `zemipro_web/docker-compose.django.yml`: `postgres:15-alpine`, volume `zemipro_django_data`, локальный порт `5433` | Реальный контейнер, база, версии, строки — UNVERIFIED | NOT_RUN |
+| Django PostgreSQL | `zemipro_web/docker-compose.django.yml`: `postgres:15-alpine`, volume `zemipro_django_data`, локальный порт `5433` | Реальный контейнер/данные — UNVERIFIED; synthetic PostgreSQL 17.11 — VERIFIED | SYNTHETIC RESTORE PASS; real OWNER_CONFIRMATION_REQUIRED |
 | Django media | `zemipro_web/core/settings.py`: `MEDIA_ROOT` в `zemipro_web/media/` | Фактические файлы/размер неизвестны; в Git не перечислены | NOT_RUN |
-| Django migrations | `zemipro_web/apps/*/migrations/` (accounts, marketplace, locations, notifications, moderation, analytics) | Файлы есть, applied migrations в DB UNVERIFIED | Git-снимок; DB restore NOT_RUN |
-| Архивный Telegram PostgreSQL | `docker-compose.yml`: `postgres:15-alpine`, volume `postgres_data` | Реальный runtime/содержимое UNVERIFIED | NOT_RUN; не переносить |
-| Старый PSEO SQLite | `masters_admin_write.db` (Git-tree size 5 771 264 bytes), `zemi_master_seo_storage.db` (741 376 bytes) | Отслеживаемые файлы Git; не открывались, строки/PII UNVERIFIED | Нет отдельного проверенного backup; не переносить в Django |
+| Django migrations | `zemipro_web/apps/*/migrations/` (accounts, marketplace, locations, notifications, moderation, analytics) | 27 applied migrations подтверждены только в synthetic DB | Git-снимок; synthetic restore PASS |
+| Архивный Telegram PostgreSQL | Только исторические Git-метаданные | Не нужен новой платформе | REJECT: не переносить и не восстанавливать |
+| Старый PSEO SQLite | Только исторические метаданные удалённого репозитория | Не нужен новой платформе | REJECT: не переносить и не восстанавливать |
 | Реальные secrets/env | PSEO `.env`, `index_site/service_account.json` | По именам есть, значения/валидность не изучались | NOT_RUN; риск 00.2 |
 
 **Не путать Git SHA и контрольные суммы реальной БД:** SHA коммита доказывает состояние репозитория, но не сохранность deployment, содержимого PostgreSQL или медиа.
@@ -42,3 +42,7 @@
 | Итог PASS/FAIL, проблемы и ответственный | NOT_RUN |
 
 Данные внешних сервисов, настоящая production-БД и приватные SQLite не были прочитаны. Отдельное подтверждение владельца требуется для любых операций с ними.
+
+## Независимая synthetic-проверка
+
+На PostgreSQL 17.11 backup/restore завершён успешно: источник и восстановленная цель содержали одинаковые **27 миграций, 8 категорий, 56 подкатегорий и 25 городов**. Проверка не доказывает существование или сохранность реальной Django-БД/media. Доступная конфигурация не содержит доказательств ценных пользовательских данных; владелец должен подтвердить их наличие. При отсутствии такой БД процедура становится обязательной перед первым production-развёртыванием.

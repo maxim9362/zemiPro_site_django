@@ -1,9 +1,9 @@
 # ZemiPro — инвентаризация существующих реализаций (00.1)
 
-**Срез:** 2026-11-10 · **Статус:** `IN_PROGRESS / STATICALLY_INVENTORIED` (техническая инвентаризация выполнена; выборочная независимая проверка и приёмка ещё нужны).
-**Репозитории/ревизии:** Django и Telegram `maxim9362/zemiPro_site_django@ba337737c6912ebaa922ae9b5cafebc722cbd71b` (`main`); PSEO `maxim9362/zemipro_site_pseo`, `main` (дерево `def493642dbb86ffe7543efecb81f08fecf50e60`). Отдельно учтена *не объединённая* разработка `stage-01-stabilization` (подэтап 01.1, коммит `5cdb19c6`).
-**Источники требований:** `AGENTS.md`, `docs/ROADMAP.md`, `docs/DEVELOPMENT_PLAN.md`, `docs/TECHNICAL_SPEC.md`; PR #5 с обновлением нормативных документов до v1.3.0 открыт и не является частью этого среза.
-**Граница проверки:** читались структуры репозиториев и обычные исходники/модели/тесты; команды, сетевой запуск, миграции, реальный Docker, SQL-запросы и загрузка закрытых данных не выполнялись. Содержимое `.env`, JSON учётных данных и файлов баз PSEO **не открывалось**, секреты/PII не копировались в документ.
+**Срез:** 2026-11-11 · **Статус:** `DONE / INDEPENDENTLY_VERIFIED`.
+**Репозитории/ревизии:** единственный runtime — `maxim9362/zemiPro_site_django`, проверенная точка ветки `stage-00-audit@94526454ff0b1102e038f5a74ab5aeb3d3be67f9`; удалённые Telegram/PSEO сведения ниже являются только исторической инвентаризацией. Отдельно существует не объединённая работа этапа 01.
+**Источники требований:** `AGENTS.md`, `docs/ROADMAP.md`, `docs/DEVELOPMENT_PLAN.md`, `docs/TECHNICAL_SPEC.md`, ADR-0001/0002/0003. Требования v1.3 PR #5 сохранены в текущей ветке без merge PR #5.
+**Граница проверки:** независимый аудит проверил дерево, Django-код, миграции, документы и тесты; 17/17 Django tests, миграции и synthetic PostgreSQL restore прошли. Production, реальные базы/media и секретные значения не открывались. Первоначальные `NOT_RUN` ниже относятся к историческому срезу 2026-11-10 и переопределены текущими результатами там, где это указано.
 
 ## Решение владельца 2026-11-10: Telegram исключён из целевой архитектуры
 
@@ -18,7 +18,7 @@
 - **Web:** `zemipro_web/` — существующий Django-проект с `apps/accounts`, `marketplace`, `locations`, `seo`, `notifications`, `moderation`, `analytics`; `core/urls.py` соединяет эти приложения; Django ORM + PostgreSQL, миграции в приложениях. В `main` ещё единый `core/settings.py`. Ветка `stage-01-stabilization` уже содержит раздельные конфигурации и дополнительные тесты 01.1; её не переносить в этап 00.
 - **Telegram legacy (архив, исключён из разработки):** корневые `main.py`, `db.py`, `customer/`, `executor/`, `admin_bot/`, `categories/`, `tests/`; aiogram/asyncpg и самостоятельная SQL-схема. Не является требованием к функциональности новой платформы, не запускается и не мигрируется автоматически.
 - **PSEO:** отдельный Flask-проект с `app.py`, `freez.py`, `data/categories.py`, `data/regions.py`, `templates/`, `index_site/generate_list.py`, локальными SQLite-хранилищами. `FLOW_MAP.master` активен, `FLOW_MAP.uslugi` выключен в проверенной ревизии; активные регионы задаёт код. Наличие маршрута или генератора не подтверждает доступность опубликованного URL.
-- **Проверки:** в `main` присутствуют 17 Django-тестов (по прежнему отчёту Codex: PASS; в этом подэтапе **NOT_RUN**): `accounts/tests/test_auth.py` (3), `marketplace/tests/test_order_security.py` (10), `test_order_concurrency.py` (1), `test_catalog.py` (3). Ещё 3 теста конфигураций существуют в `stage-01-stabilization`, итого 20 по прежнему отчёту. `tests/test_business_logic.py` — тест старого Telegram-потока, не Django; PSEO `test.py`, `test_customer.py`, `test_master.py` — отдельные скрипты, их успешность не подтверждена.
+- **Проверки:** 17 Django-тестов целевой ветки прошли на изолированной PostgreSQL, включая permissions и concurrency: `accounts/tests/test_auth.py` (3), `marketplace/tests/test_order_security.py` (10), `test_order_concurrency.py` (1), `test_catalog.py` (3). Тесты иных веток и удалённых legacy-систем не входят в приёмку 00.1.
 
 ## 2. Матрица функций и решений
 
@@ -39,31 +39,31 @@
 | Уведомления | Django `Notification`, `notifications/services.py`, `views.py` | CODE_PRESENT, создание/прочтение; доставка email/push/anti-duplicate UNVERIFIED | ADAPT | 07.3 |
 | Жалобы и блокировки | Django `Complaint`, `moderation/services.py`, `views.py` | CODE_PRESENT; `block_user` и `is_blocked` существуют, но полный запрет действий блокированному UNVERIFIED | ADAPT | 03.6, 07.5 |
 | Сводная аналитика | Django `analytics/GlobalStats`, `CategoryStats`, `services.py` | CODE_PRESENT; наполнение и точность данных UNVERIFIED | ADAPT | 09 |
-| SEO в Django | `apps/seo/models.py`, `views.py`, `urls.py` | Сквозной SEO-контент / миграция отсутствуют; текущие model/view — заглушки | REWRITE/ADAPT на основе PSEO, без второго runtime | 08 |
+| SEO в Django | `apps/seo/models.py`, `views.py`, `urls.py` | Сквозной SEO-контент отсутствует; текущие model/view — заглушки | REWRITE в Django; старый код/контент не использовать, URL только REVIEW | 08 |
 | Чат заказчика и мастера | Нет отдельного Django chat app / подтверждённого chat API в `core/urls.py` | NOT_IMPLEMENTED в проверенной web-кодовой базе | REWRITE (добавить общее серверное правило доступа) | 07.1–07.2 |
 | Версионированный мобильный REST API | Django URL-конфигурация и приложения | Нет подтверждённого DRF/API v1; Flask PSEO `/api/v1/stats/…` — не мобильный API маркетплейса | REWRITE/ADAPT без дубля бизнес-логики | 10 |
-| Регистрация и создание заявки в Telegram | `executor/registration_exe.py`, `customer/create_an_order.py` | CODE_PRESENT; независимые FSM + asyncpg, runtime не проверен | ADAPT правила/словарь, REJECT как новая runtime-реализация | 02–04 |
-| Поиск мастеров, прямые предложения и отклики Telegram | `customer/select_specialist.py`, `executor/new_orders.py` | CODE_PRESENT, обработчики и SQL; безопасность и совместимость схем UNVERIFIED | ADAPT сценарий и правила, НЕ переносить SQL без сверки | 05–06 |
-| Администрирование Telegram | `admin_bot/admin_main.py` | CODE_PRESENT; отдельный бот и операции блокировки; runtime UNVERIFIED | ADAPT функции в Django Admin/модерацию | 03.6, 07.5 |
-| Историческая SQL-схема Telegram | `db.py`: users/clients/workers/categories/subcategories/orders/responses/ratings/stats и др. | CODE_PRESENT, отдельные таблицы через asyncpg; соответствие Django и реальные объемы UNVERIFIED | ADAPT через map/dry-run, REJECT прямую загрузку в целевую БД | 00.5, 01.2 |
-| PSEO-хабы и статьи | Flask `app.py`, `freez.py`, `templates/` | CODE_PRESENT: `/<flow>/<slug>/`, region/category и article; доступность URL и индексация UNVERIFIED | ADAPT существующий контент/URL, без автоматических 301 | 00.4, 08 |
-| PSEO словари и генерация | `data/categories.py`, `data/regions.py`, `gemini*.py`, `index_site/generate_list.py` | CODE_PRESENT; качество и происхождение текстов, готовность публичных страниц UNVERIFIED | ADAPT словари, REJECT автогенерацию как обязательный runtime | 02, 08 |
+| Историческая регистрация и заявки Telegram | Удалённые `executor/`, `customer/` | Только исторически инвентаризированы; runtime исключён | REJECT код, данные, правила и словари как источник новой реализации | 02–04 |
+| Исторические поиск и отклики Telegram | Удалённые `customer/`, `executor/` | Только исторически инвентаризированы | REJECT код, SQL и данные; целевой сценарий проектировать по действующему ТЗ | 05–06 |
+| Историческое администрирование Telegram | Удалённый `admin_bot/` | Только исторически инвентаризировано | REJECT; развивать существующие Django Admin/модерацию независимо | 03.6, 07.5 |
+| Историческая SQL-схема Telegram | Удалённый `db.py` | Схема не является источником данных для Django | REJECT импорт и сопоставление ID | — |
+| Исторические PSEO-хабы и статьи | Удалённый Flask/PSEO | Сохраняется только выборка публичных URL; код и контент недоступны и не требуются | REJECT код/контент; REVIEW только URL без автоматических 301 | 00.4, 08 |
+| Исторические PSEO словари и генераторы | Удалённый PSEO | Не являются источником нового каталога или текстов | REJECT полностью | — |
 | Четыре целевых UI заказчика/мастера | Утверждённые внешние HTML-макеты; Django `templates/` | Требования зафиксированы, соответствие текущих шаблонов утверждённому UI UNVERIFIED | ADAPT backend contracts, не менять дизайн в 00.1 | 03–07 |
 
 ## 3. Карта зависимостей для следующего аудита
 
 1. `accounts.User` → `ClientProfile` / `WorkerProfile` → `marketplace.Order.client` / `Order.worker` → `Response` / `Rating`, а также `Notification` и `Complaint`. Точные FK и действия при удалении сверить по миграциям в 01.2.
-2. `Category` / `Subcategory` + `City` — общие справочники для заказов, профилей, поиска и будущего SEO. Source of truth в новой архитектуре — Django/PostgreSQL, PSEO/Telegram только доноры данных после проверки.
-3. Старый `db.py` и Flask SQLite имеют **иные схемы** и идентификаторы. Нельзя читать их как миграции Django, напрямую присваивать FK или объединять таблицы без явной карты соответствий, dry-run и backup.
+2. `Category` / `Subcategory` + `City` — общие справочники для заказов, профилей, поиска и будущего SEO. Единственный source of truth — Django/PostgreSQL; Telegram/PSEO не являются донорами данных.
+3. Старые Telegram/PostgreSQL и Flask/SQLite схемы не импортируются, не сопоставляются с Django ID и не входят в план резервного восстановления.
 4. Существующий `TECHNICAL_REPORT.md` — исторический архитектурный отчёт, не доказательство текущего успешного выполнения. Статусы подтверждаются тестами и отдельными проверками.
 5. `stage-01-stabilization` — отдельная рабочая ветка для этапа 01 (01.1); её не редактировать в ходе этапа 00. После объединения документационного PR #5 синхронизировать активные ветки с обновлённым `main` без force-push.
 
 ## 4. Неподтверждённые данные и блокирующие зависимости
 
 - **00.2 — секреты:** в дереве приватного PSEO находятся `.env`, `index_site/service_account.json`; также SQLite `.db`. Проверены только **имена файлов**, не значения и не содержимое. Владельцу нужны проверка действительности, разрешённая ротация/удаление из будущего дерева, закрытый план обработки истории. Не раскрывать секреты в PR.
-- **00.3 — backup/restore:** реальное расположение/состав/объём production PostgreSQL, SQLite и медиа не подтверждены; нет доказанного теста восстановления. Никакой backup не выполнен в 00.1.
+- **00.3 — backup/restore:** synthetic PostgreSQL backup/restore подтверждён независимым аудитом; существование рабочей Django-БД с ценными пользовательскими данными по доступной конфигурации не подтверждено. Legacy Telegram/PSEO базы не восстанавливать.
 - **00.4 — SEO URL:** требуется `docs/SEO_URL_INVENTORY.csv` из генератора, sitemap, фактических HTTP-ответов и (при наличии) GSC. Существующие Flask-маршруты не равны опубликованному списку.
-- **00.5 — перенос:** требуется ADR и map полей/ID/состояний Django vs Telegram vs PSEO, dry-run и защита от дубликатов; прежняя аналитическая записка не заменяет новую схему миграции.
+- **00.5 — архитектура:** ADR исключают перенос Telegram/PSEO. Проверяются только Django migrations и новые seed-команды; legacy URL рассматриваются отдельно в 00.4/08.
 - **00.6 — диагностика:** нужен воспроизводимый baseline проверок `manage.py check`, isolated migrate, smoke, Docker/ограничения; полученные от Codex результаты 17/20 тестов не повторялись.
 - **Риски:** отсутствие работающего чата, REST API и полноценного SEO в Django — предмет следующих этапов, а не ошибки, устраняемые в 00.1. Не запускать production/deploy/изменения DNS до соответствующего gate.
 

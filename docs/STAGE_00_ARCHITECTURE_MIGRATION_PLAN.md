@@ -1,10 +1,10 @@
 # ZemiPro — 00.5: архитектурная карта и план перехода без legacy data import
 
-**Дата:** 2026-11-10  
-**Статус:** `PLAN_PREPARED / DRY_RUN_NOT_EXECUTED`  
+**Дата:** 2026-11-11
+**Статус:** `DONE / DOCUMENTED_AND_SYNTHETICALLY_VERIFIED`
 **Решения:** [ADR-0001](DECISIONS/ADR-0001-DJANGO-ONLY-NO-TELEGRAM.md), [ADR-0002](DECISIONS/ADR-0002-REBUILD-WITH-URL-ONLY.md), [ADR-0003](DECISIONS/ADR-0003-DJANGO-ONLY-SINGLE-DATABASE.md).  
 **Источники:** `zemipro_web/apps/*/models.py`, `apps/marketplace/services.py`, `core/urls.py`, `marketplace/migrations/0003_require_order_owner.py`, `zemipro_web/docker-compose.django.yml`, `docs/SEO_URL_INVENTORY.csv`.  
-**Область:** проектирование и статический обзор; никаких данных в БД не читали и не изменяли.
+**Область:** проектирование, независимый обзор и synthetic PostgreSQL dry-run; реальные данные и production не читались и не изменялись.
 
 ## 1. Целевая схема
 
@@ -65,7 +65,7 @@
 | --- | --- | --- |
 | Существующая схема Django | Django PostgreSQL, те же `accounts.User`, `Order`, `Response`, `Rating` и связанные модели | `REUSE` через Django migrations; подтвердить состояние фактической БД до операции |
 | Django каталожные seed-команды | `Category`, `Subcategory`, `City` | `ADAPT` в 02: единый утверждённый набор и RU/EN/HE, идемпотентность по slug |
-| Старый Telegram PostgreSQL | **НЕТ** | `REJECT` импорт/синхронизацию пользователей, заказов, отзывов, профилей; архив только после безопасного backup |
+| Старый Telegram PostgreSQL | **НЕТ** | `REJECT` импорт/синхронизацию и восстановление для новой платформы |
 | Старый PSEO SQLite и Flask | **НЕТ** | `REJECT` базу/тексты/обработчики/маршруты как исполняемый код |
 | `docs/SEO_URL_INVENTORY.csv` | Контрольная карта old URL → новый Django URL | `REVIEW`: только после GSC/HTTP и семантического соответствия, не импортировать как контент |
 | Новая регистрация, заявки и профили пользователей | Одна схема Django | Только новые записи через авторизованный workflow и защищённые сервисы, без создания фейковых пользователей/заказов |
@@ -115,9 +115,9 @@
 | Source-to-target матрица с `REUSE/ADAPT/REJECT/REVIEW` | `PREPARED` |
 | Отказ от импорта Telegram/PSEO, сохранение только URL | `DECIDED` (ADR-0001/0002/0003) |
 | Первый деплой и контроль миграций | `PLAN_PREPARED`, не выполнено |
-| Backup/restore и безопасная ротация | `BLOCKED / NOT_RUN` — 00.2/00.3 |
-| Migration/URL dry-run и CI | `NOT_RUN` — по решению владельца итоговые проверки после 00.6 |
+| Backup/restore и безопасная ротация | Synthetic restore `PASS`; ротация `BLOCKED` — 00.2/00.3 |
+| Migration dry-run | `PASS` на новой PostgreSQL; URL HTTP/GSC `UNVERIFIED` |
 | Утверждение новых slug-правил и target URL | `PENDING` (02/08) |
 | Production, DNS, PSEO и реальные БД | `NOT_TOUCHED` |
 
-**Заключение:** направление технически определено, но выполнение `00.5 = DONE` без итоговой проверки не заявляется. Полный этап 00 остаётся открытым; следующий безопасный подэтап — 00.6.
+**Заключение:** `00.5 = DONE / DOCUMENTED_AND_SYNTHETICALLY_VERIFIED`. Архитектура и запреты импорта согласованы, clean migrations и synthetic restore прошли. Полный этап 00 остаётся заблокирован 00.2–00.4 и этапной приёмкой.
