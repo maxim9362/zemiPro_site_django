@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Города — ZemiPro{% endblock %}
+{% block title %}{% trans 'Города — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Города</h1>
-        <p>Выберите город для поиска мастеров</p>
+        <h1>{% trans 'Города' %}</h1>
+        <p>{% trans 'Выберите город для поиска мастеров' %}</p>
     </div>
 </section>
 

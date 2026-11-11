@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Страница не найдена — ZemiPro{% endblock %}
+{% block title %}{% trans 'Страница не найдена — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>404 — Страница не найдена</h1>
-        <p>Такой страницы не существует</p>
-        <a href="{% url 'marketplace:home' %}" class="btn btn--primary">На главную</a>
+        <h1>{% trans '404 — Страница не найдена' %}</h1>
+        <p>{% trans 'Такой страницы не существует' %}</p>
+        <a href="{% url 'marketplace:home' %}" class="btn btn--primary">{% trans 'На главную' %}</a>
     </div>
 </section>
 {% endblock %}

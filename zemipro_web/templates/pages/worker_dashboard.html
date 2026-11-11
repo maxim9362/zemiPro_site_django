@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Кабинет мастера — ZemiPro{% endblock %}
+{% block title %}{% trans 'Кабинет мастера — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Кабинет мастера</h1>
+        <h1>{% trans 'Кабинет мастера' %}</h1>
         <p>{{ profile.city.localized_name }} · {{ profile.skills.count }} категорий</p>
     </div>
 </section>
@@ -22,27 +23,27 @@
         {% endif %}
 
         <div class="dashboard__profile">
-            <h2>Ваш профиль</h2>
-            <p><strong>Город:</strong> {{ profile.city.localized_name }}</p>
-            <p><strong>Контакт:</strong> {{ profile.contact }}</p>
-            <p><strong>Категории:</strong>
+            <h2>{% trans 'Ваш профиль' %}</h2>
+            <p><strong>{% trans 'Город:' %}</strong> {{ profile.city.localized_name }}</p>
+            <p><strong>{% trans 'Контакт:' %}</strong> {{ profile.contact }}</p>
+            <p><strong>{% trans 'Категории:' %}</strong>
                 {% for skill in profile.skills.all %}
-                <span class="tag">{{ skill.emoji }} {{ skill.name_ru }}</span>
+                <span class="tag">{{ skill.emoji }} {{ skill.localized_name }}</span>
                 {% endfor %}
             </p>
-            <a href="{% url 'accounts:worker_profile' %}" class="btn btn--secondary">Редактировать профиль</a>
+            <a href="{% url 'accounts:worker_profile' %}" class="btn btn--secondary">{% trans 'Редактировать профиль' %}</a>
         </div>
 
         <div class="dashboard__section">
-            <h2>Подходящие заявки</h2>
+            <h2>{% trans 'Подходящие заявки' %}</h2>
 
             {% if page_obj.object_list %}
             <div class="orders-list">
                 {% for order in page_obj %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--new">В обработке</span>
-                        <span class="order-card__category">{{ order.category.emoji }} {{ order.category.name_ru }}</span>
+                        <span class="order-card__status order-card__status--new">{% trans 'В обработке' %}</span>
+                        <span class="order-card__category">{{ order.category.emoji }} {{ order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
                         <p class="order-card-sm__city">{{ order.city.localized_name }}</p>
@@ -50,8 +51,8 @@
                         <p class="order-card-sm__date">{{ order.created_at|date:"d.m.Y" }}</p>
                     </div>
                     <div class="order-card-sm__actions">
-                        <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary btn--sm">Открыть</a>
-                        <a href="{% url 'marketplace:order_respond' pk=order.pk %}" class="btn btn--primary btn--sm">Откликнуться</a>
+                        <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary btn--sm">{% trans 'Открыть' %}</a>
+                        <a href="{% url 'marketplace:order_respond' pk=order.pk %}" class="btn btn--primary btn--sm">{% trans 'Откликнуться' %}</a>
                     </div>
                 </div>
                 {% endfor %}
@@ -60,22 +61,22 @@
             {% if page_obj.has_other_pages %}
             <div class="pagination">
                 {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}" class="btn btn--secondary btn--sm">← Назад</a>
+                <a href="?page={{ page_obj.previous_page_number }}" class="btn btn--secondary btn--sm">← {% trans 'Назад' %}</a>
                 {% endif %}
-                <span class="pagination__current">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+                <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
                 {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}" class="btn btn--secondary btn--sm">Далее →</a>
+                <a href="?page={{ page_obj.next_page_number }}" class="btn btn--secondary btn--sm">{% trans 'Далее' %} →</a>
                 {% endif %}
             </div>
             {% endif %}
 
             {% else %}
-            <p class="empty-state">Подходящих заявок пока нет. Заявки появятся, когда клиенты создадут заказы в ваших категориях.</p>
+            <p class="empty-state">{% trans 'Подходящих заявок пока нет. Заявки появятся, когда клиенты создадут заказы в ваших категориях.' %}</p>
             {% endif %}
         </div>
 
         <div class="dashboard__section">
-            <h2>Мои отклики</h2>
+            <h2>{% trans 'Мои отклики' %}</h2>
 
             {% if my_responses %}
             <div class="orders-list">
@@ -83,22 +84,22 @@
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
                         <span class="order-card__status order-card__status--{{ resp.order.status }}">
-                            {{ resp.order.get_status_display }}
+                            {% trans resp.order.get_status_display %}
                         </span>
-                        <span class="order-card__category">{{ resp.order.category.emoji }} {{ resp.order.category.name_ru }}</span>
+                        <span class="order-card__category">{{ resp.order.category.emoji }} {{ resp.order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
                         <p class="order-card-sm__city">{{ resp.order.city.localized_name }}</p>
-                        <p class="order-card-sm__date">Отклик: {{ resp.created_at|date:"d.m.Y H:i" }}</p>
+                        <p class="order-card-sm__date">{% trans 'Отклик:' %} {{ resp.created_at|date:"d.m.Y H:i" }}</p>
                     </div>
                     <div class="order-card-sm__actions">
-                        <a href="{% url 'marketplace:order_detail' pk=resp.order.pk %}" class="btn btn--secondary btn--sm">Открыть заказ</a>
+                        <a href="{% url 'marketplace:order_detail' pk=resp.order.pk %}" class="btn btn--secondary btn--sm">{% trans 'Открыть заказ' %}</a>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="empty-state">Вы ещё не откликались ни на одну заявку.</p>
+            <p class="empty-state">{% trans 'Вы ещё не откликались ни на одну заявку.' %}</p>
             {% endif %}
         </div>
 

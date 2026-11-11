@@ -1,0 +1,587 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+"Language: en\\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\\n"
+
+msgid "Язык сайта"
+msgstr "Site language"
+
+msgid "Применить"
+msgstr "Apply"
+
+msgid "ZemiPro — Мастера по ремонту в Израиле"
+msgstr "ZemiPro — Find professionals in Israel"
+
+msgid "Найдите надёжного мастера по ремонту в Израиле. Сантехника, электрика, кондиционеры, ремонт квартир — бесплатно и без посредников."
+msgstr "Find home service professionals in Israel. Plumbing, electrical work, air conditioning and renovations — free to use."
+
+msgid "Сервис поиска мастеров по ремонту в Израиле"
+msgstr "Find service professionals in Israel"
+
+msgid "Категории услуг — ZemiPro"
+msgstr "Service categories — ZemiPro"
+
+msgid "ZemiPro — Найдите мастера по ремонту в Израиле"
+msgstr "ZemiPro — Find a professional in Israel"
+
+msgid "Категории услуг"
+msgstr "Service categories"
+
+msgid "Категории работ *"
+msgstr "Service categories *"
+
+msgid "Категории работ"
+msgstr "Service categories"
+
+msgid "Категории:"
+msgstr "Categories:"
+
+msgid "Категории"
+msgstr "Categories"
+
+msgid "Города — ZemiPro"
+msgstr "Cities — ZemiPro"
+
+msgid "Все города"
+msgstr "All cities"
+
+msgid "Все категории"
+msgstr "All categories"
+
+msgid "Города обслуживания:"
+msgstr "Service areas:"
+
+msgid "Города обслуживания"
+msgstr "Service cities"
+
+msgid "Города"
+msgstr "Cities"
+
+msgid "Город *"
+msgstr "City *"
+
+msgid "Город:"
+msgstr "City:"
+
+msgid "Город"
+msgstr "City"
+
+msgid "Создать заявку на ремонт — ZemiPro"
+msgstr "Create a service request — ZemiPro"
+
+msgid "Создать заявку на ремонт"
+msgstr "Create a service request"
+
+msgid "Создать ещё одну заявку"
+msgstr "Create another request"
+
+msgid "Создайте первую заявку"
+msgstr "Create your first request"
+
+msgid "Создать заявку"
+msgstr "Create a request"
+
+msgid "Создайте заявку"
+msgstr "Create a request"
+
+msgid "Отправить заявку"
+msgstr "Submit request"
+
+msgid "Кабинет клиента — ZemiPro"
+msgstr "Customer dashboard — ZemiPro"
+
+msgid "Кабинет мастера — ZemiPro"
+msgstr "Professional dashboard — ZemiPro"
+
+msgid "Кабинет клиента"
+msgstr "Customer dashboard"
+
+msgid "Кабинет мастера"
+msgstr "Professional dashboard"
+
+msgid "Профиль клиента — ZemiPro"
+msgstr "Customer profile — ZemiPro"
+
+msgid "Профиль мастера — ZemiPro"
+msgstr "Professional profile — ZemiPro"
+
+msgid "Профиль клиента"
+msgstr "Customer profile"
+
+msgid "Профиль мастера"
+msgstr "Professional profile"
+
+msgid "Ваш профиль"
+msgstr "Your profile"
+
+msgid "Редактировать профиль"
+msgstr "Edit profile"
+
+msgid "Открыть профиль"
+msgstr "View profile"
+
+msgid "Сохранить профиль"
+msgstr "Save profile"
+
+msgid "Профиль"
+msgstr "Profile"
+
+msgid "Регистрация — ZemiPro"
+msgstr "Register — ZemiPro"
+
+msgid "Регистрация"
+msgstr "Register"
+
+msgid "Зарегистрироваться"
+msgstr "Sign up"
+
+msgid "Уже есть аккаунт?"
+msgstr "Already have an account?"
+
+msgid "Нет аккаунта?"
+msgstr "Don't have an account?"
+
+msgid "Вход — ZemiPro"
+msgstr "Sign in — ZemiPro"
+
+msgid "Войти"
+msgstr "Sign in"
+
+msgid "Вход"
+msgstr "Sign in"
+
+msgid "Выйти"
+msgstr "Sign out"
+
+msgid "Уведомления — ZemiPro"
+msgstr "Notifications — ZemiPro"
+
+msgid "Уведомления"
+msgstr "Notifications"
+
+msgid "Отметить все прочитанными"
+msgstr "Mark all as read"
+
+msgid "Отметить прочитанным"
+msgstr "Mark as read"
+
+msgid "У вас пока нет уведомлений."
+msgstr "You have no notifications yet."
+
+msgid "Найдите мастера по ремонту в Израиле"
+msgstr "Find a professional in Israel"
+
+msgid "Сантехника, электрика, кондиционеры, ремонт квартир, сборка мебели"
+msgstr "Plumbing, electrical work, air conditioning, renovations, furniture assembly"
+
+msgid "— бесплатно и без посредников"
+msgstr "— free to use and no intermediaries"
+
+msgid "Как это работает"
+msgstr "How it works"
+
+msgid "Опишите задачу, выберите категорию и укажите адрес"
+msgstr "Describe your task, select a category and provide an address"
+
+msgid "Получите отклики"
+msgstr "Receive responses"
+
+msgid "Мастера из вашей категории увидят заявку и откликнутся"
+msgstr "Professionals in the selected category can respond to your request"
+
+msgid "Выберите мастера"
+msgstr "Choose a professional"
+
+msgid "Сравните профили, рейтинги и отзывы, выберите лучшего"
+msgstr "Compare profiles, ratings and reviews to find the right professional"
+
+msgid "Выберите направление и категорию услуги"
+msgstr "Choose a service area and category"
+
+msgid "Другие категории"
+msgstr "Other categories"
+
+msgid "Категории пока не добавлены."
+msgstr "No categories have been added yet."
+
+msgid "Виды услуг"
+msgstr "Types of services"
+
+msgid "Выберите город для поиска мастеров"
+msgstr "Choose a city to find professionals"
+
+msgid "Выберите категорию или просматривайте всех мастеров города"
+msgstr "Choose a category or browse all professionals in this city"
+
+msgid "Мастеров в этой категории"
+msgstr "There are no professionals in this category"
+
+msgid "в выбранном городе"
+msgstr "in the selected city"
+
+msgid "пока нет."
+msgstr "yet."
+
+msgid "Нужен мастер по"
+msgstr "Need a professional for"
+
+msgid "Создайте заявку и получите отклики от проверенных специалистов"
+msgstr "Submit a request and receive responses from professionals"
+
+msgid "Описание:"
+msgstr "Description:"
+
+msgid "Описание *"
+msgstr "Description *"
+
+msgid "Описание услуг *"
+msgstr "Service description *"
+
+msgid "Описание задачи *"
+msgstr "Task description *"
+
+msgid "Описание задачи"
+msgstr "Task description"
+
+msgid "Формат:"
+msgstr "Format:"
+
+msgid "Возможна работа онлайн"
+msgstr "Remote work available"
+
+msgid "Рейтинг:"
+msgstr "Rating:"
+
+msgid "Отзывы"
+msgstr "Reviews"
+
+msgid "отзывов"
+msgstr "reviews"
+
+msgid "Пожаловаться на пользователя"
+msgstr "Report user"
+
+msgid "Пожаловаться — ZemiPro"
+msgstr "Report an issue — ZemiPro"
+
+msgid "Пожаловаться"
+msgstr "Report"
+
+msgid "На пользователя:"
+msgstr "About user:"
+
+msgid "На отзыв"
+msgstr "About a review"
+
+msgid "На заявку №"
+msgstr "About request no."
+
+msgid "Причина жалобы *"
+msgstr "Report reason *"
+
+msgid "Отправить жалобу"
+msgstr "Submit report"
+
+msgid "Ваше имя *"
+msgstr "Your name *"
+
+msgid "Телефон *"
+msgstr "Phone *"
+
+msgid "Телефон"
+msgstr "Phone"
+
+msgid "Категория *"
+msgstr "Category *"
+
+msgid "Категория"
+msgstr "Category"
+
+msgid "Подкатегория"
+msgstr "Subcategory"
+
+msgid "Адрес *"
+msgstr "Address *"
+
+msgid "Адрес:"
+msgstr "Address:"
+
+msgid "Адрес"
+msgstr "Address"
+
+msgid "Контакт для связи *"
+msgstr "Contact details *"
+
+msgid "Контакт для связи"
+msgstr "Contact details"
+
+msgid "Контакт клиента:"
+msgstr "Customer contact:"
+
+msgid "Контакт:"
+msgstr "Contact:"
+
+msgid "Бюджет:"
+msgstr "Budget:"
+
+msgid "Бюджет"
+msgstr "Budget"
+
+msgid "Оставьте пустым, если цена договорная"
+msgstr "Leave blank if the price is negotiable"
+
+msgid "Минимум 30 символов"
+msgstr "At least 30 characters"
+
+msgid "Минимум 20 символов"
+msgstr "At least 20 characters"
+
+msgid "Отправить отклик"
+msgstr "Send response"
+
+msgid "Откликнуться на заявку"
+msgstr "Respond to request"
+
+msgid "Откликнуться"
+msgstr "Respond"
+
+msgid "Ваш отклик"
+msgstr "Your response"
+
+msgid "Сообщение клиенту"
+msgstr "Message to customer"
+
+msgid "Необязательно. Максимум 1000 символов."
+msgstr "Optional. Maximum 1,000 characters."
+
+msgid "Отклик:"
+msgstr "Response:"
+
+msgid "Откликов:"
+msgstr "Responses:"
+
+msgid "Отклики мастеров"
+msgstr "Professional responses"
+
+msgid "Вы ещё не откликались ни на одну заявку."
+msgstr "You haven't responded to any requests yet."
+
+msgid "Вы уже откликались на эту заявку"
+msgstr "You already responded to this request"
+
+msgid "Подходящие заявки"
+msgstr "Matching requests"
+
+msgid "Подходящих заявок пока нет. Заявки появятся, когда клиенты создадут заказы в ваших категориях."
+msgstr "No matching requests yet. New requests will appear when customers post in your categories."
+
+msgid "Мои отклики"
+msgstr "My responses"
+
+msgid "Открыть заказ"
+msgstr "Open request"
+
+msgid "Открыть"
+msgstr "Open"
+
+msgid "В обработке"
+msgstr "New"
+
+msgid "В процессе"
+msgstr "In progress"
+
+msgid "Выполнен"
+msgstr "Completed"
+
+msgid "Завершённые"
+msgstr "Completed"
+
+msgid "Отменённые"
+msgstr "Cancelled"
+
+msgid "Отменён"
+msgstr "Cancelled"
+
+msgid "Активные заявки"
+msgstr "Active requests"
+
+msgid "У вас пока нет заявок."
+msgstr "You have no requests yet."
+
+msgid "Страница"
+msgstr "Page"
+
+msgid "из"
+msgstr "of"
+
+msgid "Назад"
+msgstr "Back"
+
+msgid "Вперёд"
+msgstr "Next"
+
+msgid "Далее"
+msgstr "Next"
+
+msgid "На главную"
+msgstr "Home"
+
+msgid "Страница не найдена — ZemiPro"
+msgstr "Page not found — ZemiPro"
+
+msgid "404 — Страница не найдена"
+msgstr "404 — Page not found"
+
+msgid "Такой страницы не существует"
+msgstr "This page does not exist"
+
+msgid "Получать уведомления о новых заявках"
+msgstr "Receive notifications about new requests"
+
+msgid "Выберите города, где принимаете заказы."
+msgstr "Select cities where you accept requests."
+
+msgid "Если ничего не выбрано, используется ваш основной город."
+msgstr "If none are selected, your main city is used."
+
+msgid "Выполняю услуги онлайн"
+msgstr "I offer online services"
+
+msgid "Онлайн-заявки доступны только для категорий,"
+msgstr "Online requests are available only for categories"
+
+msgid "где разрешён онлайн-формат."
+msgstr "that support online services."
+
+msgid "Укажите город, категории работ и описание ваших услуг"
+msgstr "Select your city, service categories and describe your work"
+
+msgid "Укажите город и контакт для связи с мастерами"
+msgstr "Select a city and contact information for professionals"
+
+msgid "Опишите проблему, выберите город и категорию — мастер сможет связаться с вами"
+msgstr "Describe the task, choose a city and category so professionals can contact you"
+
+msgid "Отметить выполненной"
+msgstr "Mark as completed"
+
+msgid "Отменить заявку?"
+msgstr "Cancel this request?"
+
+msgid "Отметить как выполненный?"
+msgstr "Mark this request as completed?"
+
+msgid "Выбрать этого мастера?"
+msgstr "Choose this professional?"
+
+msgid "Отменить заявку"
+msgstr "Cancel request"
+
+msgid "Оставить отзыв мастеру"
+msgstr "Review the professional"
+
+msgid "Оставить отзыв"
+msgstr "Leave a review"
+
+msgid "Отзыв оставлен"
+msgstr "Review submitted"
+
+msgid "Отзыв на заказ"
+msgstr "Request review"
+
+msgid "Отзыв"
+msgstr "Review"
+
+msgid "Оценка (от 1 до 5) *"
+msgstr "Rating (1 to 5) *"
+
+msgid "Оценка (от 1 до 5)"
+msgstr "Rating (1 to 5)"
+
+msgid "Оценка:"
+msgstr "Rating:"
+
+msgid "Текст отзыва"
+msgstr "Review text"
+
+msgid "Необязательно. Расскажите о качестве работы."
+msgstr "Optional. Describe the quality of work."
+
+msgid "Отправить отзыв"
+msgstr "Submit review"
+
+msgid "Выбрать мастера"
+msgstr "Choose professional"
+
+msgid "Заявка создана успешно."
+msgstr "Request created successfully."
+
+msgid "Заявка создана"
+msgstr "Request created"
+
+msgid "Заказ"
+msgstr "Request"
+
+msgid "Заявка"
+msgstr "Request"
+
+msgid "Мастер:"
+msgstr "Professional:"
+
+msgid "Мастер"
+msgstr "Professional"
+
+msgid "Подробности будут доступны назначенному исполнителю."
+msgstr "Details will be available to the assigned professional."
+
+msgid "— Не выбрана —"
+msgstr "— Not selected —"
+
+msgid "— Загрузка... —"
+msgstr "— Loading... —"
+
+msgid "Выберите город"
+msgstr "Choose a city"
+
+msgid "Выберите категорию"
+msgstr "Choose a category"
+
+msgid "Договорная"
+msgstr "Negotiable"
+
+msgid "Ваше имя"
+msgstr "Your name"
+
+msgid "Описание должно содержать минимум 30 символов."
+msgstr "Description must be at least 30 characters."
+
+msgid "Описание должно содержать минимум 20 символов."
+msgstr "Description must be at least 20 characters."
+
+msgid "Введите корректный номер телефона (минимум 7 символов)."
+msgstr "Enter a valid phone number (at least 7 characters)."
+
+msgid "Для онлайн-работы выберите хотя бы одну услугу с онлайн-форматом."
+msgstr "For online work, select at least one category that supports online services."
+
+msgid "Профиль клиента сохранён."
+msgstr "Customer profile saved."
+
+msgid "Профиль мастера сохранён."
+msgstr "Professional profile saved."
+
+msgid "Подробно опишите задачу (минимум 30 символов)"
+msgstr "Describe your request in detail (at least 30 characters)"
+
+msgid "500 ₪ или Договорная"
+msgstr "500 ₪ or Negotiable"
+
+msgid "Herzl 45, Тель-Авив"
+msgstr "45 Herzl St., Tel Aviv"
+
+msgid "Иван"
+msgstr "Example name"
+
+msgid "Напишите короткое сообщение клиенту: когда сможете приехать, опыт, ориентировочная цена."
+msgstr "Write a short message about availability, experience and estimated price."

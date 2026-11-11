@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Профиль клиента — ZemiPro{% endblock %}
+{% block title %}{% trans 'Профиль клиента — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Профиль клиента</h1>
-        <p>Укажите город и контакт для связи с мастерами</p>
+        <h1>{% trans 'Профиль клиента' %}</h1>
+        <p>{% trans 'Укажите город и контакт для связи с мастерами' %}</p>
     </div>
 </section>
 
@@ -33,7 +34,7 @@
 
             <div class="form__row">
                 <div class="form__group">
-                    <label for="id_city" class="form__label">Город *</label>
+                    <label for="id_city" class="form__label">{% trans 'Город *' %}</label>
                     {{ form.city }}
                     {% if form.city.errors %}
                     <span class="form__error">{{ form.city.errors.0 }}</span>
@@ -41,7 +42,7 @@
                 </div>
 
                 <div class="form__group">
-                    <label for="id_contact" class="form__label">Контакт для связи *</label>
+                    <label for="id_contact" class="form__label">{% trans 'Контакт для связи *' %}</label>
                     {{ form.contact }}
                     {% if form.contact.errors %}
                     <span class="form__error">{{ form.contact.errors.0 }}</span>
@@ -50,7 +51,7 @@
             </div>
 
             <button type="submit" class="btn btn--primary btn--lg">
-                Сохранить профиль
+                {% trans 'Сохранить профиль' %}
             </button>
         </form>
     </div>

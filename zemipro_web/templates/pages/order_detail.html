@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Заказ #{{ order.pk }} — ZemiPro{% endblock %}
+{% block title %}{% trans 'Заказ' %} #{{ order.pk }} — ZemiPro{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Заказ #{{ order.pk }}</h1>
-        <p>Заявка создана {{ order.created_at|date:"d.m.Y в H:i" }}</p>
+        <h1>{% trans 'Заказ' %} #{{ order.pk }}</h1>
+        <p>{% trans 'Заявка создана' %} {{ order.created_at|date:"d.m.Y в H:i" }}</p>
     </div>
 </section>
 
@@ -23,50 +24,50 @@
         <div class="order-card">
             <div class="order-card__header">
                 <span class="order-card__status order-card__status--{{ order.status }}">
-                    {{ order.get_status_display }}
+                    {% trans order.get_status_display %}
                 </span>
                 <span class="order-card__category">
-                    {{ order.category.emoji }} {{ order.category.name_ru }}
+                    {{ order.category.emoji }} {{ order.category.localized_name }}
                 </span>
             </div>
 
             {% if order.subcategory %}
-            <p class="order-card__subcategory">{{ order.subcategory.name_ru }}</p>
+            <p class="order-card__subcategory">{{ order.subcategory.localized_name }}</p>
             {% endif %}
 
             <div class="order-card__body">
                 <div class="order-card__field">
-                    <strong>Город:</strong> {{ order.city.localized_name }}
+                    <strong>{% trans 'Город:' %}</strong> {{ order.city.localized_name }}
                 </div>
                 {% if can_view_private_details %}
                 <div class="order-card__field">
-                    <strong>Адрес:</strong> {{ order.address }}
+                    <strong>{% trans 'Адрес:' %}</strong> {{ order.address }}
                 </div>
                 {% endif %}
                 {% if can_view_private_details %}
                 <div class="order-card__field">
-                    <strong>Описание:</strong>
+                    <strong>{% trans 'Описание:' %}</strong>
                     <p>{{ order.description }}</p>
                 </div>
                 {% else %}
                 <div class="order-card__field">
-                    <strong>Описание:</strong>
-                    <p>Подробности будут доступны назначенному исполнителю.</p>
+                    <strong>{% trans 'Описание:' %}</strong>
+                    <p>{% trans 'Подробности будут доступны назначенному исполнителю.' %}</p>
                 </div>
                 {% endif %}
                 <div class="order-card__field">
-                    <strong>Бюджет:</strong> {{ order.price }}
+                    <strong>{% trans 'Бюджет:' %}</strong> {{ order.price }}
                 </div>
 
                 {% if order.worker and is_owner %}
                 <div class="order-card__field">
-                    <strong>Мастер:</strong> {{ order.worker }}
+                    <strong>{% trans 'Мастер:' %}</strong> {{ order.worker }}
                 </div>
                 {% endif %}
 
                 {% if can_view_private_details %}
                 <div class="order-card__field">
-                    <strong>Контакт клиента:</strong> {{ order.customer_phone }}
+                    <strong>{% trans 'Контакт клиента:' %}</strong> {{ order.customer_phone }}
                 </div>
                 {% endif %}
             </div>
@@ -77,8 +78,8 @@
                     {% if order.status == 'new' %}
                     <form method="post" action="{% url 'marketplace:order_cancel' pk=order.pk %}" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn--danger" onclick="return confirm('Отменить заявку?')">
-                            Отменить заявку
+                        <button type="submit" class="btn btn--danger" onclick="return confirm('{% trans 'Отменить заявку?' %}')">
+                            {% trans 'Отменить заявку' %}
                         </button>
                     </form>
                     {% endif %}
@@ -86,52 +87,52 @@
                     {% if order.status == 'in_progress' %}
                     <form method="post" action="{% url 'marketplace:order_complete' pk=order.pk %}" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn--primary" onclick="return confirm('Отметить как выполненный?')">
-                            Отметить выполненной
+                        <button type="submit" class="btn btn--primary" onclick="return confirm('{% trans 'Отметить как выполненный?' %}')">
+                            {% trans 'Отметить выполненной' %}
                         </button>
                     </form>
                     {% endif %}
 
                     {% if order.status == 'completed' and not existing_rating %}
                     <a href="{% url 'marketplace:rating_create' pk=order.pk %}" class="btn btn--primary">
-                        Оставить отзыв
+                        {% trans 'Оставить отзыв' %}
                     </a>
                     {% elif existing_rating %}
                     <span class="btn btn--secondary" style="opacity: 0.7; cursor: default;">
-                        Отзыв оставлен ({{ existing_rating.rating }}/5)
+                        {% trans 'Отзыв оставлен' %} ({{ existing_rating.rating }}/5)
                     </span>
                     {% endif %}
 
                     <a href="{% url 'marketplace:client_dashboard' %}" class="btn btn--secondary">
-                        Кабинет клиента
+                        {% trans 'Кабинет клиента' %}
                     </a>
                 {% endif %}
 
                 {# Кнопки для мастера #}
                 {% if not is_owner and order.status == 'new' and has_worker_profile and not worker_response %}
                 <a href="{% url 'marketplace:order_respond' pk=order.pk %}" class="btn btn--primary">
-                    Откликнуться
+                    {% trans 'Откликнуться' %}
                 </a>
                 {% elif not is_owner and worker_response %}
                 <span class="btn btn--secondary" style="opacity: 0.7; cursor: default;">
-                    Вы уже откликались на эту заявку
+                    {% trans 'Вы уже откликались на эту заявку' %}
                 </span>
                 {% endif %}
 
                 {# Ссылка для зарегистрированных пользователей без профиля мастера #}
                 {% if not is_owner and not has_worker_profile and order.status == 'new' %}
                 <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">
-                    Создать ещё одну заявку
+                    {% trans 'Создать ещё одну заявку' %}
                 </a>
                 {% endif %}
 
                 <a href="{% url 'marketplace:home' %}" class="btn btn--secondary">
-                    На главную
+                    {% trans 'На главную' %}
                 </a>
 
                 {% if user.is_authenticated and not is_owner %}
                 <a href="{% url 'moderation:complaint_create' %}?order={{ order.pk }}" class="btn btn--secondary" style="color: #dc2626;">
-                    Пожаловаться
+                    {% trans 'Пожаловаться' %}
                 </a>
                 {% endif %}
             </div>
@@ -141,7 +142,7 @@
         {% if is_owner and responses %}
         <div class="order-card" style="margin-top: 24px; max-width: 700px; margin-left: auto; margin-right: auto;">
             <div class="order-card__header">
-                <span class="order-card__category">Отклики мастеров ({{ responses|length }})</span>
+                <span class="order-card__category">{% trans 'Отклики мастеров' %} ({{ responses|length }})</span>
             </div>
             <div class="order-card__body">
                 {% for resp in responses %}
@@ -149,19 +150,19 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <strong>{{ resp.worker }}</strong>
                         <span class="order-card__status order-card__status--{{ resp.status }}">
-                            {{ resp.get_status_display }}
+                            {% trans resp.get_status_display %}
                         </span>
                     </div>
                     {% if resp.message %}
                     <p style="color: var(--color-text-light); margin-bottom: 8px;">{{ resp.message }}</p>
                     {% endif %}
-                    <p style="font-size: 0.8125rem; color: var(--color-text-light);">Отклик: {{ resp.created_at|date:"d.m.Y H:i" }}</p>
+                    <p style="font-size: 0.8125rem; color: var(--color-text-light);">{% trans 'Отклик:' %} {{ resp.created_at|date:"d.m.Y H:i" }}</p>
 
                     {% if order.status == 'new' and resp.status == 'pending' %}
                     <form method="post" action="{% url 'marketplace:order_accept_response' order_id=order.pk response_id=resp.pk %}" style="margin-top: 8px;">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn--primary btn--sm" onclick="return confirm('Выбрать этого мастера?')">
-                            Выбрать мастера
+                        <button type="submit" class="btn btn--primary btn--sm" onclick="return confirm('{% trans 'Выбрать этого мастера?' %}')">
+                            {% trans 'Выбрать мастера' %}
                         </button>
                     </form>
                     {% endif %}
@@ -171,14 +172,14 @@
         </div>
         {% endif %}
 
-        {# Отзыв если есть #}
+        {# {% trans 'Отзыв' %} если есть #}
         {% if existing_rating %}
         <div class="order-card" style="margin-top: 24px; max-width: 700px; margin-left: auto; margin-right: auto;">
             <div class="order-card__header">
-                <span class="order-card__category">Отзыв</span>
+                <span class="order-card__category">{% trans 'Отзыв' %}</span>
             </div>
             <div class="order-card__body">
-                <p><strong>Оценка:</strong> {{ existing_rating.rating }}/5</p>
+                <p><strong>{% trans 'Оценка:' %}</strong> {{ existing_rating.rating }}/5</p>
                 {% if existing_rating.review_text %}
                 <p>{{ existing_rating.review_text }}</p>
                 {% endif %}

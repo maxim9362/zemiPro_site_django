@@ -8,6 +8,8 @@ urlpatterns = [
     path('health/live/', health.liveness, name='health_live'),
     path('health/ready/', health.readiness, name='health_ready'),
     path('admin/', admin.site.urls),
+    # Pre-02.4: cookie-based language switching; public URLs remain unchanged.
+    path('i18n/', include('django.conf.urls.i18n')),
 
     # Apps
     path('', include('apps.marketplace.urls')),

@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Откликнуться на заказ #{{ order.pk }} — ZemiPro{% endblock %}
+{% block title %}{% trans 'Откликнуться' %} на заказ #{{ order.pk }} — ZemiPro{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Откликнуться на заявку</h1>
+        <h1>{% trans 'Откликнуться на заявку' %}</h1>
     </div>
 </section>
 
@@ -13,22 +14,22 @@
     <div class="container">
         <div class="order-card" style="margin-bottom: 24px;">
             <div class="order-card__header">
-                <span class="order-card__status order-card__status--new">В обработке</span>
-                <span class="order-card__category">{{ order.category.emoji }} {{ order.category.name_ru }}</span>
+                <span class="order-card__status order-card__status--new">{% trans 'В обработке' %}</span>
+                <span class="order-card__category">{{ order.category.emoji }} {{ order.category.localized_name }}</span>
             </div>
             <div class="order-card__body">
                 <div class="order-card__field">
-                    <strong>Город:</strong> {{ order.city.localized_name }}
+                    <strong>{% trans 'Город:' %}</strong> {{ order.city.localized_name }}
                 </div>
                 <div class="order-card__field">
-                    <strong>Бюджет:</strong> {{ order.price }}
+                    <strong>{% trans 'Бюджет:' %}</strong> {{ order.price }}
                 </div>
             </div>
         </div>
 
         <div class="order-card">
             <div class="order-card__body">
-                <h2 style="margin-bottom: 16px;">Ваш отклик</h2>
+                <h2 style="margin-bottom: 16px;">{% trans 'Ваш отклик' %}</h2>
 
                 {% if messages %}
                 <div class="form__errors" style="background: #fef2f2; border-color: #fecaca; margin-bottom: 16px;">
@@ -42,19 +43,19 @@
                     {% csrf_token %}
 
                     <div class="form__group">
-                        <label for="id_message" class="form__label">Сообщение клиенту</label>
+                        <label for="id_message" class="form__label">{% trans 'Сообщение клиенту' %}</label>
                         {{ form.message }}
                         {% if form.message.errors %}
                         <span class="form__error">{{ form.message.errors.0 }}</span>
                         {% endif %}
-                        <span class="form__hint">Необязательно. Максимум 1000 символов.</span>
+                        <span class="form__hint">{% trans 'Необязательно. Максимум 1000 символов.' %}</span>
                     </div>
 
                     <button type="submit" class="btn btn--primary btn--lg">
-                        Отправить отклик
+                        {% trans 'Отправить отклик' %}
                     </button>
                     <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-left: 12px;">
-                        Назад
+                        {% trans 'Назад' %}
                     </a>
                 </form>
             </div>

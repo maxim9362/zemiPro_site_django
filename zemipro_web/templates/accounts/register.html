@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Регистрация — ZemiPro{% endblock %}
+{% block title %}{% trans 'Регистрация — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Регистрация</h1>
+        <h1>{% trans 'Регистрация' %}</h1>
     </div>
 </section>
 
@@ -35,11 +36,11 @@
             </div>
             {% endfor %}
 
-            <button type="submit" class="btn btn--primary btn--lg">Зарегистрироваться</button>
+            <button type="submit" class="btn btn--primary btn--lg">{% trans 'Зарегистрироваться' %}</button>
         </form>
 
         <p style="margin-top: 20px; text-align: center;">
-            Уже есть аккаунт? <a href="{% url 'accounts:login' %}">Войти</a>
+            {% trans 'Уже есть аккаунт?' %} <a href="{% url 'accounts:login' %}">{% trans 'Войти' %}</a>
         </p>
     </div>
 </section>

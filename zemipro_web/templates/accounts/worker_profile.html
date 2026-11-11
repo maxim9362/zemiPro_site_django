@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Профиль мастера — ZemiPro{% endblock %}
+{% block title %}{% trans 'Профиль мастера — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Профиль мастера</h1>
-        <p>Укажите город, категории работ и описание ваших услуг</p>
+        <h1>{% trans 'Профиль мастера' %}</h1>
+        <p>{% trans 'Укажите город, категории работ и описание ваших услуг' %}</p>
     </div>
 </section>
 
@@ -33,7 +34,7 @@
 
             <div class="form__row">
                 <div class="form__group">
-                    <label for="id_city" class="form__label">Город *</label>
+                    <label for="id_city" class="form__label">{% trans 'Город *' %}</label>
                     {{ form.city }}
                     {% if form.city.errors %}
                     <span class="form__error">{{ form.city.errors.0 }}</span>
@@ -41,7 +42,7 @@
                 </div>
 
                 <div class="form__group">
-                    <label for="id_contact" class="form__label">Контакт для связи *</label>
+                    <label for="id_contact" class="form__label">{% trans 'Контакт для связи *' %}</label>
                     {{ form.contact }}
                     {% if form.contact.errors %}
                     <span class="form__error">{{ form.contact.errors.0 }}</span>
@@ -50,19 +51,19 @@
             </div>
 
             <div class="form__group">
-                <label for="id_description" class="form__label">Описание услуг *</label>
+                <label for="id_description" class="form__label">{% trans 'Описание услуг *' %}</label>
                 {{ form.description }}
                 {% if form.description.errors %}
                 <span class="form__error">{{ form.description.errors.0 }}</span>
                 {% endif %}
-                <span class="form__hint">Минимум 20 символов</span>
+                <span class="form__hint">{% trans 'Минимум 20 символов' %}</span>
             </div>
 
             <div class="form__group">
-                <label class="form__label" for="id_service_cities">Города обслуживания</label>
+                <label class="form__label" for="id_service_cities">{% trans 'Города обслуживания' %}</label>
                 <p class="form__hint">
-                    Выберите города, где принимаете заказы.
-                    Если ничего не выбрано, используется ваш основной город.
+                    {% trans 'Выберите города, где принимаете заказы.' %}
+                    {% trans 'Если ничего не выбрано, используется ваш основной город.' %}
                 </p>
                 <div class="checkbox-grid">{{ form.service_cities }}</div>
                 {% for error in form.service_cities.errors %}
@@ -73,11 +74,11 @@
             <div class="form__group">
                 <label class="form__label">
                     {{ form.offers_remote }}
-                    Выполняю услуги онлайн
+                    {% trans 'Выполняю услуги онлайн' %}
                 </label>
                 <p class="form__hint">
-                    Онлайн-заявки доступны только для категорий,
-                    где разрешён онлайн-формат.
+                    {% trans 'Онлайн-заявки доступны только для категорий,' %}
+                    {% trans 'где разрешён онлайн-формат.' %}
                 </p>
                 {% for error in form.offers_remote.errors %}
                 <span class="form__error">{{ error }}</span>
@@ -85,7 +86,7 @@
             </div>
 
             <div class="form__group">
-                <label class="form__label">Категории работ *</label>
+                <label class="form__label">{% trans 'Категории работ *' %}</label>
                 <div class="checkbox-grid">
                     {{ form.skills }}
                 </div>
@@ -97,12 +98,12 @@
             <div class="form__group">
                 <label class="form__label">
                     {{ form.receive_notifications }}
-                    Получать уведомления о новых заявках
+                    {% trans 'Получать уведомления о новых заявках' %}
                 </label>
             </div>
 
             <button type="submit" class="btn btn--primary btn--lg">
-                Сохранить профиль
+                {% trans 'Сохранить профиль' %}
             </button>
         </form>
     </div>
