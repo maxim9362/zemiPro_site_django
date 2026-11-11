@@ -1,6 +1,6 @@
 # ZemiPro — 02.2: география и зоны обслуживания (Django)
 
-**Статус:** `IMPLEMENTED / CI_PENDING`. Код — ветка
+**Статус:** `CODE_DONE / CI_VERIFIED / NATIONAL_COVERAGE_PENDING`. Код — ветка
 `stage-02-catalog-localization`, единый [Draft PR #8](https://github.com/maxim9362/zemiPro_site_django/pull/8).
 Это **не** развёртывание на zemipro.co.il.
 
@@ -71,5 +71,14 @@ python manage.py test
 - Редакторская сверка названий и пограничных/неоднозначных алиасов.
 - Локализация всей UI-обвязки и мобильный RTL — 02.3.
 - Языковые канонические URL и редиректы алиасов — 02.4.
-- Независимый GitHub CI и Docker smoke для текущего коммита; записать
-  доказательства, прежде чем считать 02.2 технически завершённым.
+- Подтверждено GitHub CI и Docker smoke; перезапуск на реальном публичном
+  staging-сервере отложен до отдельного разрешения и создания инфраструктуры.
+
+## Результаты независимой проверки GitHub — 11.11.2026
+
+- Проверенный SHA: `51bc4525fcfbf3dfec9f1edd8c3e12cb0022f58a`.
+- [Django CI #43090165800](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43090165800) — **PASS**: Ruff, проверка моделей и миграций, PostgreSQL 17, 106/106 тестов, целевой service-layer coverage 94.0%.
+- Команда `seed_israel_cities`: `--plan` без записей, первый запуск `6/25/4`, повторный запуск `0/0/0`, `--check` дважды, итоговое количество `6/25/4` — **PASS**.
+- [Docker isolated staging smoke #43090165776](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43090165776) — **PASS**.
+- Коллизии `CityAlias.slug` с `City.slug` проверяются в Django Admin через `full_clean` и при seed; переходные ID и привязанные заказы проверены тестами.
+- **02.2 технически завершён.** Полный общенациональный каталог географии и редакторская проверка переводов остаются **NATIONAL_COVERAGE_PENDING** перед запуском. Это не проверка и не изменение production.

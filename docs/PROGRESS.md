@@ -416,3 +416,13 @@
 - **Coverage written:** 13 targeted tests for seed idempotency, existing IDs/admin edits, atomic conflict, alias collision, translations, legacy fallback, multi-city search, remote compatibility, form tampering and geo-specific job feed. **Not yet independently executed**, no claim of PASS.
 - **Source reference:** Israel CBS [2022 census](https://census.cbs.gov.il/en) and [2023 localities dataset](https://data.gov.il/he/datasets/lamas/localities-in-israel/d47a54ff-87f0-44b3-b33a-f284c0c38e5a). Native Hebrew name review and nationally complete locality import remain open before public full coverage.
 - **Next gate:** GitHub Django CI migrations/Ruff/13 tests and repeated seeded isolated PG counts `6/25/4`; isolated Docker smoke; document results before `CODE_VERIFIED`.
+
+## 2026-11-11 — Stage 02.2 GitHub QA PASS; technical geography accepted
+
+- **Verified code SHA:** `51bc4525fcfbf3dfec9f1edd8c3e12cb0022f58a`, shared [Draft PR #8](https://github.com/maxim9362/zemiPro_site_django/pull/8).
+- **Django CI:** [#43090165800](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43090165800) **SUCCESS**: Ruff, Django checks, `makemigrations --check --dry-run`, PostgreSQL `locations.0002_district_city_alias` + `accounts.0004_worker_service_zones` applied cleanly, **106/106 tests PASS**; target-only `apps.marketplace.services` coverage **94.0%** (not entire project).
+- **Isolated PostgreSQL geo seed:** plan 6 districts / 25 cities / 4 aliases, first seed created `6/25/4`, second created `0/0/0`, two `--check` runs PASS, model counts assertion `STAGE_02_2_GEO_SEED_PASS (6, 25, 4)`. Preserves city FK identity and prior admin edits in tests. Catalog seed 02.1 round-trip also PASS.
+- **Staging smoke:** [#43090165776](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43090165776) **SUCCESS** (disposable runner, not public HTTPS).
+- **Alias collision hardening:** canonical City.slug and CityAlias.slug cross-table conflicts rejected by admin form validation and seed guards; test added. No production input or site changes.
+- **Status:** `02.2 CODE_DONE / CI_VERIFIED / NATIONAL_COVERAGE_PENDING`. Technical service-zone and remote search functionality verified. 25 cities are an explicit pilot subset, **not** a claim of complete Israeli locality coverage; need official complete registry and editorial RU/EN/HE translations, plus full UI localization in 02.3.
+- **Next:** 02.3 three-language interface and mobile Hebrew RTL, within same stage branch / one Draft PR. No merge or deploy.
