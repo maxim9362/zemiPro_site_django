@@ -750,3 +750,31 @@ a:hover {
         flex-direction: column;
     }
 }
+
+/* Stage 01.6: prevent horizontal overflow in legacy Django fallback.
+   Approved four-page frontend design remains outside this backend stage. */
+@media (max-width: 480px) {
+    .container { padding-inline: 12px; }
+    .header .container { flex-wrap: wrap; gap: 12px; }
+    .nav { width: 100%; justify-content: flex-start; gap: 10px; }
+    .categories-grid,
+    .cities-grid,
+    .checkbox-grid { grid-template-columns: minmax(0, 1fr); }
+    .order-card__header,
+    .order-card-sm__header,
+    .order-card__footer,
+    .pagination,
+    .filter-bar,
+    .filter-form { flex-wrap: wrap; }
+    .filter-form,
+    .filter-form .form__select { width: 100%; max-width: none; }
+    .cta-block { padding: 20px; }
+    .order-card__body,
+    .order-card__footer { padding: 16px; }
+    .order-card-sm,
+    .order-card { min-width: 0; }
+    .order-card__field,
+    .order-card-sm__desc,
+    .dashboard__profile { overflow-wrap: anywhere; }
+    .btn { max-width: 100%; white-space: normal; }
+}

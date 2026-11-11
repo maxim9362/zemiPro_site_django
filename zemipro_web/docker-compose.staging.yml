@@ -32,6 +32,7 @@ services:
       DJANGO_ALLOWED_HOSTS: ${STAGING_DOMAIN:?Set the staging HTTPS host}
       DJANGO_CSRF_TRUSTED_ORIGINS: https://${STAGING_DOMAIN:?Set the staging HTTPS host}
       DJANGO_TRUST_X_FORWARDED_PROTO: "true"
+      ZEMIPRO_TRUST_X_REAL_IP: "true"
       DB_NAME: zemipro_staging
       DB_USER: zemipro_staging
       DB_PASSWORD: ${STAGING_DB_PASSWORD:?Set a NEW staging PostgreSQL password}

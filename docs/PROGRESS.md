@@ -298,3 +298,15 @@
 - **Тесты/CI:** добавлены конфигурационные тесты formatter, health HTTP/DB mock, backup/monitor guard; CI проверяет shell syntax и `docker compose --profile maintenance config --quiet`. Runtime Django/PostgreSQL/Docker/curl monitoring/restore **NOT_RUN** в доступном окружении; только статический review и сопоставление конфигураций `PASS`. Версии и уязвимости внешних сервисов повторно не аудировались.
 - **Риски:** следует отдельно подтвердить отсутствие PII в Gunicorn/Caddy/host логах, проверку реального 503 и доставку алерта; backup на volume того же хоста не disaster recovery. Staging/production, домен, secrets, старая Django/Telegram/PSEO DB, платежи и медиа `NOT_TOUCHED`.
 - **Далее:** 01.6 — только по команде; финальные независимые проверки и один итоговый PR после всех шести подэтапов.
+
+## 2026-11-11 — 01.6: SQL performance, safe errors, mobile fallback and throttling
+
+- **Status:** `IN_PROGRESS / IMPLEMENTED / BENCHMARK_NOT_RUN`, not `DONE`. Code now exists for 01.1–01.6, but none of the runtime acceptance gates can be asserted solely from these commits.
+- **Branch:** `stage-01-development`, parent commit `84ce08e1dd62227210fe31478d3e620f106051e1`. One stage branch, one final PR after independent verification; main not touched.
+- **SQL:** city worker skills prefetched, category ordering stabilized by PK, worker public profile skills prefetched, worker dashboard orders joined to city/category, client dashboard response counts aggregated instead of N per-order DB queries.
+- **Cache/error:** dynamic HTML no-store middleware and independent generic 404/500 templates that do not echo request data/tracebacks.
+- **Basic throttle:** 12 login POST / 5 min, 6 registration POST / 15 min per client IP, HMAC cache keys, generic 429/503; staging Caddy overwrites X-Real-IP and a dedicated env flag enables trust. Default LocMemCache is per process, **not** an adequate distributed production safeguard.
+- **CSS:** minimal responsive fallback for existing Django pages at 320–480px; the approved four separate frontend HTML source files are not changed.
+- **Tests:** synthetic SQL scaling, 404/500, cache headers, POST limit and source-IP trust behavior added to existing CI test suite. Current environment lacks Django/PostgreSQL, so test execution and real device/latency/memory figures remain `NOT_RUN`.
+- **Data/infra:** no schema migrations, no external services or libraries, no Docker starts, no VPS/DNS/Cloudflare/production or real data changes. See `docs/STAGE_01_PERFORMANCE_BASELINE.md`.
+- **Stage 01 acceptance:** requires independent Codex Cloud review, full verified GitHub CI with PostgreSQL/migrations/tests, branch protection, isolated Docker HTTPS staging, backup/restore + alert drill, performance/mobile checks and production-grade abuse-control decision. Do not claim Stage 01 DONE or merge until verified and authorized.

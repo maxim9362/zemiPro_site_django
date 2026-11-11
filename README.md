@@ -96,5 +96,16 @@ are documented in [01.5 logging and recovery](docs/STAGE_01_LOGGING_BACKUP.md).
 **No scheduled backups, monitoring alerts or staging restore have been
 activated or verified yet.** These require a separately authorized host.
 
+## Performance and basic abuse controls (01.6)
+
+Catalog queries and private dashboards use joins, prefetch and aggregate
+response counts; dynamic HTML is `private, no-store`. Login and registration
+POSTs have basic per-IP cache throttling. The built-in memory cache is
+**per worker, not distributed**: a shared or edge limiter must be validated
+before production. Safe 404/500 templates and a minimal narrow-screen CSS
+fallback affect only the current Django views, not the four approved separate
+frontend designs. Details and unverified targets:
+[01.6 performance baseline](docs/STAGE_01_PERFORMANCE_BASELINE.md).
+
 Project rules: [AGENTS.md](AGENTS.md). Implementation and acceptance status:
 [roadmap](docs/ROADMAP.md), [progress](docs/PROGRESS.md).

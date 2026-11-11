@@ -34,13 +34,14 @@ def create_order(client, category, city, address, description, price='Догов
 def get_available_orders_for_worker(worker_profile):
     """Получить заявки, подходящие мастеру по городу и категориям."""
     skills = worker_profile.skills.all()
-    if not skills:
+    if not skills.exists():
         return Order.objects.none()
 
-    base_qs = Order.objects.filter(
+    # These related objects are rendered on every card.
+    base_qs = Order.objects.select_related('category', 'city').filter(
         status=Order.Status.NEW,
         category__in=skills,
-    ).exclude(client=worker_profile.user)
+    ).exclude(client_id=worker_profile.user_id)
 
     if worker_profile.city:
         return base_qs.annotate(
@@ -49,9 +50,9 @@ def get_available_orders_for_worker(worker_profile):
                 default=Value(1),
                 output_field=IntegerField(),
             )
-        ).order_by('city_priority', '-created_at')
+        ).order_by('city_priority', '-created_at', '-pk')
 
-    return base_qs.order_by('-created_at')
+    return base_qs.order_by('-created_at', '-pk')
 
 
 def create_response(order, worker_user, message=''):

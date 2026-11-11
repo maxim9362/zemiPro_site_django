@@ -41,7 +41,7 @@ def category_detail(request, slug):
     ).select_related('city', 'user').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
-    ).order_by('-avg_rating')
+    ).order_by('-avg_rating', 'pk')
 
     if selected_city:
         workers = workers.filter(city__slug=selected_city)
@@ -69,10 +69,10 @@ def city_detail(request, slug):
 
     workers = WorkerProfile.objects.filter(
         city=city, user__is_active=True
-    ).select_related('user').annotate(
+    ).select_related('user').prefetch_related('skills').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
-    ).order_by('-avg_rating')
+    ).order_by('-avg_rating', 'pk')
 
     if selected_category:
         workers = workers.filter(skills__slug=selected_category)
@@ -90,7 +90,7 @@ def city_detail(request, slug):
 
 def worker_public_profile_view(request, pk):
     profile = get_object_or_404(
-        WorkerProfile.objects.select_related('city', 'user'),
+        WorkerProfile.objects.select_related('city', 'user').prefetch_related('skills'),
         pk=pk,
     )
     reviews = Rating.objects.filter(
@@ -185,17 +185,21 @@ def client_dashboard_view(request):
 
     my_orders = Order.objects.filter(
         client=request.user
-    ).select_related('category', 'city').order_by('-created_at')
+    ).select_related('category', 'city', 'worker').order_by('-created_at', '-pk')
 
     active_orders = my_orders.filter(status=Order.Status.NEW)
     in_progress_orders = my_orders.filter(status=Order.Status.IN_PROGRESS)
     completed_orders = my_orders.filter(status=Order.Status.COMPLETED)
     cancelled_orders = my_orders.filter(status=Order.Status.CANCELLED)
 
-    orders_with_responses = []
-    for order in list(active_orders) + list(in_progress_orders):
-        resp_count = Response.objects.filter(order=order).count()
-        orders_with_responses.append({'order': order, 'response_count': resp_count})
+    # Constant query count: aggregate response totals for all open orders.
+    visible_orders = my_orders.filter(
+        status__in=[Order.Status.NEW, Order.Status.IN_PROGRESS]
+    ).annotate(response_count=Count('responses'))
+    orders_with_responses = [
+        {'order': order, 'response_count': order.response_count}
+        for order in visible_orders
+    ]
 
     return render(request, 'pages/client_dashboard.html', {
         'profile': profile,
@@ -374,7 +378,10 @@ def order_respond_view(request, pk):
         messages.warning(request, 'Сначала заполните профиль мастера.')
         return redirect('accounts:worker_profile')
 
-    order = get_object_or_404(Order, pk=pk, status=Order.Status.NEW)
+    order = get_object_or_404(
+        Order.objects.select_related('category', 'city'),
+        pk=pk, status=Order.Status.NEW,
+    )
 
     if order.client_id == request.user.pk:
         messages.error(request, 'Нельзя откликнуться на собственную заявку.')

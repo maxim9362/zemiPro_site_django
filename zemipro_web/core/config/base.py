@@ -2,7 +2,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .env import database_config
+from .env import database_config, env_bool
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -29,6 +29,8 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'core.middleware.DynamicHtmlNoStoreMiddleware',
+    'core.middleware.SensitivePostThrottleMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -140,3 +142,6 @@ LOGGING = {
         },
     },
 }
+
+# Only when Caddy overwrites X-Real-IP on an isolated internal network.
+THROTTLE_TRUST_X_REAL_IP = env_bool('ZEMIPRO_TRUST_X_REAL_IP', False)
