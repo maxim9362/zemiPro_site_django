@@ -1,1 +1,1 @@
-from django.db import models
+"""Placeholder module; implementations belong to later stages."""

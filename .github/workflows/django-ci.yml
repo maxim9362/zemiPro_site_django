@@ -1,0 +1,106 @@
+name: Django CI
+
+on:
+  push:
+    branches:
+      - stage-01-development
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  django:
+    name: django-postgresql
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: zemipro_ci
+          POSTGRES_PASSWORD: ci-only-synthetic-password
+          POSTGRES_DB: zemipro_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U zemipro_ci -d zemipro_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_ENV: test
+      DJANGO_SETTINGS_MODULE: core.settings
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_NAME: zemipro_ci
+      DB_USER: zemipro_ci
+      DB_PASSWORD: ci-only-synthetic-password
+      PYTHONDONTWRITEBYTECODE: "1"
+
+    defaults:
+      run:
+        working-directory: zemipro_web
+        shell: bash
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            zemipro_web/requirements.txt
+            zemipro_web/requirements-ci.txt
+
+      - name: Install pinned runtime and CI tools
+        run: |
+          python -m pip install -r requirements.txt -r requirements-ci.txt
+          python -m pip check
+
+      - name: Lint Django Python sources
+        run: |
+          python -m compileall -q apps core manage.py
+          python -m ruff check apps core manage.py
+
+      - name: Validate development and staging Compose (no containers started)
+        env:
+          STAGING_DOMAIN: ci-staging.example.invalid
+          STAGING_DB_PASSWORD: ci-only-synthetic-staging-password
+          STAGING_DJANGO_SECRET_KEY: ci-only-synthetic-staging-secret-W8k2P7q4R6s1V3x5Z7c9B2n4M6a8D0
+        run: |
+          docker compose -f docker-compose.django.yml config --quiet
+          docker compose -f docker-compose.staging.yml config --quiet
+          docker compose --profile maintenance -f docker-compose.staging.yml config --quiet
+          sh -n docker/staging-backup.sh docker/check-staging-health.sh
+
+      - name: Check Django and migration/model consistency
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+
+      - name: Apply clean isolated PostgreSQL migrations
+        run: |
+          python manage.py migrate --noinput
+          python manage.py migrate --check
+
+      - name: Run Django suite with service coverage gate
+        run: |
+          python -m coverage run manage.py test
+          python -m coverage report
+
+      - name: Validate strict production settings without deployment
+        env:
+          DJANGO_ENV: production
+          DJANGO_SECRET_KEY: ci-only-synthetic-secret-9hW8k2P7q4R6s1V3x5Z7c9B2n4M6a8D0
+          DJANGO_ALLOWED_HOSTS: ci.example.invalid
+        run: |
+          python manage.py check --deploy

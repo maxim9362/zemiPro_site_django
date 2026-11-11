@@ -1,6 +1,7 @@
-{% load static %}
+{% load static i18n %}
+{% get_current_language as current_language %}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ current_language }}" dir="{% if current_language == 'he' %}rtl{% else %}ltr{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

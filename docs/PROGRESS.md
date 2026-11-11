@@ -240,3 +240,140 @@
 - Отзыв старых ключей у провайдеров владелец планирует выполнить позднее самостоятельно. Он **не выполнен и не подтверждён**; 00.2 остаётся `BLOCKED / PROVIDER_REVOCATION_DEFERRED_BY_OWNER`. Публичная Git history с прежним SOCKS5 credential — отдельный риск до отзыва; force-push/history rewrite не выполнялись.
 - Решение о позднем отзыве **не является** доказательством безопасности и не разрешает production. Разрешены только дальнейшие независимые проверки, разработка и подготовка изменений без использования старых секретов.
 - Изменена только документация `stage-00-audit`; реальных ключей, секретов, Django-кода, production и серверных данных не трогали. Один этап/ветка/итоговый PR сохраняется.
+
+## 2026-11-11 — 01.1: разделение Django-конфигурации (GPT, рабочая ветка)
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / RUNTIME_NOT_RUN`; до подтверждения тестов и воспроизводимого чистого запуска не `DONE`.
+- **Ветка и основание:** `stage-01-development`, исходный `main` `6b119043e330`; код адаптирован выборочно из `stage-01-stabilization`, старые ветки не изменены. Коммит: запись в этом же коммите 01.1. Один этап — одна ветка — один итоговый PR.
+- **Реализовано:** `core.config` с профилями `development/test/staging/production`; строгая проверка продакшен-секретов, хостов и DB, обязательный HTTPS, secure cookies, консервативная HSTS без preload; отдельная тестовая PostgreSQL с локальным host-guard; `manage.py test` выбирает профиль test. Сохранены единая Django ORM и существующая бизнес-логика.
+- **Зависимости:** Python 3.12.14 (reference), Django 5.2.19 LTS; runtime requirements с exact pins и Windows markers, Gunicorn для Linux.
+- **Документы/безопасность:** новые `README.md`, `DJANGO_SETUP.md`, `.env.example`, `.dockerignore`; Git-исключения секретов сохранены. Compose/staging остаются 01.4 и не заявляются проверенными.
+- **Тесты:** `PASS` — статическое сравнение веток, код/requirements/документация проверены на уровне GitHub; `NOT_RUN` — новый Django suite и `manage.py check --deploy`, PostgreSQL migrate, `pip check`, Windows/Linux clean install и Docker build (в рабочем контейнере отсутствуют Django и сетевой доступ к пакетам). 7 конфигурационных тестов добавлены, выполнение ожидается в изолированной среде.
+- **Миграции:** нет; схемы и реальные данные не изменялись.
+- **Риски:** поддерживаемый Django 5.2 ещё требует полноценного regression run; проверка Python package pins/совместимости и реальный clean start не завершены; до production старые credentials должны быть отозваны отдельно владельцем.
+- **Далее:** после подтверждения доступных тестов и решения по DoD 01.1 переход к 01.2 только по команде владельца. Production, VPS, Cloudflare, DNS и действующие БД `NOT_TOUCHED`.
+
+## 2026-11-11 — 01.2: PostgreSQL constraints and migration rehearsal (GPT)
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / RUNTIME_NOT_RUN`, не `DONE`: миграции и тесты написаны, но полноценный PostgreSQL/Django runtime недоступен в этой среде.
+- **Ветка:** `stage-01-development`; исходный предыдущий этапный коммит `9c34753e058d9953d65478138678e18c7a4f1977`. Один этап — одна ветка — один итоговый PR; этот подэтап не создаёт PR.
+- **Проверено:** `accounts`, `marketplace`, `locations`, `moderation`, `notifications`, `analytics`: сохранены исходные миграции, модель пользователя, связи `PROTECT/SET_NULL/CASCADE`, уникальность категорий/городов/откликов/подкатегорий, существующие индексы. Правила каскада и политики удаления личных данных не менялись без продуктового решения.
+- **Реализовано:** модельные и миграционные PostgreSQL CHECK constraints для `Order.status`, `Response.status`, `Complaint.status`, с предварительной блокировкой несовместимых legacy значений и без записи/удаления данных; добавлены адресные тесты графа миграций, статусных ограничений, уникальности и защиты владельца. Файлы: `marketplace/models.py`, `marketplace/migrations/0004_status_constraints.py`, `moderation/models.py`, `moderation/migrations/0002_status_constraint.py`, `marketplace/tests/test_schema_constraints.py`, `docs/STAGE_01_MIGRATION_REHEARSAL.md`.
+- **Решение по legacy:** новые тестовые PostgreSQL создаются с нуля. Старые Telegram/PSEO/SQLite базы/данные не импортируются; для текущего Django — только сохранение существующей истории миграций и synthetic backup/restore.
+- **Проверки:** `PASS` — GitHub-статическая проверка моделей, имён/зависимостей миграций и сохранения исходных файлов; `NOT_RUN` — Django migration loader, `makemigrations --check`, `migrate`, PostgreSQL CHECK enforcement, synthetic restore + row counts, Django tests (зависимости и изолированный PostgreSQL не доступны).
+- **Миграции:** 2 новых, без удаления старых и без правок production. Вставка данных/вызовы внешних сервисов отсутствуют.
+- **Риски:** 01.1 Django 5.2 dependencies ещё требуют регрессионных тестов; статусные ограничения не применены в БД; настройка тестовой БД и миграционная репетиция должны быть выполнены в изолированной среде. Действующие базы, DNS, Cloudflare, VPS, секреты: `NOT_TOUCHED`.
+- **Следующий шаг:** после команды владельца — 01.3, сохраняя оба предыдущих подэтапа `IN_PROGRESS` до выполненных критериев и независимого этапного Codex review.
+
+## 2026-11-11 — 01.3: базовые Django тесты, фабрики и CI через GPT
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / CI_VERIFICATION_PENDING`. Это не `DONE` без реального успешного CI и проверки blocking required status.
+- **Рабочая ветка:** `stage-01-development` на базе предыдущего 01.2 коммита `6ce67ca0b62013f0d56a4864fa2cfb307e9d1179`; один этап, одна ветка и один итоговый PR. `main` не изменяется.
+- **Реализовано:** `.github/workflows/django-ci.yml` запускает Ubuntu/Python 3.12, отдельную PostgreSQL 17, pinned dependencies, `pip check`, Ruff и `compileall`, Django check, `makemigrations --check`, clean migrate, `migrate --check`, полный набор Django TestCase и coverage критичного сервисного слоя, а также синтетический `check --deploy` без сетевого production доступа.
+- **Переиспользовано:** исходные 17 Django тестов этапа 00, 7 конфигурационных тестов из 01.1, 8 тестов схемы PostgreSQL из 01.2. Добавлены 6 тестов сервисного happy path/отрицательных сценариев и фабрики синтетических users/categories/cities/orders; новые тесты используют данные только своего тестового PostgreSQL.
+- **Файлы:** `.github/workflows/django-ci.yml`, `zemipro_web/requirements-ci.txt`, `zemipro_web/pyproject.toml`, `zemipro_web/.coveragerc`, `zemipro_web/apps/marketplace/tests/factories.py`, `zemipro_web/apps/marketplace/tests/test_service_workflow.py`, `docs/STAGE_01_CI_ACCEPTANCE.md` и записи ROADMAP/PROGRESS.
+- **Порог покрытия:** 60% только для `apps.marketplace.services`; не заявлено глобальное покрытие Django.
+- **Тесты:** `PASS` — подготовительный просмотр текущих файлов GitHub и синтаксиса конфигураций статически; GitHub Actions, Django tests, покрытие и настоящий PostgreSQL `NOT_RUN` до появления результата запусков после push. Контейнер ChatGPT без Django/PostgreSQL и без сетевого доступа к PyPI.
+- **Приёмка/блокер:** branch ruleset для main должен требовать GitHub Actions check `django-postgresql`; наличие YAML в Git не гарантирует запрет merge. Проверить перед PR и записать доказательство.
+- **Миграции/production:** миграции в 01.3 не добавлены; staging/VPS/DNS/prod/секреты/реальные БД не затронуты.
+- **Следующий подэтап:** 01.4 только по команде владельца, не объявляя 01.1–01.3 `DONE` до соответствующих проверок.
+
+## 2026-11-11 — 01.4: Docker Compose и staging (GPT)
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / DEPLOYMENT_NOT_RUN` — требования описаны и код добавлен, но Docker build и реальное staging HTTPS ещё не подтверждены.
+- **Ветка:** `stage-01-development`, исходный commit `1f2b6313467fe9c375bd797dc23ce98f0a833319`. Один этап/одна ветка/один итоговый PR, без merge.
+- **Что сделано:** обновлён non-root Python 3.12 Dockerfile; безопасный `entrypoint.sh` запускает Django migrations только для явных `development/staging`, `collectstatic` на persistent static volume, Gunicorn. Development Compose: PostgreSQL 17, healthcheck DB/web, volumes для PostgreSQL/static/media, порты только loopback. Отдельный staging Compose: физически независимые БД/тома/сеть, нет опубликованного DB/web порта, ограничение памяти и 1 worker, Caddy TLS proxy для заранее согласованного домена, запрет прямого доступа `/media/*`; `.env.staging.example` без реальных секретов.
+- **Проверки:** добавлены 5 статических Django-тестов безопасности конфигурации и CI `docker compose config --quiet` с синтетическими переменными. Фактические Docker build/run, PostgreSQL persistence, HTTPS smoke и тесты Django пока `NOT_RUN` / staging `BLOCKED` до изолированного окружения и согласования.
+- **Файлы:** `zemipro_web/Dockerfile.django`, `docker-compose.django.yml`, `docker-compose.staging.yml`, `Caddyfile.staging`, `docker/entrypoint.sh`, `.env.staging.example`, `core/tests/test_container_config.py`, CI workflow, README, `docs/STAGE_01_DOCKER_STAGING.md`, ROADMAP, PROGRESS.
+- **Риски и rollback:** старые volumes не удаляются/не подключаются, новые секреты не использованы; полноценный rollback зависит от 01.5 backup/restore. Окружение с Gunicorn TCP health проверяет лишь процесс, а не функциональную готовность Django/DB. До пробного HTTPS нужен отдельный staging host, DNS и разрешение владельца.
+- **Production, VPS, DNS/Cloudflare, реальные БД и медиа:** `NOT_TOUCHED`. Дальше 01.5 только после команды владельца.
+
+## 2026-11-11 — 01.5: safe logs, health, staging backup/restore runbook
+
+- **Статус:** `IN_PROGRESS / IMPLEMENTED / RUNTIME_AND_RESTORE_NOT_RUN`. Нет подтверждённого расписания/бэкапа/restore/доставленного мониторингового алерта; `DONE` не заявляется.
+- **Ветка:** `stage-01-development`, исходный HEAD после 01.4 `80b29bd7903e9ca7ad2d574aa318df23c1ed5889`. Один этап — одна ветка, один итоговый PR после 01.6, `main` не изменяется.
+- **Реализация:** `core.observability.SafeJsonFormatter` пишет только UTC timestamp/level/component/allowlisted event/status_code и отбрасывает сообщения, аргументы, request, exceptions, tracebacks; базовые Django логгеры направлены в безопасный console JSON handler. `GET /health/live/` — HTTP liveness без БД, `GET /health/ready/` — `SELECT 1` и 503 при `DatabaseError`, без деталей DB, с no-store. PostgreSQL connect_timeout=3.
+- **Staging backup:** отдельный opt-in maintenance контейнер PostgreSQL 17 с жёстко проверенными PGHOST/PGDATABASE/PGUSER, приватным `staging_backups` volume, atomic pg_dump custom archive + pg_restore list + SHA-256. Архив не включает медиа; для медиа нужен отдельный защищённый backup. Без автоматического удаления имеющихся архивов и без воздействия на production.
+- **Расписание и ошибки:** подготовлены неактивный шаблон cron 03:15 UTC, проверка readiness каждые 5 минут (скрипт exit=1 + syslog ALERТ), runbook внешней зашифрованной копии, synthetic restore через защищённый stage00 tool, сравнений counts и ручного rollback. Ни хост, ни cron, ни канал алертов не настроены.
+- **Тесты/CI:** добавлены конфигурационные тесты formatter, health HTTP/DB mock, backup/monitor guard; CI проверяет shell syntax и `docker compose --profile maintenance config --quiet`. Runtime Django/PostgreSQL/Docker/curl monitoring/restore **NOT_RUN** в доступном окружении; только статический review и сопоставление конфигураций `PASS`. Версии и уязвимости внешних сервисов повторно не аудировались.
+- **Риски:** следует отдельно подтвердить отсутствие PII в Gunicorn/Caddy/host логах, проверку реального 503 и доставку алерта; backup на volume того же хоста не disaster recovery. Staging/production, домен, secrets, старая Django/Telegram/PSEO DB, платежи и медиа `NOT_TOUCHED`.
+- **Далее:** 01.6 — только по команде; финальные независимые проверки и один итоговый PR после всех шести подэтапов.
+
+## 2026-11-11 — 01.6: SQL performance, safe errors, mobile fallback and throttling
+
+- **Status:** `IN_PROGRESS / IMPLEMENTED / BENCHMARK_NOT_RUN`, not `DONE`. Code now exists for 01.1–01.6, but none of the runtime acceptance gates can be asserted solely from these commits.
+- **Branch:** `stage-01-development`, parent commit `84ce08e1dd62227210fe31478d3e620f106051e1`. One stage branch, one final PR after independent verification; main not touched.
+- **SQL:** city worker skills prefetched, category ordering stabilized by PK, worker public profile skills prefetched, worker dashboard orders joined to city/category, client dashboard response counts aggregated instead of N per-order DB queries.
+- **Cache/error:** dynamic HTML no-store middleware and independent generic 404/500 templates that do not echo request data/tracebacks.
+- **Basic throttle:** 12 login POST / 5 min, 6 registration POST / 15 min per client IP, HMAC cache keys, generic 429/503; staging Caddy overwrites X-Real-IP and a dedicated env flag enables trust. Default LocMemCache is per process, **not** an adequate distributed production safeguard.
+- **CSS:** minimal responsive fallback for existing Django pages at 320–480px; the approved four separate frontend HTML source files are not changed.
+- **Tests:** synthetic SQL scaling, 404/500, cache headers, POST limit and source-IP trust behavior added to existing CI test suite. Current environment lacks Django/PostgreSQL, so test execution and real device/latency/memory figures remain `NOT_RUN`.
+- **Data/infra:** no schema migrations, no external services or libraries, no Docker starts, no VPS/DNS/Cloudflare/production or real data changes. See `docs/STAGE_01_PERFORMANCE_BASELINE.md`.
+- **Stage 01 acceptance:** requires independent Codex Cloud review, full verified GitHub CI with PostgreSQL/migrations/tests, branch protection, isolated Docker HTTPS staging, backup/restore + alert drill, performance/mobile checks and production-grade abuse-control decision. Do not claim Stage 01 DONE or merge until verified and authorized.
+
+## 2026-11-11 — Stage 01 independent Codex review: ZP-01-001–006 remediation
+
+- **Reviewed SHA:** `3b06a647bca3cdba1c70aca6c2e02a23d89f552b`; Codex verdict `CHANGES REQUIRED`. Independent synthetic PostgreSQL: Django `69/69 PASS` twice, `pip check` PASS, `manage.py check` PASS, `makemigrations --check` PASS, `29` migrations PASS, schema restore and backup/verification PASS, coverage `89.5%` of `apps.marketplace.services`. GitHub CI `FAIL` from 16 F401 + 2 F405; these are **pre-remediation** results, not post-change passes.
+- **ZP-01-001 HIGH:** remove 16 confirmed unused imports across Django source and historic no-op stubs; make `DATABASES` explicit in test settings so Ruff F405 does not trigger. Do not turn lint rules off.
+- **ZP-01-002 MEDIUM:** staging/production reject `DJANGO_SECURE_HSTS_SECONDS <= 0`, add invalid-value test.
+- **ZP-01-003 HIGH:** replace per-process LocMemCache throttle with atomic PostgreSQL `INSERT ... ON CONFLICT ... RETURNING` HMAC window counters, new `accounts.0003_sensitive_post_counter` schema, expiring records and operator-scheduled pruning, concurrency test across independent DB connections. No Redis, queue or paid service.
+- **ZP-01-004 HIGH:** public catalogue and direct worker URL require both `user.is_active=True` and `is_blocked=False`, new tests assert 404 and no public profile listing.
+- **ZP-01-005 MEDIUM:** `NULLS LAST` descending rating with stable PK tie-break and rating test.
+- **ZP-01-006 LOW:** rewrite obsolete Compose description in `DJANGO_SETUP.md`.
+- **Verification status:** remediation prepared in the same existing stage branch, but new Django/PostgreSQL suite, migrations, Ruff and GitHub Actions require **fresh** execution. Do not infer PASS from Codex's pre-fix 69/69. No PR, merge, production DB, VPS, DNS, Cloudflare or secret changes.
+- **Remaining gates:** real staging HTTPS, off-host backup+monitor alert, branch protection, representative p95/RSS, mobile HE/RTL and authorized deployment decisions. All 01 substages remain `IN_PROGRESS` until acceptance.
+
+## 2026-11-11 — Stage 01: повторная проверка Codex после исправлений / подготовка итогового PR
+
+- **Проверенный Codex коммит:** `c8591a553b59412c56c85ab2b2b584b4f5718719` в `stage-01-development`. Результаты приведены по итоговому отчёту Codex, переданному владельцем; это **не новый локальный прогон GPT**.
+- **Итог ZP-01-001–006:** все 6 замечаний закрыты; новых ошибок по ним Codex не обнаружил. Ruff **PASS**, GitHub Actions **PASS**, миграция `accounts.0003_sensitive_post_counter` **PASS**, атомарность общего PostgreSQL rate limiter при параллельных запросах **PASS**.
+- **Тесты:** полный Django набор **75/75 PASS**, два независимых прогона по отчёту Codex (обычный и coverage); покрытие `apps.marketplace.services` **89,5%**. Это **не** покрытие всего проекта. До исправлений были `69/69` и красный CI; эти записи исторические и не отражают текущий код.
+- **Объём:** код 01.1–01.6 реализован и успешно прошёл повторную проверку исправлений. Этап **не объявляется `DONE`**, поскольку инфраструктурные и продуктовые гейты ниже ещё не выполнены.
+- **Подтверждено ранее по первому отчёту Codex на синтетической среде:** dev Docker/Compose runtime, новая PostgreSQL и миграции, базовые DB health, staging backup container и synthetic restore; реальные production/staging настройки и пользовательские данные не использовались.
+- **Осталось не подтверждено / `BLOCKED`:** отдельный staging host/domain/DNS с действительным HTTPS; off-host зашифрованное хранение backup и доставка мониторингового alert; административная проверка required GitHub branch protection для `main`; реальные p50/p95/RSS и мобильная визуальная проверка 320px, RU/EN/HE RTL; native Docker build без особенностей облачного CA окружения (Codex проверял сборку с audit CA mount, не production build).
+- **Политика PR:** допускается **один итоговый Draft PR** из `stage-01-development` в `main` для review; незакрытые гейты перечисляются в описании. **Не объединять PR, не активировать staging/prod и не менять DNS/Cloudflare/VPS** без отдельного решения владельца. После изменения документации новый commit требует собственного GitHub CI run; PASS за `c8591a553b59412c56c85ab2b2b584b4f5718719` не автоматически распространяется на новый SHA.
+
+## 2026-11-11 — изолированная staging smoke-проверка CI, без изменения реальной инфраструктуры
+
+- **Основание:** владелец запросил довести инфраструктурные гейты Stage 01 до приёмки, сохраняя действующий сайт/VPS/DNS/Cloudflare.
+- **Новая проверка:** `.github/workflows/stage01-staging-smoke.yml` запускает на disposable GitHub runner `zemipro_web/docker/ci-staging-smoke.sh` с синтетическими секретами, `localhost` и локальными портами. Docker staging build, loopback HTTPS с внутренним Caddy CA (не доверенный реальный TLS), HSTS, Django readiness, CSS/media, PostgreSQL persistence после restart, backup checksum и 100 HTTP timing samples.
+- **При добавлении:** `WORKFLOW_NOT_YET_VERIFIED`. Статус обновить только после реального GitHub Actions run. Результаты p50/p95 локального CI не приравнивать к реальному staging benchmark.
+- **В уже проверенном GitHub run** `43026841102` / Django CI / SHA `8ed9c3797fd5a9016bfece64b1333a3f4d81b76f` статус `success` (отдельно подтверждён инструментом GitHub).
+- **Не затронуты:** существующие VPS, DNS, Cloudflare, production и настоящие данные/секреты. В PR #7 нет разрешения на merge.
+- **Остаётся зависимость от владельца:** назвать и разрешить отдельный staging host/domain, параметры DNS и защищённое off-host место хранения; провести внешний alert и real TLS, browser/mobile RTL, performance с реалистичными данными, проверить GitHub branch protection (админ-интерфейс).
+
+## 2026-11-11 — GitHub Actions synthetic staging smoke verified (PR #7)
+
+- **Tested SHA:** `c2e159f96254ffd0005b790050a273da7f11bfdf`.
+- **Django CI run #9:** [43028406270](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406270) — **SUCCESS**.
+- **Isolated staging smoke run #1:** [43028406371](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43028406371) — **SUCCESS** (GitHub hosted runner, `localhost` with Caddy *internal* CA, synthetic credentials). Actual output confirms HTTPS readiness, static 200/media 404, HTTP redirect/HSTS, migration persistence across DB restart, `pg_dump` + checksum and `pg_restore --list`.
+- **Timing baseline:** 100 sequential requests to empty `/categories/`: p50 **15.5 ms**, p95 **16.6 ms**, loopback-only. This **does not meet** representative 100/1000-workers or real staging p95/RSS/mobile gates.
+- **Main blocker:** no owner-designated separate staging host/domain and no authority to change real Cloudflare/DNS/VPS; off-host backup + delivered alert, branch protection administration and 320px/HE/RTL visual checks remain `BLOCKED/NOT_RUN`.
+- **PR:** [Draft #7](https://github.com/maxim9362/zemiPro_site_django/pull/7) remains **OPEN / NOT MERGED**. Stage 01 remains `IN_PROGRESS`; passing disposable CI does not satisfy the publicly trusted HTTPS or off-host disaster recovery conditions.
+
+## 2026-11-11 — локальный Codex на Windows: найденные дефекты и исправления в PR #7
+
+- **Основание:** пользователь предоставил резюме локального `STAGE_01_LOCAL_VERIFICATION_REPORT_RU.md`; полный файл остаётся локально на ноутбуке и не предоставлен в GitHub/чат. Итог Codex: `CHANGES_REQUIRED`; рабочие локальные Development (`127.0.0.1:8000`) и Staging (`localhost:18443`), PostgreSQL 17.11/30 миграций, 75/75 Django tests, Ruff PASS, 89.5% coverage `apps.marketplace.services`, synthetic backup/checksum/restore PASS, health failures, 2 Gunicorn workers + shared rate limiter, 10/100/1000 entities и 320–1280px проверены на старом HEAD `8365d7c`.
+- **LOCAL-01-HIGH:** `CRLF` Windows checkout портит shell scripts (`entrypoint`/backup). Добавлен корневой `.gitattributes` с `*.sh text eol=lf` и static regression. Уже существующий Windows checkout может требовать безопасного переполучения tracked scripts после `git pull --ff-only`; не очищать чужие изменения.
+- **LOCAL-02-MEDIUM:** Gunicorn пытается использовать отсутствующий домашний каталог `/home/django`. Docker образ создаёт `/home/django` с владельцем `django`, `HOME` и правами `0700`.
+- **LOCAL-03-MEDIUM:** dashboard заказчика рендерил 1000 заказов (~1.02 MiB). Введены **четыре независимые ограниченные страницы** по статусам (по 10 записей каждая), с сохранением позиции других секций и агрегированными счётчиками откликов. Добавлены тесты объёма, приватности, пагинации и счётчиков.
+- **LOCAL-04 / Stage 02:** базовый `<html lang="ru">` заменён динамическими `lang/dir` (he→rtl; ru/en→ltr) и тестом. Это только корректная разметка активного locale; **полная локализация RU/EN/HE и пригодный RTL-дизайн остаются в 02.3**, не помечать `DONE`.
+- **Проверка новых исправлений:** GitHub [Django CI #43058354569](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43058354569) **PASS: 81/81 Django tests, Ruff, PostgreSQL migrations и coverage 89,5% только для `apps.marketplace.services`**. GitHub [isolated staging smoke #43058354612](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43058354612) **PASS: localhost TLS, backup SHA-256, DB restart/persistence**; CI baseline empty catalog p50 12.0 ms / p95 13.1 ms (не результат реальной нагрузки). **PENDING на Windows-ноутбуке:** повторное получение LF после существующего checkout, пересборка Docker/Gunicorn HOME и замер кабинета на 1000 заявках. Результат 75/75 был на предыдущем SHA.
+- **Внешние гейты:** `OFF_HOST_BACKUP_NOT_VERIFIED`, `ALERT_DELIVERY_NOT_VERIFIED`, `BRANCH_PROTECTION_BLOCKED`, publicly trusted staging TLS `NOT_RUN` — сознательно не названы выполненными. Действующий VPS, DNS, Cloudflare, production, чужие ноутбучные контейнеры не трогались. PR #7 остаётся **Draft / NOT_MERGED**.
+
+## 2026-11-11 — Windows Codex repeat review: six PASS, one Docker-only false negative
+
+- **Reviewed SHA:** `71094208a68350d4c10d63f7a2a0601e106ebb9d` on `stage-01-development`; source checkout and PR #7 were not changed by Codex. Summary supplied by owner, not an independently collected full report file.
+- **Confirmed PASS:** clean fast-forward from `8365d7c`; all four tracked shell scripts `i/lf w/lf attr/text eol=lf`; local Development and Staging rebuild/health on isolated Docker with retained PostgreSQL volumes; Gunicorn `/home/django` writable for UID 10001 and zero permission errors; 1000 synthetic orders survive restart; paginated client dashboard limits each of four statuses to 10 orders/page and excludes another client's private address, HTML **39,661 bytes** (previously ~1.02 MiB); 50-request local direct p95 **28.92 ms**, HTTPS p50 **70.58 ms** / p95 **101.79 ms**, zero HTTP errors; dynamic RU/EN/HE `lang/dir` PASS; Windows venv **81/81 Django PASS**, Ruff/migrations/backup/health PASS.
+- **One reproducible false negative (Docker 80/81):** `core.tests.test_container_config.ContainerConfigurationTests.test_shell_scripts_use_lf_and_django_has_writable_home` reads `self.root.parent / '.gitattributes'`, which exists in repository checkout but is intentionally outside Docker image context `/app`; Docker image must **not** copy `.git` or parent workspace. Fix: check root `.gitattributes` **only when it exists**. Mandatory checks of actual LF in scripts and Dockerfile Gunicorn HOME remain unconditional.
+- **After fix:** new tests and staging smoke `NOT_YET_VERIFIED` until latest GitHub run and new Windows container test. No code/DB production modifications, no branch merge.
+- **External gates still OPEN:** `OFF_HOST_BACKUP_NOT_VERIFIED`, `ALERT_DELIVERY_NOT_VERIFIED`, `BRANCH_PROTECTION_BLOCKED`, publicly trusted staging TLS `NOT_RUN`. Stage 02 covers full translations and Hebrew RTL UX.
+
+## 2026-11-11 — Stage 01 локально принят; разрешён merge PR #7 и переход к Stage 02
+
+- **Решение владельца:** после проверки положительных результатов разрешены завершение этапного PR #7 в `main` и переход к разработке Stage 02 в этом чате. Владелец не приобретает VPS сейчас; отдельный публичный staging/production host не настроен.
+- **Состояние на момент решения:** `stage-01-development` at `455236a5f782ef6c491f746d20a4cebd90c9c1e8`; GitHub Django CI [#43079414032](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43079414032) **SUCCESS**; isolated staging Docker smoke [#43079414024](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43079414024) **SUCCESS**, включая специфический тест `test_shell_scripts_use_lf_and_django_has_writable_home` `Ran 1 test / OK` внутри образа.
+- **Локальная база по отчёту Codex:** Windows с чистым git, LF и Docker dev/staging, Gunicorn HOME, PostgreSQL 17.11 / 30 migrations, synthetic backup/checksum/restore, 1000 заявок с HTML 39,661 B, p95 HTTPS 101.79 ms на 50 запросах, privacy, 81/81 Django suite. Повтор полного Windows suite после *самой последней* CI-only правки не предоставлен; не приписывать ему PASS.
+- **Приёмочный статус:** `LOCAL_VERIFIED / ACCEPTED_FOR_STAGE_02`. Это подтверждение пригодности для продолжения локальной разработки, **не** `DONE` всей внешней/production инфраструктуры.
+- **Обязательства при будущей подготовке к релизу:** off-host зашифрованный backup и восстановление, реальная доставка alert, branch protection для `main`, публичный staging HTTPS/TLS, реальные p50/p95/RSS на сервере и визуальный HE RTL. Всё `DEFERRED / NOT_VERIFIED`, а не `PASS`.
+- **Ограничения:** Merge только кода, никакого автоматического deploy, миграций на VPS, DNS/Cloudflare, изменения prod БД или создания настоящего staging без отдельного разрешения.

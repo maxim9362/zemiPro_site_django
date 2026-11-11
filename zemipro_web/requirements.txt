@@ -1,4 +1,10 @@
-Django>=5.1,<5.2
-psycopg2-binary>=2.9,<3.0
-python-dotenv>=1.0,<2.0
-gunicorn>=22.0,<23.0
+# Exact dependency versions for Python 3.12.x; no bot/PSEO packages.
+# Update deliberately and verify with pip check + Django tests.
+Django==5.2.19
+asgiref==3.13.0
+sqlparse==0.6.1
+psycopg2-binary==2.9.13
+python-dotenv==1.2.4
+gunicorn==26.2.0; platform_system != "Windows"
+packaging==26.3; platform_system != "Windows"
+tzdata==2025.2; platform_system == "Windows"

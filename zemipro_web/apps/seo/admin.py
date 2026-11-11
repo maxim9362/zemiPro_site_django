@@ -1,1 +1,1 @@
-from django.contrib import admin
+"""Placeholder module; implementations belong to later stages."""

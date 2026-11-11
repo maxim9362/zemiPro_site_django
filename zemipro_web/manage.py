@@ -6,6 +6,14 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    if len(sys.argv) > 1 and sys.argv[1] == 'test':
+        requested = os.environ.get('DJANGO_ENV', 'development').strip().lower()
+        if requested not in {'development', 'test'}:
+            raise RuntimeError(
+                'Django tests cannot run with DJANGO_ENV=staging/production.'
+            )
+        # Precedes python-dotenv loading, including DJANGO_ENV in .env.
+        os.environ['DJANGO_ENV'] = 'test'
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     try:
         from django.core.management import execute_from_command_line

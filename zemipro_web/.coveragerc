@@ -1,0 +1,9 @@
+[run]
+branch = True
+source =
+    apps.marketplace.services
+
+[report]
+show_missing = True
+precision = 1
+fail_under = 60

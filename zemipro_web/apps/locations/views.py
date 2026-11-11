@@ -1,1 +1,1 @@
-from django.shortcuts import render
+"""Placeholder module; implementations belong to later stages."""

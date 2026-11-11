@@ -54,6 +54,12 @@ class Complaint(models.Model):
         verbose_name_plural = 'Жалобы'
         db_table = 'moderation_complaint'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(status__in=['pending', 'resolved', 'dismissed']),
+                name='complaint_status_allowed',
+            ),
+        ]
 
     def __str__(self):
         target = self.target_user or self.target_order or '?'

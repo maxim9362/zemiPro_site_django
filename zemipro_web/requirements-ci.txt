@@ -1,0 +1,4 @@
+# Isolated CI/developer test dependencies; never install in production image.
+# Runtime dependencies remain pinned separately in requirements.txt.
+coverage==7.17.2
+ruff==0.17.4

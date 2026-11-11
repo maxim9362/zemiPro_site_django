@@ -1,0 +1,6 @@
+# Template only: install on an explicitly approved, ISOLATED staging host.
+# Replace absolute paths and verify dedicated files/volumes before activation.
+# Cron: daily at 03:15 UTC; set CRON_TZ=UTC if the host uses another timezone.
+# Restrict file permissions and system logs; never include secrets here.
+CRON_TZ=UTC
+15 3 * * * cd /REPLACE/with/authorized/isolated/zemipro_web && /usr/bin/docker compose --env-file .env.staging -f docker-compose.staging.yml --profile maintenance run --rm backup >> /REPLACE/with/private/backup-health.log 2>&1
