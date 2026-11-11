@@ -137,9 +137,10 @@ class Stage02WorkerServiceZonesTests(TestCase):
         cls.profile.skills.add(cls.repair, cls.remote)
 
     def test_legacy_worker_uses_home_city_if_no_explicit_zones(self):
-        city_url = lambda c: reverse('marketplace:city_detail', args=[c.slug])
-        self.assertContains(self.client.get(city_url(self.ashdod)), 'geo-worker')
-        self.assertNotContains(self.client.get(city_url(self.ashkelon)), 'geo-worker')
+        home_url = reverse('marketplace:city_detail', args=[self.ashdod.slug])
+        other_url = reverse('marketplace:city_detail', args=[self.ashkelon.slug])
+        self.assertContains(self.client.get(home_url), 'geo-worker')
+        self.assertNotContains(self.client.get(other_url), 'geo-worker')
 
     def test_explicit_multiple_service_cities_filter_city_and_category(self):
         self.profile.service_cities.set([self.ashkelon, self.netanya])
