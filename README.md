@@ -4,6 +4,17 @@ Service marketplace for Israel, built on one existing Django/PostgreSQL codebase
 [`zemipro_web/`](zemipro_web/). No Telegram runtime, Flask/PSEO runtime, SQLite
 runtime, or import of legacy user data is supported.
 
+**First public pilot: Ashdod ONLY.** Other Israeli cities are *not* available
+for public city selection, orders, or worker discovery until the owner explicitly
+approves expansion. The PostgreSQL seed still retains 25 technical city records,
+6 districts and 4 aliases to preserve IDs/FKs and historical tests; this does
+not imply 25 launch cities. Normal Django settings enforce `ashdod` on the
+server; `DJANGO_ENV=test` permits historical synthetic multi-city fixtures.
+RU/EN/HE and Hebrew RTL remain required. See
+[Stage 02 geography](docs/STAGE_02_GEOGRAPHY.md) and
+[Stage 02 integration](docs/STAGE_02_INTEGRATION.md). Production, merge and
+public launch still require separate owner approval.
+
 ## Local environment (01.1)
 
 Use **Python 3.12.x** (`.python-version`: 3.12.14) and the exact versions in

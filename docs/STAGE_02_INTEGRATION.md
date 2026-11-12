@@ -5,7 +5,7 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 
 ## Automated matrix
 
-1. Catalog seed (12 sections, 19 categories, 88 services), geography (6 districts, 25 pilot cities, 4 aliases), optional demo questionnaires (4 drafts/versions), plus duplicate collision rejection.
+1. Catalog seed (12 sections, 19 categories, 88 services), **technical geography registry** (6 districts, 25 stored cities, 4 aliases; **Ashdod is the only public pilot city**), optional demo questionnaires (4 drafts/versions), plus duplicate collision rejection.
 2. Create one synthetic order with a published questionnaire; repeat all three seeds and assert PK/FK stability, admin edits preserved, old answer/schema snapshots unchanged and no new questionnaire versions.
 3. RU/EN/HE path/slug consistency, menu/form rendering and text direction, language switching with query parameters, canonical/hreflang via existing regression suites, and private-answer non-disclosure.
 4. Playwright headless Chrome viewport checks at widths 320, 360, 375, 390 and 768 for catalogs, cities and authenticated order form across RU/EN/HE. Assert computed direction, navigation, horizontal overflow and LTR telephone field. Capture screenshots in the GitHub Actions artifact.
@@ -14,7 +14,7 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 ## Explicit manual gates
 
 - CI viewport emulation is not proof of actual Android/iPhone hardware behavior. Download and inspect screenshot artifact for clipping, menus, mixed-script fields and form usability; if device unavailable mark physical testing NOT_RUN.
-- Native Hebrew proofreading of catalog, city labels and demo questionnaire options; 11 new categories are editorial proposals, 25 cities are a pilot subset rather than official national coverage.
+- Native Hebrew proofreading of catalog, **Ashdod city labels** and demo questionnaire options; 11 new categories require editorial approval. The other 24 cities are technical data, not launch regions; the complete CBS registry is for later nationwide expansion.
 - Localized catalog indexing remains disabled by design; production/real staging DNS, VPS, live PostgreSQL, secrets and public rollout are not part of this acceptance.
 - Earlier Stage 00/01 production gates remain open. Do not merge PR #8 without explicit owner permission.
 
@@ -29,13 +29,13 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - Reusable isolated environment verification on application baseline `632226b3`: Python 3.12.14 / PostgreSQL 17.11 / existing Docker Compose, clean 34 migrations, repeated seeds and PK/FK/order/questionnaire regressions, normal restart persistence, synthetic checksum dump/restore, full **151/151 PASS**, targeted service coverage **94.0%**. Real headless Chromium checked **180/180** page/language/viewport combinations (320/360/375/390/768/1440), generated 54 screenshots and a RU/EN/HE mobile/desktop sample was visually inspected without clipping. See `docs/SHARED_TEST_ENVIRONMENT.md`. Physical devices and native Hebrew editorial quality remain unverified.
 - **Not Stage 02 DONE:** native Hebrew and category/city/questionnaire content review, official nationwide CBS coverage, physical Android/iPhone, original screenshot artifact final UX approval and Stage 08 legacy URL inventory remain open. Off-host backup, real alert delivery, credential rotation, branch protection and publicly trusted staging HTTPS are not verified. **PR #8 remains Draft / NOT_MERGED**, no production/deploy authorization.
 
-## Approved pilot geography and unchanged release gates (2026-11-12)
+## Historical multi-city proposal — SUPERSEDED by Ashdod-only (2026-11-12)
 
-- **Owner decision:** the technical acceptance boundary for Stage 02 is the existing **25-city pilot** (`6 districts / 25 cities / 4 aliases`), with stable PK/FK, seeds and previously verified automated scenarios. This accepts the limited **scope**, not the quality of all translated content or a real release.
+- **Historical decision only — superseded:** an earlier 25-city pilot was considered; the later owner instruction sets **Ashdod ONLY** as the actual public pilot. The 6 districts/25 city records/4 aliases stay as technical fixtures for PK/FK and seed regressions, not an approved multi-city release.
 - **Deferred obligation, not waived:** the **official complete CBS Israel locality registry**, alias/name/translation reconciliation and safe data expansion remain **`DEFERRED / REQUIRED_BEFORE_NATIONWIDE_ROLLOUT`**. Do not represent this as nationally complete; do not silently extend coverage or create synthetic supply outside supported locations.
-- **Still OPEN before public 25-city pilot:** Hebrew native editorial sign-off for UI and names; approval of 11 added categories, 25 city translations, 4 demo questionnaire texts; physical Android/iPhone checks (`NOT_RUN`); original screenshot and final mobile/RTL UX owner approval. Existing browser checks (CI 45/45 and shared Chromium 180/180) remain validated **emulations only**.
+- **Still OPEN before public Ashdod-only pilot:** native Hebrew approval of visible UI, category and Ashdod translations; 11 new categories, four demo questionnaire texts; physical Android/iPhone checks (`NOT_RUN`), screenshot and mobile/RTL UX owner approval. CI browsers are **emulations only**; 180-case shared Chromium evidence is from a prior code SHA.
 - **Security/infrastructure remain OPEN for corresponding deployment/release:** off-host backup, delivered alert, legacy credential rotation, branch protection, publicly trusted staging HTTPS and authorized DNS/Cloudflare/VPS/production actions. Legacy SEO URL inventory remains mandatory before Stage 08. These are not converted into `PASS` or silently declared `DEFERRED` by the city-scope decision.
-- **Stage 02 status remains `CODE_VERIFIED / SHARED_ENV_VERIFIED / MANUAL_GATES_OPEN`, not `DONE`.** Draft PR #8 must not be marked ready, merged or deployed without a new explicit owner instruction.
+- **Stage 02 status remains `ASHDOD_SCOPE_CI_VERIFIED / NEW_SCOPE_CODEX_REVIEW_PENDING / MANUAL_GATES_OPEN`, not `DONE`.** Draft PR #8 must not be marked ready, merged or deployed without a new explicit owner instruction.
 
 ## Superseding owner clarification: FIRST PILOT = ASHDOD ONLY (2026-11-12)
 
