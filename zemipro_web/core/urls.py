@@ -4,13 +4,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.conf.urls.i18n import i18n_patterns
 from core import health
+from core.i18n_views import safe_set_language
 
 urlpatterns = [
     path('health/live/', health.liveness, name='health_live'),
     path('health/ready/', health.readiness, name='health_ready'),
     path('admin/', admin.site.urls),
     # Language switch must stay UNPREFIXED even when public catalog uses i18n_patterns.
-    path('i18n/', include('django.conf.urls.i18n')),
+    path('i18n/setlang/', safe_set_language, name='set_language'),
 
     # Apps
     path('', include('apps.marketplace.urls')),

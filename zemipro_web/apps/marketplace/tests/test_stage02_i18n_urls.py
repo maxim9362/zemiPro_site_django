@@ -71,8 +71,10 @@ class CatalogLanguageUrlTests(TestCase):
                 with self.subTest(language=language, route=name):
                     path = self.localized(language, name, **params)
                     self.assertTrue(path.startswith(f'/{language}/'), path)
+                    with override(language):
+                        matched = resolve(path)
                     self.assertEqual(
-                        resolve(path).view_name, f'catalog_i18n:{name}',
+                        matched.view_name, f'catalog_i18n:{name}',
                     )
                     response = self.client.get(
                         path, HTTP_ACCEPT_LANGUAGE='ru',

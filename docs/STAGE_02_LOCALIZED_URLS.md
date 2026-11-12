@@ -77,3 +77,27 @@ protection of private worker contacts.
 staging smoke on exact head; real mobile RTL at 320/360/375/390/768,
 human review of Hebrew, verified legacy PSEO URL inventory before any
 live migration. Final stage 02 independent verification is 02.6.
+
+## 02.4 CI fix: source-language URL resolution (2026-11-12)
+
+The first [Django CI #43155090437](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155090437)
+reported nine tests: **2 FAIL / 12 ERROR** within the new 02.4
+multilingual route suite. Earlier steps, including ten 02.3 i18n tests,
+passed, and the accompanying [Docker smoke #43155090449](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155090449)
+was successful. These are NOT full-suite PASS results for 02.4.
+
+Root causes: tests called `resolve('/en/...')` after leaving the
+`translation.override('en')` block; Django resolves `i18n_patterns`
+according to the active language. The test now resolves while that
+language is active. Separately, Django's default `set_language`
+may leave a `/he/...` redirect unchanged when the POST to unprefixed
+`/i18n/setlang/` occurs without a Hebrew cookie. New
+`core.i18n_views.safe_set_language` validates `next` as an allowed local
+URL, temporarily activates its source language, then delegates to
+Django's built-in `set_language` for cookie/redirect semantics.
+External URL fallback remains guarded by Django. The original
+legacy unprefixed 404 redirect was addressed in
+`LegacySafeLocaleMiddleware`.
+
+**Gate:** repeat targeted 02.4 tests, 02.3 tests, full Django suite and
+Docker smoke on the corrected exact HEAD; no release before success.
