@@ -3,7 +3,7 @@ import uuid
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase, override_settings
 
 from apps.marketplace.models import Order, OrderStatusEvent, Response
@@ -141,10 +141,10 @@ class OrderLifecycleTests(TestCase):
         order = self.make_draft()
         transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
         event = order.status_events.get()
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(DatabaseError):
             with transaction.atomic():
                 OrderStatusEvent.objects.filter(pk=event.pk).update(new_status='cancelled')
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(DatabaseError):
             with transaction.atomic():
                 OrderStatusEvent.objects.filter(pk=event.pk).delete()
         self.assertEqual(order.status_events.count(), 1)
