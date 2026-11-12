@@ -565,7 +565,6 @@
 - **Different deadlines preserved:** Stage 00.4 and verified legacy SEO URL inventory **before Stage 08**; complete official CBS catalogue **before nationwide rollout** (not before first Ashdod public pilot).
 - **Status now:** Stage 00 `CORE_VERIFIED / FOLLOW_UP_REQUIRED`, Stage 01 `LOCAL_VERIFIED / EXTERNAL_RELEASE_GATES_OPEN`, Stage 02 `TECHNICAL_IMPLEMENTATION_COMPLETE / CI_VERIFIED / RELEASE_GATES_DEFERRED_BY_OWNER / TARGETED_CODEX_REVIEW_PENDING / PR_DRAFT`, **not DONE**, **not MERGED**, **not DEPLOYED**. No permission to start Stage 03 implied by release-gate decision.
 
-
 ## 2026-11-12 — Stage 03.1: один пользователь / два кабинета (начало)
 
 - **Зависимость:** Stage 02 HEAD `36cfb9965d7cffe7a09cb68b252b0d8ba9761acc`; PR #8 остаётся Draft/NOT_MERGED. Разработка ведётся в `stage-03-accounts-profiles`; отдельный итоговый Draft PR готовится только после 03.7, с базой Stage 02 до её разрешённого merge.
@@ -679,4 +678,10 @@
 - **03.7 code SHA:** `6f58ac775c0bd92580a24b88507829673a422f99`. [GitHub Django CI #43203817702](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43203817702) **SUCCESS:** **241/241 Django**, **45/45 headless Chrome mobile RU/EN/HE**, **12/12 isolated Ashdod-only**; migrations and `makemigrations --check`, model consistency, Ruff, seed and strict production-setting checks PASS. `marketplace.services` targeted coverage **90.4%** (NOT all backend). The negative test actually migrated a disposable PostgreSQL DB backward, inserted one *synthetic* legacy Telegram ID, confirmed the forward schema migration aborted with the value preserved, then cleared that single synthetic fixture and successfully reapplied the migration. Never run this destructive schema migration against real users without approved production preflight and backup.
 - **Review handoff:** [one final Stage 03 PR #9](https://github.com/maxim9362/zemiPro_site_django/pull/9) created as **DRAFT**, head `stage-03-accounts-profiles`, base `stage-02-catalog-localization` (Stage 02 PR #8 remains **DRAFT/NOT_MERGED**). PR #9 is **NOT MERGED**; no changes to `main`, VPS, DNS/Cloudflare, SMTP/SMS production delivery or live DB.
 - **Status:** all Stage 03.1–03.7 sub-stages `CODE_IMPLEMENTED / CI_VERIFIED`; **Stage 03 remains `IN_PROGRESS / INDEPENDENT_CODEX_REVIEW_PENDING / MERGE_PERMISSION_REQUIRED`**, and all previously open Ashdod-only public release gates remain OPEN. The final documentation-only commits may have later CI runs; the exact code SHA above is the confirmed complete test result.
+## 2026-11-12 — Independent final Ashdod-only review and remote-profile fix
+
+- Review baseline `36cfb9965d7cffe7a09cb68b252b0d8ba9761acc` exposed one HIGH boundary bypass: an existing worker profile based outside Ashdod could use `offers_remote` to appear in an online category and respond to an Ashdod order.
+- Fix `3a8e99886d108f401b2247a1b4a918d633e4d33d` keeps all historical rows but requires an Ashdod home profile for public discovery, order-feed access and response creation. A regression covers catalogue/profile visibility, GET/POST tampering and direct service calls.
+- Independent loopback PostgreSQL 17/Docker verification: 13/13 Ashdod-only; 164/164 full Django; Ruff, compile, checks, migrations, repeatable seeds, persistence and synthetic backup/restore PASS; targeted service coverage 95.2%; real Chromium 180/180 across RU/EN/HE and 320–1440 px, with 54 screenshots sampled. Physical devices remain NOT_RUN.
+- GitHub Actions for the forthcoming documentation HEAD are pending. PR #8 remains Draft/NOT_MERGED; native Hebrew/editorial, real-device, owner UX and infrastructure release gates remain OPEN.
 

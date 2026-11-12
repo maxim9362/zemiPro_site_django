@@ -63,3 +63,10 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - **Still required BEFORE technical closure of Stage 02:** fresh focused **independent Codex review of the Ashdod-only diff**. Previous CODE_REVIEW_PASS concerns earlier code. After PASS, any necessary fixes and matching CI, owner must separately authorize PR #8 Ready/merge. No Stage 02 formal DONE or public activation yet.
 - **Preserved earlier deadlines:** Stage 00.4 and legacy SEO URL inventory before Stage 08; full CBS nationwide register before nationwide rollout. Exact obligations and proof: [Stage 02 Release Gates](STAGE_02_RELEASE_GATES.md).
 
+## Independent final Ashdod-only review (2026-11-12)
+
+- Review of `36cfb996` found one HIGH pilot-boundary bypass: a historical worker based outside Ashdod could set `offers_remote` and appear in an online category, open the response endpoint and call `create_response` for an Ashdod order.
+- Fix `3a8e9988` requires the worker profile home city itself to be the configured public pilot city before publication, matching, order-feed access or response creation. It preserves every historical city/profile/order row and adds a regression for HTML GET/POST plus direct services.
+- Independent isolated PostgreSQL 17 result after the fix: Ashdod-only 13/13; full Django 164/164; Ruff, system/migration/deploy checks, repeatable seeds, synthetic persistence and backup/restore PASS; targeted `marketplace.services` coverage 95.2%. Real Chromium RU/EN/HE at 320/360/375/390/768/1440 px: 180/180 PASS and 54 screenshots visually sampled. Physical Android/iPhone remain NOT_RUN.
+- Current-source GitHub Actions are pending after publication of the documentation commit. The PR remains Draft and all manual/infrastructure release gates remain open.
+

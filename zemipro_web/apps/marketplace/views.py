@@ -674,6 +674,8 @@ def order_respond_view(request, pk):
             request, _('Для откликов сначала опубликуйте анкету мастера.'),
         )
         return redirect('accounts:worker_profile')
+    if public_city_slug() and not city_is_public(profile.city):
+        raise Http404
 
     order = get_object_or_404(
         Order.objects.select_related('category', 'city').filter(
