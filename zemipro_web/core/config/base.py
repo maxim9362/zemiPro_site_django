@@ -117,7 +117,10 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = False
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = False
 SOCIALACCOUNT_STORE_TOKENS = False
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+# allauth local-account flows are disabled; our separate Django email OTP
+# performs local proof and our social adapter requires verified Google email.
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_ADAPTER = 'apps.accounts.social_adapter.ZemiProGoogleAdapter'
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
