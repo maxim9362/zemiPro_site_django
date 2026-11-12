@@ -1,47 +1,120 @@
+"""Stage 03.6 — audited moderation actions require an authorized staff actor."""
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.utils import timezone
 
-from .models import Complaint
+from apps.accounts.models import PrivacyRequest, User
+from .models import Complaint, ModerationEvent
+
+
+def _require_moderator(actor, permission):
+    if (actor is None or not actor.is_authenticated or not actor.is_active
+            or actor.is_blocked or not actor.is_staff or not actor.has_perm(
+                f'moderation.{permission}',
+            )):
+        raise PermissionDenied('Недостаточно прав для модерации.')
 
 
 def create_complaint(reporter, reason, message, target_user=None,
                      target_order=None, target_rating=None):
-    """Создать жалобу."""
-    complaint = Complaint.objects.create(
-        reporter=reporter,
-        reason=reason,
-        message=message,
-        target_user=target_user,
-        target_order=target_order,
+    if (reporter is None or not reporter.is_authenticated
+            or not User.objects.filter(
+                pk=reporter.pk, is_active=True, is_blocked=False,
+            ).exists()):
+        raise PermissionDenied('Аккаунт недоступен.')
+    return Complaint.objects.create(
+        reporter=reporter, reason=reason, message=message,
+        target_user=target_user, target_order=target_order,
         target_rating=target_rating,
     )
-    return complaint
 
 
-def resolve_complaint(complaint, admin_note=''):
-    """Рассмотреть жалобу."""
-    complaint.status = Complaint.Status.RESOLVED
-    complaint.admin_note = admin_note
-    complaint.resolved_at = timezone.now()
-    complaint.save(update_fields=['status', 'admin_note', 'resolved_at'])
+@transaction.atomic
+def resolve_complaint(complaint, admin_note='', *, actor):
+    _require_moderator(actor, 'review_complaints')
+    row = Complaint.objects.select_for_update().get(pk=complaint.pk)
+    if row.status != Complaint.Status.PENDING:
+        raise ValueError('Жалоба уже рассмотрена.')
+    row.status = Complaint.Status.RESOLVED
+    row.admin_note = admin_note
+    row.resolved_at = timezone.now()
+    row.save(update_fields=['status', 'admin_note', 'resolved_at'])
+    ModerationEvent.objects.create(
+        actor=actor, complaint=row, target_user=row.target_user,
+        action=ModerationEvent.Action.RESOLVE,
+    )
+    return row
 
 
-def dismiss_complaint(complaint, admin_note=''):
-    """Отклонить жалобу."""
-    complaint.status = Complaint.Status.DISMISSED
-    complaint.admin_note = admin_note
-    complaint.resolved_at = timezone.now()
-    complaint.save(update_fields=['status', 'admin_note', 'resolved_at'])
+@transaction.atomic
+def dismiss_complaint(complaint, admin_note='', *, actor):
+    _require_moderator(actor, 'review_complaints')
+    row = Complaint.objects.select_for_update().get(pk=complaint.pk)
+    if row.status != Complaint.Status.PENDING:
+        raise ValueError('Жалоба уже рассмотрена.')
+    row.status = Complaint.Status.DISMISSED
+    row.admin_note = admin_note
+    row.resolved_at = timezone.now()
+    row.save(update_fields=['status', 'admin_note', 'resolved_at'])
+    ModerationEvent.objects.create(
+        actor=actor, complaint=row, target_user=row.target_user,
+        action=ModerationEvent.Action.DISMISS,
+    )
+    return row
 
 
-def block_user(user):
-    """Заблокировать пользователя."""
-    user.is_blocked = True
-    user.is_active = False
-    user.save(update_fields=['is_blocked', 'is_active'])
+@transaction.atomic
+def block_user(user, *, actor, complaint=None):
+    _require_moderator(actor, 'moderate_accounts')
+    target = User.objects.select_for_update().get(pk=user.pk)
+    if target.pk == actor.pk or target.is_superuser or target.is_staff:
+        raise PermissionDenied('Нельзя блокировать административный аккаунт.')
+    if target.is_blocked:
+        return False
+    target.is_blocked = True
+    target.is_active = False
+    target.save(update_fields=['is_blocked', 'is_active'])
+    ModerationEvent.objects.create(
+        actor=actor, target_user=target, complaint=complaint,
+        action=ModerationEvent.Action.BLOCK,
+    )
+    return True
 
 
-def unblock_user(user):
-    """Разблокировать пользователя."""
-    user.is_blocked = False
-    user.is_active = True
-    user.save(update_fields=['is_blocked', 'is_active'])
+@transaction.atomic
+def unblock_user(user, *, actor, complaint=None):
+    _require_moderator(actor, 'moderate_accounts')
+    target = User.objects.select_for_update().get(pk=user.pk)
+    if target.pk == actor.pk or target.is_superuser or target.is_staff:
+        raise PermissionDenied('Нельзя изменять административный аккаунт.')
+    if not target.is_blocked:
+        return False
+    target.is_blocked = False
+    target.is_active = True
+    target.save(update_fields=['is_blocked', 'is_active'])
+    ModerationEvent.objects.create(
+        actor=actor, target_user=target, complaint=complaint,
+        action=ModerationEvent.Action.UNBLOCK,
+    )
+    return True
+
+
+@transaction.atomic
+def review_privacy_request(item, *, actor, reject=False):
+    """Never mark completed or silently export/delete any personal data."""
+    _require_moderator(actor, 'review_privacy_requests')
+    request = PrivacyRequest.objects.select_for_update().get(pk=item.pk)
+    if request.status != PrivacyRequest.Status.PENDING:
+        raise ValueError('Запрос уже обрабатывается.')
+    request.status = (
+        PrivacyRequest.Status.REJECTED if reject
+        else PrivacyRequest.Status.PROCESSING
+    )
+    request.reviewed_at = timezone.now()
+    request.save(update_fields=['status', 'reviewed_at'])
+    ModerationEvent.objects.create(
+        actor=actor, target_user=request.user, privacy_request=request,
+        action=(ModerationEvent.Action.PRIVACY_REJECT if reject
+                else ModerationEvent.Action.PRIVACY_REVIEW),
+    )
+    return request
