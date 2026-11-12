@@ -229,7 +229,7 @@ class OrderDetailsPhotoTests(TestCase):
         self.assertEqual(self.upload(order, color=45).status_code, 302)
         self.assertEqual(self.upload(order, color=45).status_code, 302)
         self.assertEqual(OrderAttachment.objects.filter(order=order).count(), 1)
-        for color in (46, 47, 48, 49):
+        for color in (75, 115, 155, 205):
             self.assertEqual(self.upload(order, color=color).status_code, 302)
         self.assertEqual(OrderAttachment.objects.filter(order=order).count(), 5)
         rejected = self.upload(order, color=50)

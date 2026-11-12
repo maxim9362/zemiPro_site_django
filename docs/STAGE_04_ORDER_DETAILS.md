@@ -27,3 +27,5 @@ No antivirus scanner or automated visual PII detector is included. Image decode/
 ## Test gate
 
 Isolated PostgreSQL 17 migration and `makemigrations --check`, new 04.4 unit/integration tests (fixed/range/negotiable, restored legacy, uploaded corrupt/oversize/unsupported/animation, metadata stripping, draft-owner/staff/assignee/public visibility, CSRF and unauthorized deletes, duplicates, media root guard, locale and safe order view), existing Stage 04.1–04.3 regressions, Ashdod-only and headless Chrome mobile/RTL. Independent Codex Cloud review and in-browser end-to-end wizard photo UX acceptance are part of the final Stage 04 review after 04.7.
+
+**Draft photo access:** even an explicitly marked public photo remains inaccessible to anonymous users and selected workers until publication; owner and active, granularly authorized moderation staff can review the draft image. Authorization is checked against current persisted user flags on every request.

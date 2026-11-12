@@ -111,24 +111,25 @@ def store_photos_on_locked_order(order, *, actor, cleaned, visibility,
 def visible_order_photos(order, user):
     """The photo list itself is filtered, not only the streaming endpoint."""
     qs = OrderAttachment.objects.filter(order=order)
-    if order.status == Order.Status.DRAFT:
-        ensure_wizard_owner(user)
-        return qs if order.client_id == user.pk else qs.none()
-
+    stored = None
     if getattr(user, 'is_authenticated', False):
         stored = User.objects.filter(
             pk=user.pk, is_active=True, is_blocked=False,
             email_verification_required=False,
         ).first()
-        if stored:
-            if stored.pk == order.client_id:
-                return qs
-            if stored.is_staff and stored.has_perm('moderation.review_complaints'):
-                return qs
-            if order.worker_id == stored.pk:
-                return qs.filter(visibility__in=(
-                    OrderAttachment.Visibility.PUBLIC, OrderAttachment.Visibility.ASSIGNEE,
-                ))
+    if stored:
+        if stored.pk == order.client_id:
+            return qs
+        if stored.is_staff and stored.has_perm('moderation.review_complaints'):
+            return qs
+        if (order.status != Order.Status.DRAFT
+                and order.worker_id == stored.pk):
+            return qs.filter(visibility__in=(
+                OrderAttachment.Visibility.PUBLIC, OrderAttachment.Visibility.ASSIGNEE,
+            ))
+    if order.status == Order.Status.DRAFT:
+        # Even a previously public-consented photo stays closed until publish.
+        return qs.none()
     return qs.filter(
         visibility=OrderAttachment.Visibility.PUBLIC,
         public_consent_at__isnull=False,
@@ -136,12 +137,6 @@ def visible_order_photos(order, user):
 
 
 def can_read_order_photo(photo, user):
-    if photo.order.status == Order.Status.DRAFT:
-        try:
-            ensure_wizard_owner(user)
-        except PermissionDenied:
-            return False
-        return photo.order.client_id == user.pk
     return visible_order_photos(photo.order, user).filter(pk=photo.pk).exists()
 
 
