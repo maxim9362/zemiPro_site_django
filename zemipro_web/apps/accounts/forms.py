@@ -106,9 +106,14 @@ class SafeAuthenticationForm(AuthenticationForm):
             # Keep the original submitted identifier in cleaned_data so failed
             # login forms cannot disclose the resolved account username.
             self.user_cache = authenticate(
-                self.request, username=resolve_login_identifier(username),
+                self.request, username=username,
                 password=password,
             )
+            resolved = resolve_login_identifier(username)
+            if self.user_cache is None and resolved != username:
+                self.user_cache = authenticate(
+                    self.request, username=resolved, password=password,
+                )
             if self.user_cache is None:
                 raise self.get_invalid_login_error()
             self.confirm_login_allowed(self.user_cache)

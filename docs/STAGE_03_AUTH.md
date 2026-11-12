@@ -34,3 +34,8 @@
 - Code commits: `d5e1a331` (registration, email/phone proof, generic reset), `53db447d` (verified contact login aliases), `d6982384` (purpose-separated phone-only password recovery); intermediate test/CSS/translation fixes in same Stage 03 branch. This is **test-only proof**, not evidence of actual email or SMS delivery.
 - Operational release gate **STILL OPEN**: provider credentials, real delivery and receipt, bounces/retries, safe provider quotas, contact storage/retention and manual Hebrew/content/device acceptance. SMTP is dummy and SMS disabled by default; do not enable any real transport or launch publicly without separate owner permission.
 
+## Independent final review correction
+
+- Login now tries the literal username before resolving a verified email/phone alias. A historical username equal to another account's verified contact therefore remains usable, while the verified owner can still use the same text with its own password. The regression proves both identities select only the account matching the submitted password.
+- Independent isolated PostgreSQL 17 result on the reviewed tree: all Stage 03 contact/auth tests and the complete 244-test Django suite PASS. Real SMS/SMTP delivery remains disabled and is not claimed as tested.
+

@@ -685,3 +685,11 @@
 - Independent loopback PostgreSQL 17/Docker verification: 13/13 Ashdod-only; 164/164 full Django; Ruff, compile, checks, migrations, repeatable seeds, persistence and synthetic backup/restore PASS; targeted service coverage 95.2%; real Chromium 180/180 across RU/EN/HE and 320–1440 px, with 54 screenshots sampled. Physical devices remain NOT_RUN.
 - GitHub Actions for the forthcoming documentation HEAD are pending. PR #8 remains Draft/NOT_MERGED; native Hebrew/editorial, real-device, owner UX and infrastructure release gates remain OPEN.
 
+## 2026-11-12 — Independent final Stage 03 review and corrections
+
+- Stage 03 was synchronized with reviewed Stage 02 HEAD `24df07f1` in merge commit `9f709cfc`; PR #9 remains based on the Stage 02 branch and no PR was merged.
+- HIGH privacy finding fixed: generic `is_staff` no longer reveals order address/phone/free text/questionnaire answers. Persisted staff state plus `moderation.review_complaints` is required; owner and assigned worker behavior is unchanged. A negative staff regression was added.
+- MEDIUM authentication ambiguity fixed: a verified contact alias can no longer make an identical historical username unusable. Literal username authentication is attempted first, then the verified alias; regression covers both passwords/accounts.
+- Independent PostgreSQL 17 evidence on the combined tree: 69/69 focused security/migration tests, 244/244 full Django, Ruff/compile/checks/migration consistency, 43 clean migrations, repeatable seeds, persistence and synthetic backup/restore PASS; targeted `marketplace.services` coverage 91.0%; Chromium RU/EN/HE 180/180 with 54 screenshots. Physical devices and real SMTP/SMS remain NOT_RUN.
+- GitHub Actions on the forthcoming correction/documentation HEAD remain pending. Stage 03 is technically review-passed locally, not merged/deployed; all manual/legal/infrastructure release gates remain open.
+

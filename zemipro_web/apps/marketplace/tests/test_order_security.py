@@ -1,4 +1,5 @@
 from django.db import IntegrityError, transaction
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
@@ -21,6 +22,12 @@ class OrderSecurityTests(TestCase):
         self.worker = User.objects.create_user(username='worker', password='test-pass-3')
         self.staff = User.objects.create_user(
             username='staff', password='test-pass-4', is_staff=True
+        )
+        self.staff.user_permissions.add(Permission.objects.get(
+            content_type__app_label='moderation', codename='review_complaints',
+        ))
+        self.unprivileged_staff = User.objects.create_user(
+            username='unprivileged-staff', password='test-pass-5', is_staff=True,
         )
         self.worker_profile = WorkerProfile.objects.create(
             user=self.worker, city=self.city, display_name=self.worker.username,
@@ -124,7 +131,7 @@ class OrderSecurityTests(TestCase):
         self.assertNotContains(response, self.private_order.customer_phone)
         self.assertNotContains(response, self.private_order.customer_name)
 
-    def test_private_details_visible_to_owner_assignee_and_staff(self):
+    def test_private_details_visible_to_owner_assignee_and_authorized_staff(self):
         url = reverse('marketplace:order_detail', args=[self.private_order.pk])
 
         for user in (self.owner, self.worker, self.staff):
@@ -135,6 +142,16 @@ class OrderSecurityTests(TestCase):
                 self.assertContains(response, self.private_order.address)
                 self.assertContains(response, self.private_order.customer_phone)
                 self.assertContains(response, self.private_order.description)
+
+    def test_unprivileged_staff_sees_only_safe_order_fields(self):
+        self.client.force_login(self.unprivileged_staff)
+        response = self.client.get(reverse(
+            'marketplace:order_detail', args=[self.private_order.pk],
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, self.private_order.address)
+        self.assertNotContains(response, self.private_order.customer_phone)
+        self.assertNotContains(response, self.private_order.description)
 
     def test_unrelated_user_cannot_manage_order_by_guessing_id(self):
         order = Order.objects.create(

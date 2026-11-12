@@ -115,6 +115,34 @@ class AccountSecurityTests(TestCase):
                              fetch_redirect_response=False)
         self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
 
+    @override_settings(ZEMIPRO_CONTACT_DELIVERY_MODE='test-email')
+    def test_verified_email_alias_does_not_disable_same_text_username(self):
+        self.register()
+        verified = get_user_model().objects.get(username='synthetic-registrant')
+        request_contact_verification(verified, 'email')
+        code = re.search(r'\b\d{6}\b', mail.outbox[-1].body).group()
+        self.assertTrue(confirm_contact_verification(verified, 'email', code))
+        collision = get_user_model().objects.create_user(
+            username=verified.email,
+            password='Collision-Strong-Password-9362!',
+        )
+        self.client.post(reverse('accounts:logout'))
+
+        exact = self.client.post(reverse('accounts:login'), {
+            'username': collision.username,
+            'password': 'Collision-Strong-Password-9362!',
+        })
+        self.assertEqual(exact.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), collision.pk)
+        self.client.post(reverse('accounts:logout'))
+
+        alias = self.client.post(reverse('accounts:login'), {
+            'username': verified.email,
+            'password': 'Synthetic-Password-9362!',
+        })
+        self.assertEqual(alias.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), verified.pk)
+
     def test_verified_phone_login_requires_the_original_confirmed_number(self):
         self.register(email='')
         user = get_user_model().objects.get(username='synthetic-registrant')

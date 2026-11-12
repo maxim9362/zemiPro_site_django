@@ -1,6 +1,6 @@
 """Focused business-service happy path and negative authorization tests."""
 
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, Permission
 from django.test import TestCase
 
 from apps.marketplace.models import Order, Response
@@ -31,6 +31,9 @@ class ServiceWorkflowTests(TestCase):
         cls.worker = make_user('ci-worker')
         cls.unrelated = make_user('ci-unrelated')
         cls.staff = make_user('ci-staff', is_staff=True)
+        cls.staff.user_permissions.add(Permission.objects.get(
+            content_type__app_label='moderation', codename='review_complaints',
+        ))
         make_worker_profile(cls.worker, city=cls.city, category=cls.category)
 
     def test_registered_customer_to_accepted_worker_to_completed_order(self):

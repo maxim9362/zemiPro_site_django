@@ -7,16 +7,21 @@ from .models import Category, Order, Response
 
 
 def can_view_private_order_details(user, order):
-    """Allow private order data only to its owner, assignee, or staff."""
+    """Allow private data to parties or explicitly authorized moderation staff."""
     if not user.is_authenticated or not user.is_active or user.is_blocked:
         return False
     # Read persisted moderation state, never rely on a stale User instance.
-    if not User.objects.filter(
+    stored = User.objects.filter(
         pk=user.pk, is_active=True, is_blocked=False,
-    ).exists():
+    ).first()
+    if stored is None:
         return False
+    authorized_staff = (
+        stored.is_staff
+        and stored.has_perm('moderation.review_complaints')
+    )
     return bool(
-        user.is_staff
+        authorized_staff
         or order.client_id == user.id
         or order.worker_id == user.id
     )
