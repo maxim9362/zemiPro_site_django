@@ -8,6 +8,7 @@
 .git
 .gitignore
 .venv/
+.venv-shared-test/
 venv/
 env/
 **/__pycache__/
@@ -15,6 +16,7 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+artifacts/
 staticfiles/
 media/
 *.sqlite*

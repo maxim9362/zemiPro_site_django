@@ -1,6 +1,6 @@
 # Stage 02.6: integration and mobile RTL acceptance
 
-Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
+Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / SHARED_ENV_VERIFIED / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
 All seeds, schema checks, browser registration and order tests use isolated, disposable PostgreSQL in GitHub Actions. Never run these commands on production.
 
 ## Automated matrix
@@ -26,4 +26,5 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - [Disposable Docker staging smoke #43162342520](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162342520): **SUCCESS** on the same fix commit.
 - Independent Codex re-review of `cad90a071a169a9d70d99629422ff852db610e7c`: **`CODE_REVIEW_PASS`**. `ZP-02-001 FIXED`, `ZP-02-002 FIXED`, new blockers: none. Targeted local checks covered 16/16 SEO cases, Ruff, Django system/migration checks, legacy links/canonical/hreflang and private contact marker. Unchanged full suite and Chrome were not re-run locally.
 - The reviewed exact HEAD `cad90a071` also has [Django CI #43162656220](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656220) **SUCCESS** (full 151/151, SEO 16/16, Chrome 45/45, targeted coverage 94.0%) and [isolated Docker smoke #43162656363](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656363) **SUCCESS**.
+- Reusable isolated environment verification on application baseline `632226b3`: Python 3.12.14 / PostgreSQL 17.11 / existing Docker Compose, clean 34 migrations, repeated seeds and PK/FK/order/questionnaire regressions, normal restart persistence, synthetic checksum dump/restore, full **151/151 PASS**, targeted service coverage **94.0%**. Real headless Chromium checked **180/180** page/language/viewport combinations (320/360/375/390/768/1440), generated 54 screenshots and a RU/EN/HE mobile/desktop sample was visually inspected without clipping. See `docs/SHARED_TEST_ENVIRONMENT.md`. Physical devices and native Hebrew editorial quality remain unverified.
 - **Not Stage 02 DONE:** native Hebrew and category/city/questionnaire content review, official nationwide CBS coverage, physical Android/iPhone, original screenshot artifact final UX approval and Stage 08 legacy URL inventory remain open. Off-host backup, real alert delivery, credential rotation, branch protection and publicly trusted staging HTTPS are not verified. **PR #8 remains Draft / NOT_MERGED**, no production/deploy authorization.

@@ -87,6 +87,23 @@ Install additional dev-only tools using
 root (after installing Django runtime requirements). Details and merge-gate
 requirements: [01.3 CI acceptance](docs/STAGE_01_CI_ACCEPTANCE.md).
 
+## Shared Stage 00–02 verification environment
+
+Codex Cloud/Linux can reuse the existing Docker Compose with one project-scoped
+launcher; no second Django project or CI workflow is required:
+
+```bash
+cd zemipro_web
+./scripts/shared_test_env.sh verify
+./scripts/shared_test_env.sh browser
+./scripts/shared_test_env.sh report
+./scripts/shared_test_env.sh stop
+```
+
+The environment is loopback-only, uses PostgreSQL 17 and synthetic data, and
+preserves its named volumes on stop. Full safety boundaries, artifacts, test
+coverage and Stage 00–02 matrix: [shared test environment](docs/SHARED_TEST_ENVIRONMENT.md).
+
 ## Observability and backups (01.5)
 
 Django exposes `GET /health/live/` and `GET /health/ready/`, and writes

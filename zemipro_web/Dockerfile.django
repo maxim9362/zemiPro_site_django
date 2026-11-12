@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Python/Django runtime only. Development and staging share this image.
 FROM python:3.12-slim-bookworm
 
@@ -9,7 +10,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt /app/requirements.txt
-RUN python -m pip install --no-cache-dir -r /app/requirements.txt
+# ``build_ca`` is optional and is used only by managed development runners
+# whose HTTPS proxy has a private CA. The certificate is a BuildKit secret: it
+# is never copied into an image layer. Normal local/CI builds use system trust.
+RUN --mount=type=secret,id=build_ca,required=false \
+    if [ -s /run/secrets/build_ca ]; then \
+        PIP_CERT=/run/secrets/build_ca python -m pip install --no-cache-dir -r /app/requirements.txt; \
+    else \
+        python -m pip install --no-cache-dir -r /app/requirements.txt; \
+    fi
 
 RUN groupadd --gid 10001 django \
     && useradd --uid 10001 --gid django --create-home --home-dir /home/django --shell /usr/sbin/nologin django \
