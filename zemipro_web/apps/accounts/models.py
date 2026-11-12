@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -31,6 +32,8 @@ class User(AbstractUser):
         max_length=20, blank=True, null=True,
         verbose_name='Телефон'
     )
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    phone_verified_at = models.DateTimeField(null=True, blank=True)
     is_blocked = models.BooleanField(
         default=False, verbose_name='Заблокирован'
     )
@@ -144,3 +147,62 @@ class SensitivePostCounter(models.Model):
 
     class Meta:
         db_table = 'accounts_sensitive_post_counter'
+
+class ContactChallenge(models.Model):
+    """One time-limited, hashed verification code per account and channel."""
+
+    class Channel(models.TextChoices):
+        EMAIL = 'email', 'Email'
+        PHONE = 'phone', 'Телефон'
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='contact_challenges',
+    )
+    channel = models.CharField(max_length=8, choices=Channel.choices)
+    destination_digest = models.CharField(max_length=64)
+    code_digest = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField()
+    sent_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'accounts_contact_challenge'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'channel'], name='accounts_one_contact_challenge',
+            ),
+        ]
+
+
+class VerifiedContact(models.Model):
+    """DB-unique verified identity: prevents two accounts claiming one address."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='verified_contacts',
+    )
+    channel = models.CharField(max_length=8, choices=ContactChallenge.Channel.choices)
+    fingerprint = models.CharField(max_length=64, unique=True)
+    verified_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'accounts_verified_contact'
+
+
+class ContactDeliveryEvent(models.Model):
+    """Audit outcome only. Never persist verification codes or raw contacts."""
+
+    class Outcome(models.TextChoices):
+        SENT = 'sent', 'Передано адаптеру'
+        UNAVAILABLE = 'unavailable', 'Доставка не настроена'
+        FAILED = 'failed', 'Ошибка доставки'
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='contact_delivery_events',
+    )
+    channel = models.CharField(max_length=8, choices=ContactChallenge.Channel.choices)
+    destination_digest = models.CharField(max_length=64)
+    outcome = models.CharField(max_length=12, choices=Outcome.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'accounts_contact_delivery_event'

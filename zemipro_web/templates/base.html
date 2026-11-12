@@ -40,7 +40,11 @@
                     {% endif %}
                 </a>
                 <a href="{% url 'accounts:client_profile' %}">{% trans 'Профиль' %}</a>
-                <a href="{% url 'accounts:logout' %}">{% trans 'Выйти' %}</a>
+                <a href="{% url 'accounts:contact_verification' %}">{% trans 'Подтверждение контактов' %}</a>
+                <form method="post" action="{% url 'accounts:logout' %}" class="nav__logout">
+                    {% csrf_token %}
+                    <button type="submit">{% trans 'Выйти' %}</button>
+                </form>
                 {% else %}
                 <a href="{% url 'accounts:login' %}">{% trans 'Войти' %}</a>
                 <a href="{% url 'accounts:register' %}">{% trans 'Регистрация' %}</a>

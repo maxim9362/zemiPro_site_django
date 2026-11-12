@@ -774,3 +774,93 @@ msgstr "An answer to this question is required."
 
 msgid "Подуслуга не относится к выбранной категории."
 msgstr "This service does not belong to the selected category."
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Номер телефона Израиля с кодом +972"
+msgstr "Israeli phone number with +972 country code"
+
+msgid "Некорректный израильский номер телефона."
+msgstr "Invalid Israeli phone number."
+
+msgid "Укажите email или телефон для подтверждения."
+msgstr "Enter an email address or phone number for verification."
+
+msgid "Аккаунт недоступен."
+msgstr "This account is unavailable."
+
+msgid "Способ подтверждения"
+msgstr "Verification method"
+
+msgid "Код подтверждения"
+msgstr "Verification code"
+
+msgid "Введите шестизначный код."
+msgstr "Enter a six-digit code."
+
+msgid "Подтверждение контактов"
+msgstr "Contact verification"
+
+msgid "Не удалось отправить код подтверждения."
+msgstr "Unable to send a verification code."
+
+msgid "Код подтверждения отправлен."
+msgstr "Verification code sent."
+
+msgid "Доставка подтверждений пока недоступна."
+msgstr "Verification delivery is currently unavailable."
+
+msgid "Проверьте способ подтверждения."
+msgstr "Check your verification method."
+
+msgid "Контакт подтверждён."
+msgstr "Contact verified."
+
+msgid "Неверный или просроченный код."
+msgstr "Invalid or expired code."
+
+msgid "Сначала укажите email или телефон при регистрации."
+msgstr "Provide an email or phone number when registering."
+
+msgid "Отправить код"
+msgstr "Send code"
+
+msgid "Подтвердить контакт"
+msgstr "Verify contact"
+
+msgid "Восстановить пароль"
+msgstr "Reset password"
+
+msgid "Ссылка для восстановления отправляется только на подтверждённый email."
+msgstr "Recovery links are sent only to verified email addresses."
+
+msgid "Продолжить"
+msgstr "Continue"
+
+msgid "Проверьте почту"
+msgstr "Check your inbox"
+
+msgid "Если адрес подтверждён и аккаунт доступен, вы получите письмо."
+msgstr "If this is a verified address for an active account, an email will be sent."
+
+msgid "Новый пароль"
+msgstr "New password"
+
+msgid "Сохранить пароль"
+msgstr "Save password"
+
+msgid "Ссылка недействительна или срок её действия истёк."
+msgstr "The link is invalid or has expired."
+
+msgid "Пароль обновлён."
+msgstr "Password updated."
+
+msgid "Для восстановления пароля ZemiPro перейдите по ссылке:"
+msgstr "To reset your ZemiPro password, open this link:"
+
+msgid "Если вы не запрашивали восстановление, проигнорируйте это письмо."
+msgstr "If you did not request this reset, ignore this email."
+
+msgid "ZemiPro — восстановление пароля"
+msgstr "ZemiPro — password reset"

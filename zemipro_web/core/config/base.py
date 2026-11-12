@@ -96,6 +96,12 @@ AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/client/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+PASSWORD_RESET_TIMEOUT = 3600
+# External contact delivery is explicitly disabled until a provider is
+# configured and accepted before the first public release.
+ZEMIPRO_CONTACT_DELIVERY_MODE = 'disabled'
+EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@zemipro.invalid'
 
 # Structured logs deliberately exclude request paths, query strings, headers,
 # exception messages, tracebacks and user input. Use stable events only.

@@ -1,5 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, UserCreationForm
+from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
@@ -8,15 +10,105 @@ from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceFi
 from apps.locations.models import City
 from apps.locations.services import get_public_cities
 from apps.marketplace.models import Category, Rating
-from .models import ClientProfile, User, WorkerProfile
+from .models import ClientProfile, User, WorkerProfile, VerifiedContact
+from .verification import contact_fingerprint, normalize_israeli_phone
 
 
 class RegistrationForm(UserCreationForm):
-    """Registration form bound to the project's custom user model."""
+    """Username/password remain primary; neither unverified contact is login."""
+
+    email = forms.EmailField(
+        label=_('Email'), required=False, max_length=254,
+    )
+    phone = forms.CharField(
+        label=_('Телефон'), required=False, max_length=20,
+        help_text=_('Номер телефона Израиля с кодом +972'),
+    )
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username',)
+        fields = ('username', 'email', 'phone')
+
+    def clean_email(self):
+        return self.cleaned_data.get('email', '').strip().casefold()
+
+    def clean_phone(self):
+        value = self.cleaned_data.get('phone', '').strip()
+        if not value:
+            return ''
+        try:
+            return normalize_israeli_phone(value)
+        except ValueError as exc:
+            raise ValidationError(_('Некорректный израильский номер телефона.')) from exc
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get('email') and not cleaned.get('phone'):
+            raise ValidationError(_('Укажите email или телефон для подтверждения.'))
+        return cleaned
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.phone = self.cleaned_data['phone'] or None
+        if commit:
+            user.save()
+        return user
+
+
+class SafeAuthenticationForm(AuthenticationForm):
+    """A blocked user must not be able to start a new session."""
+
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+        if user.is_blocked:
+            raise ValidationError(
+                _('Аккаунт недоступен.'), code='inactive',
+            )
+
+
+class VerifiedPasswordResetForm(PasswordResetForm):
+    """Never send a recovery link to an email the user has not proved."""
+
+    def get_users(self, email):
+        normalized = email.strip().casefold()
+        digest = contact_fingerprint('email', normalized)
+        accounts = get_user_model()._default_manager.filter(
+            email__iexact=normalized, email_verified_at__isnull=False,
+            is_active=True, is_blocked=False,
+        )
+        for user in accounts:
+            if (
+                user.has_usable_password()
+                and VerifiedContact.objects.filter(
+                    user=user, channel='email', fingerprint=digest,
+                ).exists()
+            ):
+                yield user
+
+
+class RequestContactVerificationForm(forms.Form):
+    channel = forms.ChoiceField(
+        choices=(('email', _('Email')), ('phone', _('Телефон'))),
+        label=_('Способ подтверждения'),
+    )
+
+
+class ConfirmContactVerificationForm(RequestContactVerificationForm):
+    code = forms.CharField(
+        min_length=6, max_length=6,
+        label=_('Код подтверждения'),
+        widget=forms.TextInput(attrs={
+            'autocomplete': 'one-time-code', 'inputmode': 'numeric',
+            'pattern': '[0-9]{6}',
+        }),
+    )
+
+    def clean_code(self):
+        value = self.cleaned_data['code']
+        if len(value) != 6 or not value.isascii() or not value.isdigit():
+            raise ValidationError(_('Введите шестизначный код.'))
+        return value
 
 
 class ClientProfileForm(forms.ModelForm):
