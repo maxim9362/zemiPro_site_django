@@ -28,6 +28,13 @@ class UserAdmin(BaseUserAdmin):
     # may block/unblock. User deletion risks erasing responses, notifications.
     readonly_fields = ('is_blocked', 'is_active')
 
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        # No delegated password-reset/role escalation via change_user.
+        return request.user.is_superuser
+
     def has_delete_permission(self, request, obj=None):
         return False
 
@@ -49,6 +56,16 @@ class ClientProfileAdmin(admin.ModelAdmin):
     raw_id_fields = ('user', 'city')
 
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Profiles are owner-managed; no unreviewed changes by staff.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 @admin.register(WorkerProfile)
 class WorkerProfileAdmin(admin.ModelAdmin):
     list_display = (
@@ -63,6 +80,16 @@ class WorkerProfileAdmin(admin.ModelAdmin):
     raw_id_fields = ('user', 'city')
     filter_horizontal = ('skills', 'service_cities')
 
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Profiles are owner-managed; no unreviewed changes by staff.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 @admin.register(PrivacyRequest)
 class PrivacyRequestAdmin(admin.ModelAdmin):
