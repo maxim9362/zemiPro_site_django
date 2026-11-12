@@ -137,8 +137,21 @@ class BlockedAccountMiddleware(MiddlewareMixin):
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         user = request.user
+        public_catalog = {
+            'marketplace:home', 'marketplace:categories_list',
+            'marketplace:category_detail', 'marketplace:cities_list',
+            'marketplace:city_detail', 'marketplace:section_detail',
+            'marketplace:service_detail', 'marketplace:worker_public_profile',
+            'catalog_i18n:home', 'catalog_i18n:categories_list',
+            'catalog_i18n:category_detail', 'catalog_i18n:cities_list',
+            'catalog_i18n:city_detail', 'catalog_i18n:section_detail',
+            'catalog_i18n:service_detail',
+        }
+        view_name = getattr(request.resolver_match, 'view_name', '')
+        safe_public_read = request.method == 'GET' and view_name in public_catalog
         if (user.is_authenticated and user.is_blocked
-                and request.path_info != '/accounts/logout/'):
+                and request.path_info != '/accounts/logout/'
+                and not safe_public_read):
             response = HttpResponseForbidden('Аккаунт недоступен.')
             response['Cache-Control'] = 'private, no-store'
             return response
