@@ -4,6 +4,7 @@ from io import BytesIO
 from tempfile import TemporaryDirectory
 
 from django.conf import settings
+from django.db import IntegrityError, transaction
 from django.contrib.auth.models import Permission
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -148,6 +149,60 @@ class OrderDetailsPhotoTests(TestCase):
         self.assertContains(detail, 'Central Ashdod')
         self.assertContains(detail, '250.20')
         self.assertNotContains(detail, 'Synthetic work description long enough.')
+
+    def test_fixed_and_negotiable_price_modes_and_database_guard(self):
+        for mode, minimum, expected in (
+            ('fixed', '85.75', '85.75'),
+            ('negotiable', '', None),
+        ):
+            with self.subTest(mode=mode):
+                order = self.begin()
+                self.assertEqual(
+                    self.step(order, 2, {'questionnaire_version': ''}).status_code, 302,
+                )
+                self.assertEqual(
+                    self.step(order, 3, {
+                        'city': self.city.pk, 'mode': 'onsite', 'area': 'Central Ashdod',
+                    }).status_code, 302,
+                )
+                self.assertEqual(
+                    self.step(order, 4, {
+                        'preferred_date': '', 'urgency': 'normal',
+                    }).status_code, 302,
+                )
+                self.assertEqual(
+                    self.step(order, 5, {
+                        'price_type': mode, 'amount_min': minimum, 'amount_max': '',
+                    }).status_code, 302,
+                )
+                self.assertEqual(
+                    self.step(order, 6, {
+                        'description': 'Synthetic order with normalized budget.',
+                    }).status_code, 302,
+                )
+                self.assertEqual(self.finish(order).status_code, 302)
+                order.refresh_from_db()
+                self.assertEqual(order.price_kind, mode)
+                self.assertEqual(
+                    str(order.amount_min_ils) if order.amount_min_ils is not None else None,
+                    expected,
+                )
+                self.assertIsNone(order.amount_max_ils)
+                self.assertEqual(order.price, (
+                    '85.75 ₪' if mode == 'fixed' else 'Договорная'
+                ))
+                self.assertIsNone(order.preferred_date)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Order.objects.create(
+                client=self.owner, category=self.category, city=self.city,
+                price_kind='range', amount_min_ils='200.00',
+                amount_max_ils='100.00',
+            )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Order.objects.create(
+                client=self.owner, category=self.category, city=self.city,
+                price_kind='fixed', amount_min_ils=None,
+            )
 
     def test_legacy_values_are_not_rewritten_or_guessed(self):
         order = Order.objects.create(

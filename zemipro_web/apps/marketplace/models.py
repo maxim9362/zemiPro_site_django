@@ -286,6 +286,24 @@ class Order(models.Model):
                 ]),
                 name='order_status_allowed',
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        price_kind__in=['legacy', 'negotiable'],
+                        amount_min_ils__isnull=True, amount_max_ils__isnull=True,
+                    )
+                    | models.Q(
+                        price_kind='fixed', amount_min_ils__gte=0,
+                        amount_min_ils__isnull=False, amount_max_ils__isnull=True,
+                    )
+                    | models.Q(
+                        price_kind='range', amount_min_ils__gte=0,
+                        amount_min_ils__isnull=False, amount_max_ils__isnull=False,
+                        amount_max_ils__gte=models.F('amount_min_ils'),
+                    )
+                ),
+                name='order_structured_price_valid',
+            ),
         ]
 
     def __str__(self):
