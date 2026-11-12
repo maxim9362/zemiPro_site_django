@@ -966,3 +966,117 @@ msgstr "Under review"
 
 msgid "Отклонён"
 msgstr "Rejected"
+
+msgid "Частный мастер"
+msgstr "Independent professional"
+
+msgid "Компания"
+msgstr "Company"
+
+msgid "Принимаю заказы"
+msgstr "Available for new jobs"
+
+msgid "Ограниченная доступность"
+msgstr "Limited availability"
+
+msgid "Пока не принимаю заказы"
+msgstr "Not accepting new jobs"
+
+msgid "Тип исполнителя"
+msgstr "Provider type"
+
+msgid "Публичное имя или компания"
+msgstr "Public name or company"
+
+msgid "Языки общения"
+msgstr "Spoken languages"
+
+msgid "Цены или принцип расчёта"
+msgstr "Prices or pricing method"
+
+msgid "Доступность"
+msgstr "Availability"
+
+msgid "График работы"
+msgstr "Working hours"
+
+msgid "Опубликован"
+msgstr "Published"
+
+msgid "Опубликован с"
+msgstr "Published since"
+
+msgid "Русский"
+msgstr "Russian"
+
+msgid "Английский"
+msgstr "English"
+
+msgid "Иврит"
+msgstr "Hebrew"
+
+msgid "Укажите публичное имя или название компании."
+msgstr "Enter a public name or company name."
+
+msgid "Выберите обслуживаемый город."
+msgstr "Select a supported service city."
+
+msgid "Для публикации укажите описание минимум 20 символов."
+msgstr "To publish, provide a description of at least 20 characters."
+
+msgid "Укажите ориентировочные цены или принцип расчёта."
+msgstr "Provide an estimated price or explain how pricing works."
+
+msgid "Выберите языки общения."
+msgstr "Select spoken languages."
+
+msgid "Выберите тип исполнителя."
+msgstr "Select a provider type."
+
+msgid "Укажите доступность."
+msgstr "Select your availability."
+
+msgid "Выберите активные категории услуг."
+msgstr "Select active service categories."
+
+msgid "Для онлайн-работы выберите услугу с онлайн-форматом."
+msgstr "To offer remote work, choose an eligible online service."
+
+msgid "Анкета снята с публикации."
+msgstr "Profile unpublished."
+
+msgid "Анкета опубликована."
+msgstr "Profile published."
+
+msgid "Анкета сохранена."
+msgstr "Profile saved."
+
+msgid "Анкета пока не опубликована."
+msgstr "Profile is not published yet."
+
+msgid "Заполните анкету и опубликуйте её, когда будете готовы."
+msgstr "Complete your profile and publish it when you are ready."
+
+msgid "Посмотреть публичную анкету"
+msgstr "View public profile"
+
+msgid "Контакт для связи (виден только вам)"
+msgstr "Contact (visible only to you)"
+
+msgid "Для публикации нужно минимум 20 символов"
+msgstr "At least 20 characters required to publish"
+
+msgid "Сохранить черновик"
+msgstr "Save draft"
+
+msgid "Опубликовать анкету"
+msgstr "Publish profile"
+
+msgid "Снять с публикации"
+msgstr "Unpublish profile"
+
+msgid "Создайте заявку и получите отклики от специалистов"
+msgstr "Post a request and receive offers from professionals"
+
+msgid "Для откликов сначала опубликуйте анкету мастера."
+msgstr "Publish your professional profile before responding to requests."
