@@ -2,15 +2,17 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, F, Prefetch, Q
-from django.http import Http404, JsonResponse
+from django.http import Http404, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from apps.accounts.forms import RatingCreateForm
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
-from apps.locations.models import City
+from apps.locations.models import City, CityAlias
 from apps.notifications.services import create_notification
+from .catalog_seo import catalog_context, complete_names
 from .forms import OrderCreateForm, ResponseCreateForm
 from .models import Category, ServiceSection, Subcategory, Order, Response, Rating
 from .services import (
@@ -44,11 +46,15 @@ def categories_list(request):
         )
     )
     unassigned_categories = categories.filter(section__isnull=True)
-    return render(request, 'pages/categories.html', {
+    context = {
         'categories': categories,
         'sections': sections,
         'unassigned_categories': unassigned_categories,
-    })
+    }
+    context.update(catalog_context(
+        request, 'categories_list', indexable=categories.exists(),
+    ))
+    return render(request, 'pages/categories.html', context)
 
 
 
@@ -101,23 +107,48 @@ def category_detail(request, slug):
         category=category, is_active=True
     ).order_by('sort_order', 'pk')
 
-    return render(request, 'pages/category_detail.html', {
+    context = {
         'subcategories': subcategories,
         'category': category,
         'page_obj': page,
         'cities': cities,
         'selected_city': selected_city,
-    })
+    }
+    context.update(catalog_context(
+        request, 'category_detail', kwargs={'slug': category.slug},
+        indexable=complete_names(category) and page.paginator.count > 0
+        and bool(category.localized_description),
+    ))
+    return render(request, 'pages/category_detail.html', context)
 
 
 def cities_list(request):
     cities = City.objects.filter(is_active=True).select_related(
         'district'
     ).order_by('name_ru', 'pk')
-    return render(request, 'pages/cities.html', {'cities': cities})
+    context = {'cities': cities}
+    context.update(catalog_context(
+        request, 'cities_list', indexable=cities.exists(),
+    ))
+    return render(request, 'pages/cities.html', context)
 
 
 def city_detail(request, slug):
+    is_prefixed = (
+        request.resolver_match is not None
+        and request.resolver_match.namespace == 'catalog_i18n'
+    )
+    if is_prefixed:
+        alias = CityAlias.objects.select_related('city').filter(slug=slug).first()
+        if alias is not None:
+            if not alias.city.is_active:
+                raise Http404
+            pathname = reverse(
+                'catalog_i18n:city_detail', kwargs={'slug': alias.city.slug},
+            )
+            if request.GET:
+                pathname += '?' + request.GET.urlencode()
+            return HttpResponsePermanentRedirect(pathname)
     city = get_object_or_404(City, slug=slug, is_active=True)
     categories = Category.objects.filter(is_active=True).filter(
         Q(section__isnull=True) | Q(section__is_active=True)
@@ -144,12 +175,58 @@ def city_detail(request, slug):
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
 
-    return render(request, 'pages/city_detail.html', {
+    context = {
         'city': city,
         'categories': categories,
         'page_obj': page,
         'selected_category': selected_category,
-    })
+    }
+    context.update(catalog_context(
+        request, 'city_detail', kwargs={'slug': city.slug},
+        indexable=complete_names(city) and page.paginator.count > 0,
+    ))
+    return render(request, 'pages/city_detail.html', context)
+
+
+
+def section_detail(request, slug):
+    section = get_object_or_404(
+        ServiceSection, slug=slug, is_active=True,
+    )
+    categories = Category.objects.filter(
+        section=section, is_active=True,
+    ).order_by('sort_order', 'pk')
+    context = {'section': section, 'categories': categories}
+    context.update(catalog_context(
+        request, 'section_detail', kwargs={'slug': section.slug},
+        indexable=complete_names(section) and bool(section.localized_description)
+        and categories.exists(),
+    ))
+    return render(request, 'pages/section_detail.html', context)
+
+
+def service_detail(request, category_slug, service_slug):
+    service = get_object_or_404(
+        Subcategory.objects.select_related('category', 'category__section')
+        .filter(
+            Q(category__section__isnull=True)
+            | Q(category__section__is_active=True),
+        ),
+        category__slug=category_slug, slug=service_slug,
+        is_active=True, category__is_active=True,
+    )
+    # We don't have service-specific workers yet. Avoid implying supply
+    # based on category membership, and never index an empty/thin service page.
+    context = {'service': service, 'category': service.category}
+    context.update(catalog_context(
+        request, 'service_detail',
+        kwargs={
+            'category_slug': service.category.slug,
+            'service_slug': service.slug,
+        },
+        indexable=False,
+    ))
+    return render(request, 'pages/service_detail.html', context)
 
 
 def worker_public_profile_view(request, pk):

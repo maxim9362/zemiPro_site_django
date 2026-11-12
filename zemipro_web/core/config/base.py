@@ -76,6 +76,8 @@ LANGUAGES = [
 TIME_ZONE = 'Asia/Jerusalem'
 USE_I18N = True
 LOCALE_PATHS = [BASE_DIR / 'locale']
+# New prefixed catalog pages remain noindex until explicit editorial/SEO approval.
+ZEMIPRO_CATALOG_INDEXING_ENABLED = env_bool('ZEMIPRO_CATALOG_INDEXING_ENABLED', False)
 USE_TZ = True
 
 STATIC_URL = '/static/'

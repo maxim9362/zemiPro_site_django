@@ -439,3 +439,15 @@
 
 
 - **Post-implementation static review 2026-11-11:** 20 main Django templates audited for unlocalized Russian UI literals: only the language selector's proper name `Русский` remains. Editable EN/HE `.po` and compiled binary `.mo` catalog contents are aligned (249 messages in each language). New automated regression checks PO/MO binary parity with `gettext.GNUTranslations` (10 targeted i18n tests in total). **GitHub Actions still QUEUED; tests have not executed on the current SHA**. Last checked head `9e35c3c2d5bca09071f67adc3bf6412740580ea0`. CI and Android/mobile visual RTL remain non-verified.
+
+## 2026-11-12 — Stage 02.4 add-only localized public catalog routes (QA pending)
+
+- **Same Draft PR #8**, branch `stage-02-catalog-localization`; no merge/deploy.
+- Added `catalog_i18n` routes under Django `i18n_patterns` for sections, categories, subcategories, cities, lists (`ru/en/he`); existing unprefixed routes and privileged endpoints untouched.
+- One stable model PK + slug across all languages. For service detail, category slug is included because subcategory slug is category-scoped.
+- Additive templates and catalog links keep their language; language switch uses Django `set_language` to translate the current prefixed path and retain query string.
+- New prefixed routes only: absolute `canonical`, reciprocal `hreflang`, `noindex,follow` by default. Explicit config flag remains off and thin pages remain noindex; production SEO/PSEO URL mappings are not changed.
+- Prefixed known CityAlias → exact canonical city 301, unknown/inactive returns 404. Unprefixed legacy aliases keep their old 404 behavior; no guessed redirects.
+- Tests written: 9 targeted test methods, covering 6 × 3 route matrix, same object identity, SEO/canonical, 404/301, query preservation, default index guard and private data exclusion. **Not executed** until GitHub Actions complete.
+- **02.3 QA still pending:** GitHub runners for that commit did not execute (last seen `queued`); 02.4 does not inherit its PASS.
+- **Status**: `02.4 IMPLEMENTED / CI_PENDING / MOBILE_VISUAL_PENDING`. Real domain/Cloudflare unchanged. Next stage after QA: 02.5.

@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ service.localized_name }} — ZemiPro{% endblock %}
+{% block meta_description %}{{ service.localized_description }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>{{ service.localized_name }}</h1>
+        {% if service.localized_description %}<p>{{ service.localized_description }}</p>{% endif %}
+    </div>
+</section>
+<section class="category-content">
+    <div class="container">
+        <div class="info-block">
+            <h2>
+                <a href="{% url 'catalog_i18n:category_detail' slug=category.slug %}">
+                    {{ category.localized_name }}
+                </a>
+            </h2>
+            {% if category.localized_description %}
+            <p>{{ category.localized_description }}</p>
+            {% endif %}
+        </div>
+        <div class="cta-block">
+            <p>{% trans 'Создайте заявку и получите отклики от проверенных специалистов' %}</p>
+            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">
+                {% trans 'Создать заявку' %}
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

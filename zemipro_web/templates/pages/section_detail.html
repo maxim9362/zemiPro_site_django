@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ section.localized_name }} — ZemiPro{% endblock %}
+{% block meta_description %}{{ section.localized_description }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>{{ section.localized_name }}</h1>
+        {% if section.localized_description %}
+        <p>{{ section.localized_description }}</p>
+        {% endif %}
+    </div>
+</section>
+<section class="categories-list">
+    <div class="container">
+        {% if categories %}
+        <div class="categories-grid">
+            {% for category in categories %}
+            <a href="{% url 'catalog_i18n:category_detail' slug=category.slug %}" class="category-card">
+                <span class="category-card__emoji">{{ category.emoji }}</span>
+                <h2 class="category-card__title">{{ category.localized_name }}</h2>
+                <p class="category-card__desc">{{ category.localized_description }}</p>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">{% trans 'Категории пока не добавлены.' %}</p>
+        {% endif %}
+        <div class="cta-block">
+            <a href="{% url 'catalog_i18n:categories_list' %}" class="btn btn--secondary">
+                {% trans 'Категории услуг' %}
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -114,6 +114,10 @@ jobs:
         run: |
           python manage.py test core.tests.test_i18n
 
+      - name: Stage 02.4 add-only multilingual public URL regression tests
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_i18n_urls
+
       - name: Run Django suite with service coverage gate
         run: |
           python -m coverage run manage.py test

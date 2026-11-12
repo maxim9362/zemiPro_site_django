@@ -20,7 +20,11 @@
             <h2>{% trans 'Виды услуг' %}</h2>
             <ul class="catalog-services">
                 {% for service in subcategories %}
-                <li>{{ service.localized_name }}</li>
+                <li>
+                    {% if catalog_localized %}
+                    <a href="{% url 'catalog_i18n:service_detail' category_slug=category.slug service_slug=service.slug %}">{{ service.localized_name }}</a>
+                    {% else %}{{ service.localized_name }}{% endif %}
+                </li>
                 {% endfor %}
             </ul>
         </section>

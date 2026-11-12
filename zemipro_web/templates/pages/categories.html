@@ -16,10 +16,14 @@
         {% for section in sections %}
         {% if section.categories.all %}
         <section class="catalog-section" aria-label="{{ section.localized_name }}">
-            <h2>{{ section.localized_name }}</h2>
+            <h2>
+                {% if catalog_localized %}
+                <a href="{% url 'catalog_i18n:section_detail' slug=section.slug %}">{{ section.localized_name }}</a>
+                {% else %}{{ section.localized_name }}{% endif %}
+            </h2>
             <div class="categories-grid">
                 {% for cat in section.categories.all %}
-                <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:category_detail' slug=cat.slug %}{% else %}{% url 'marketplace:category_detail' slug=cat.slug %}{% endif %}" class="category-card">
                     <span class="category-card__emoji">{{ cat.emoji }}</span>
                     <h3 class="category-card__title">{{ cat.localized_name }}</h3>
                     <p class="category-card__desc">{{ cat.localized_description }}</p>
@@ -35,7 +39,7 @@
             <h2>{% trans 'Другие категории' %}</h2>
             <div class="categories-grid">
                 {% for cat in unassigned_categories %}
-                <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:category_detail' slug=cat.slug %}{% else %}{% url 'marketplace:category_detail' slug=cat.slug %}{% endif %}" class="category-card">
                     <span class="category-card__emoji">{{ cat.emoji }}</span>
                     <h3 class="category-card__title">{{ cat.localized_name }}</h3>
                     <p class="category-card__desc">{{ cat.localized_description }}</p>

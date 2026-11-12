@@ -15,7 +15,7 @@
     <div class="container">
         <div class="cities-grid">
             {% for city in cities %}
-            <a href="{% url 'marketplace:city_detail' slug=city.slug %}" class="city-card">
+            <a href="{% if catalog_localized %}{% url 'catalog_i18n:city_detail' slug=city.slug %}{% else %}{% url 'marketplace:city_detail' slug=city.slug %}{% endif %}" class="city-card">
                 <h3 class="city-card__title">{{ city.localized_name }}</h3>
                 {% if city.district %}<p>{{ city.district.localized_name }}</p>{% endif %}
             </a>
