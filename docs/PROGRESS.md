@@ -473,3 +473,12 @@
 - Optional operator-invoked `seed_demo_questionnaires` for plumbing, math tutoring, landing pages, event photography; `--plan`, `--check`, `--publish`, no production auto-seed or overwriting administrator drafts. Four drafted demonstrations are provisional content.
 - Added 15 targeted tests: invalid schemas, idempotent revisions, immutable old versions/answers, tamper resistance, conditional questions, multi-language API, privacy, legacy order behavior and demo seed re-run. EN/HE gettext catalogs updated to 257 entries.
 - `02.5 IMPLEMENTED / QA_PENDING` until GitHub CI Django/migrations/seed/full suite and Docker smoke succeed. Native Hebrew editorial review and mobile RTL visual checks remain for Stage 02.6. No Docker/production credentials changed.
+
+## 2026-11-12 — Stage 02.5 technical acceptance on GitHub Actions
+
+- **Code SHA:** `22297226d781a43f3279386f9bdec2ed0aaf374d`, same Draft PR #8.
+- [Django CI #43156737078](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43156737078) **SUCCESS**: migration `marketplace.0006_versioned_questionnaires`, Ruff, `makemigrations --check`, 15/15 targeted questionnaire tests, 10/10 i18n, 9/9 localized URLs, **140/140 complete Django suite**, target service-layer coverage 94.0%.
+- Isolated CI PG seed: `seed_demo_questionnaires --plan`, first `--publish` = 4 drafts + 4 versions, `--check` PASS, second `--publish` = 0 new drafts and 0 new versions, model counts `(4,4)` asserted. The regular catalog 12/19/88 and geography 6/25/4 repeated checks also PASS.
+- [Docker staging smoke #43156737097](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43156737097) **SUCCESS** on disposable GitHub runner; not public staging deployment.
+- **02.5 `CODE_DONE / CI_VERIFIED`.** Technical versioned questionnaires accepted. Sample wording/HE translations remain editorial-pending and real mobile browser/RTL screenshots remain Stage 02.6 gates. No real contacts/order data read or altered; no production/domain/VPS changes; PR stays Draft.
+- **Next:** 02.6 integrated Stage 02 verification, including official national locality and Hebrew editorial completeness decisions, with separate Codex Cloud final review.

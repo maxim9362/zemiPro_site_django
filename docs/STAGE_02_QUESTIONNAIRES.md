@@ -1,6 +1,6 @@
 # ZemiPro — Stage 02.5: configurable service questionnaires
 
-**Status:** `IMPLEMENTED / QA_PENDING`, same Stage 02 branch and Draft PR #8.
+**Status:** `CODE_DONE / CI_VERIFIED / DEMO_EDITORIAL_REVIEW_PENDING`, same Stage 02 branch and Draft PR #8.
 No VPS, production database, PSEO, Cloudflare, DNS or live site changes.
 
 ## Design
@@ -100,9 +100,17 @@ untouched. Do not execute seed on production.
 
 ## Gates
 
-- Independent PostgreSQL CI (Django, Ruff, migration check, idempotent
-  seed, full suite) and ephemeral staging Docker smoke — **PENDING**.
+- Independent PostgreSQL CI and isolated staging Docker smoke — **PASS** (details below).
 - Native-speaker RU/EN/HE editorial review of demonstrative wording, and
   mobile RTL at 320/360/375/390/768 widths — Stage 02.6.
 - The entire Stage 02 remains `IN_PROGRESS` until 02.6 integrated
   validation and owner decision. Draft PR #8 **must not be merged**.
+
+
+## Independent GitHub verification — 2026-11-12
+
+- SHA: `22297226d781a43f3279386f9bdec2ed0aaf374d`.
+- [Django CI #43156737078](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43156737078) — **SUCCESS**, `15/15` questionnaire tests, `140/140` full Django tests, Ruff, migration consistency and PostgreSQL migration 0006 PASS; service-layer-only coverage `94.0%`.
+- Seed on disposable PostgreSQL: 4 drafts and 4 published versions on first `--publish`; `--check` and repeated `--publish` result 0 new versions; count assertion `STAGE_02_5_QUESTIONNAIRES_PASS (4, 4)`.
+- [Ephemeral Docker smoke #43156737097](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43156737097) — **SUCCESS**.
+- Technical 02.5 criteria complete. Native Hebrew proofreading, actual Android/mobile UX and editorial sign-off on sample content are NOT verified and belong to Stage 02.6. No merge or production deploy authorized.
