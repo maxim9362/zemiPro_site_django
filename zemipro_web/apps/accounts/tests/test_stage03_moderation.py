@@ -196,6 +196,27 @@ class ModerationAndPermissionTests(TestCase):
                 )
         self.assertEqual(ModerationEvent.objects.count(), 3)
 
+    def test_stale_staff_object_cannot_bypass_revoked_database_permission(self):
+        actor = self.grant('moderate_accounts')
+        self.assertTrue(actor.has_perm('moderation.moderate_accounts'))
+        get_user_model().objects.filter(pk=actor.pk).update(is_staff=False)
+        with self.assertRaises(PermissionDenied):
+            block_user(self.worker, actor=actor)
+        self.assertFalse(ModerationEvent.objects.exists())
+        self.worker.refresh_from_db()
+        self.assertFalse(self.worker.is_blocked)
+
+    def test_blocked_session_can_browse_only_public_catalog(self):
+        self.client.force_login(self.owner)
+        get_user_model().objects.filter(pk=self.owner.pk).update(is_blocked=True)
+        self.assertEqual(self.client.get(reverse('marketplace:home')).status_code, 200)
+        self.assertEqual(self.client.get(reverse(
+            'marketplace:category_detail', args=[self.category.slug],
+        )).status_code, 200)
+        self.assertEqual(self.client.get(reverse(
+            'marketplace:order_detail', args=[self.order.pk],
+        )).status_code, 403)
+
     def test_no_moderator_can_block_staff_superuser_or_self(self):
         actor = self.grant('moderate_accounts')
         for target in (actor, self.root):
