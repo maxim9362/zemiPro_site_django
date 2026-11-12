@@ -6,6 +6,7 @@ from core.forms import LocalizedModelChoiceField
 
 from apps.locations.models import City
 from .models import Category, Order, Response, Subcategory
+from .questionnaire_forms import attach_questions, normalize_question_answers
 
 
 class OrderCreateForm(forms.ModelForm):
@@ -84,6 +85,35 @@ class OrderCreateForm(forms.ModelForm):
                 )
             except (ValueError, TypeError):
                 pass
+        elif self.initial.get('category'):
+            self.fields['subcategory'].queryset = Subcategory.objects.filter(
+                category=self.initial['category'], is_active=True,
+            )
+        self.fields['questionnaire_version'] = forms.IntegerField(
+            required=False, widget=forms.HiddenInput,
+        )
+        service_id = (
+            self.data.get('subcategory') if self.is_bound
+            else self.initial.get('subcategory')
+        )
+        try:
+            attach_questions(self, int(service_id) if service_id else None)
+        except (TypeError, ValueError):
+            attach_questions(self, None)
+        if self.questionnaire_version and not self.is_bound:
+            self.initial['questionnaire_version'] = self.questionnaire_version.pk
+        for item in self.questionnaire_questions:
+            item['field'] = self[item['name']]
+
+    def clean(self):
+        values = super().clean()
+        subcategory, category = values.get('subcategory'), values.get('category')
+        if subcategory is not None and category is not None:
+            if subcategory.category_id != category.pk:
+                self.add_error('subcategory', _('Подуслуга не относится к выбранной категории.'))
+        self.questionnaire_answers = normalize_question_answers(self)
+        return values
+
 
     def clean_description(self):
         desc = self.cleaned_data.get('description', '')

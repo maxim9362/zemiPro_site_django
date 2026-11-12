@@ -1,6 +1,11 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 
-from .models import Category, ServiceSection, Subcategory, Order, Response, Rating
+from .models import (
+    Category, ServiceSection, Subcategory, Order, Response, Rating,
+    ServiceQuestionnaire, QuestionnaireVersion, OrderQuestionnaireAnswer,
+)
+from .questionnaire_services import publish_questionnaire
 
 
 @admin.register(ServiceSection)
@@ -62,3 +67,64 @@ class RatingAdmin(admin.ModelAdmin):
     search_fields = ('review_text', 'worker__username', 'client__username')
     raw_id_fields = ('order', 'worker', 'client')
     readonly_fields = ('created_at',)
+
+
+@admin.register(ServiceQuestionnaire)
+class ServiceQuestionnaireAdmin(admin.ModelAdmin):
+    list_display = ('service', 'published_version', 'updated_at')
+    search_fields = ('service__name_ru', 'service__category__name_ru')
+    list_select_related = ('service', 'published_version')
+    raw_id_fields = ('service',)
+    readonly_fields = ('published_version',)
+    actions = ['publish_selected']
+
+    @admin.action(description='Опубликовать новые версии выбранных анкет')
+    def publish_selected(self, request, queryset):
+        published = 0
+        for questionnaire in queryset:
+            try:
+                _, created = publish_questionnaire(questionnaire.pk)
+                published += int(created)
+            except ValidationError as error:
+                self.message_user(
+                    request, f'{questionnaire.pk}: {error}',
+                    level=messages.ERROR,
+                )
+        self.message_user(
+            request, f'Опубликовано новых версий: {published}',
+            level=messages.INFO,
+        )
+
+
+@admin.register(QuestionnaireVersion)
+class QuestionnaireVersionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'questionnaire', 'number', 'created_at')
+    list_select_related = ('questionnaire',)
+    readonly_fields = ('questionnaire', 'number', 'schema', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(OrderQuestionnaireAnswer)
+class OrderQuestionnaireAnswerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order', 'version', 'created_at')
+    raw_id_fields = ('order',)
+    readonly_fields = (
+        'order', 'version', 'schema_snapshot', 'answers', 'created_at',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

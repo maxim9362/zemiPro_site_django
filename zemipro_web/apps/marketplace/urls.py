@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('categories/', views.categories_list, name='categories_list'),
     path('api/subcategories/<int:category_id>/', views.api_subcategories, name='api_subcategories'),
+    path('api/questionnaire/<int:service_id>/', views.api_questionnaire, name='api_questionnaire'),
     path('categories/<slug:slug>/', views.category_detail, name='category_detail'),
     path('cities/', views.cities_list, name='cities_list'),
     path('cities/<slug:slug>/', views.city_detail, name='city_detail'),

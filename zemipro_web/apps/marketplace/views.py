@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Avg, Count, F, Prefetch, Q
 from django.http import Http404, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
@@ -13,8 +14,13 @@ from apps.accounts.services import get_client_profile, get_worker_profile
 from apps.locations.models import City, CityAlias
 from apps.notifications.services import create_notification
 from .catalog_seo import catalog_context, complete_names
+from .questionnaires import localized_label
+from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
-from .models import Category, ServiceSection, Subcategory, Order, Response, Rating
+from .models import (
+    Category, ServiceSection, Subcategory, Order, Response, Rating,
+    ServiceQuestionnaire, OrderQuestionnaireAnswer,
+)
 from .services import (
     get_available_orders_for_worker, create_response,
     accept_response, complete_order, cancel_order,
@@ -56,6 +62,41 @@ def categories_list(request):
     ))
     return render(request, 'pages/categories.html', context)
 
+
+
+def api_questionnaire(request, service_id):
+    """Public read-only published schema. Only safe labels and stable option IDs."""
+    if request.method != 'GET':
+        raise Http404
+    service = get_object_or_404(
+        Subcategory.objects.filter(
+            is_active=True, category__is_active=True,
+        ).filter(
+            Q(category__section__isnull=True)
+            | Q(category__section__is_active=True)
+        ), pk=service_id,
+    )
+    template = ServiceQuestionnaire.objects.select_related(
+        'published_version',
+    ).filter(service=service).first()
+    version = template.published_version if template is not None else None
+    if version is None:
+        return JsonResponse({'version': None, 'questions': []})
+    questions = []
+    for question in version.schema:
+        condition = question.get('depends_on')
+        questions.append({
+            'key': question['key'],
+            'type': question['type'],
+            'label': localized_label(question['labels']),
+            'required': question['required'],
+            'options': [
+                {'value': item['value'], 'label': localized_label(item['labels'])}
+                for item in question.get('options', [])
+            ],
+            'depends_on': condition,
+        })
+    return JsonResponse({'version': version.pk, 'questions': questions})
 
 
 def api_subcategories(request, category_id):
@@ -264,7 +305,15 @@ def order_create_view(request):
         if form.is_valid():
             order = form.save(commit=False)
             order.client = request.user
-            order.save()
+            with transaction.atomic():
+                order.save()
+                if form.questionnaire_version is not None:
+                    OrderQuestionnaireAnswer.objects.create(
+                        order=order,
+                        version=form.questionnaire_version,
+                        schema_snapshot=form.questionnaire_version.schema,
+                        answers=form.questionnaire_answers,
+                    )
 
             create_notification(
                 recipient=request.user,
@@ -309,14 +358,24 @@ def order_detail_view(request, pk):
 
             existing_rating = Rating.objects.filter(order=order).first()
 
+    can_read_private = can_view_private_order_details(request.user, order)
+    private_question_answers = []
+    if can_read_private:
+        snapshot = OrderQuestionnaireAnswer.objects.select_related(
+            'version',
+        ).filter(order=order).first()
+        if snapshot is not None:
+            private_question_answers = present_order_answers(snapshot)
+
     return render(request, 'pages/order_detail.html', {
         'order': order,
+        'private_question_answers': private_question_answers,
         'worker_response': worker_response,
         'has_worker_profile': has_worker_profile,
         'is_owner': is_owner,
         'responses': responses,
         'existing_rating': existing_rating,
-        'can_view_private_details': can_view_private_order_details(request.user, order),
+        'can_view_private_details': can_read_private,
     })
 
 

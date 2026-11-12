@@ -59,6 +59,18 @@
                     <strong>{% trans 'Бюджет:' %}</strong> {% trans order.price %}
                 </div>
 
+                {% if can_view_private_details and private_question_answers %}
+                <div class="order-card__field">
+                    <strong>{% trans 'Ответы на вопросы услуги' %}</strong>
+                    <dl>
+                        {% for question in private_question_answers %}
+                        <dt>{{ question.label }}</dt>
+                        <dd dir="auto">{{ question.value }}</dd>
+                        {% endfor %}
+                    </dl>
+                </div>
+                {% endif %}
+
                 {% if order.worker and is_owner %}
                 <div class="order-card__field">
                     <strong>{% trans 'Мастер:' %}</strong> {{ order.worker }}

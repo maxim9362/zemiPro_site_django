@@ -60,6 +60,27 @@
                 </div>
             </div>
 
+            <div class="form__group" id="service-questionnaire"
+                 aria-live="polite" data-url-base="/api/questionnaire/">
+                <h2>{% trans 'Уточняющие вопросы' %}</h2>
+                {{ form.questionnaire_version }}
+                <div id="service-questionnaire-fields">
+                    {% for item in form.questionnaire_questions %}
+                    <div class="form__group" data-question-key="{{ item.key }}"
+                         {% if item.question.depends_on %}data-depends-key="{{ item.question.depends_on.key }}"
+                         data-depends-equals="{{ item.question.depends_on.equals }}"{% endif %}>
+                        <label class="form__label" for="{{ item.field.id_for_label }}">
+                            {{ item.field.label }}{% if item.question.required %} *{% endif %}
+                        </label>
+                        {{ item.field }}
+                        {% for error in item.field.errors %}
+                        <span class="form__error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="form__row">
                 <div class="form__group">
                     <label for="id_city" class="form__label">{% trans 'Город *' %}</label>
@@ -110,7 +131,106 @@
 
     const notSelected = '{{ unselected_label|escapejs }}';
     const loading = '{{ loading_label|escapejs }}';
+    const servicePanel = document.getElementById('service-questionnaire');
+    const serviceFields = document.getElementById('service-questionnaire-fields');
+    const hiddenVersion = document.getElementById('id_questionnaire_version');
+
+    function clearQuestionnaire() {
+        serviceFields.replaceChildren();
+        hiddenVersion.value = '';
+    }
+    function manageDependencies() {
+        serviceFields.querySelectorAll('[data-depends-key]').forEach(function (row) {
+            const parent = serviceFields.querySelector('[name="q_' + row.dataset.dependsKey + '"]');
+            if (!parent) {
+                row.hidden = true;
+                return;
+            }
+            const expected = row.dataset.dependsEquals;
+            const visible = parent.value === expected || (
+                parent.value === 'true' && expected === 'True'
+            ) || (parent.value === 'false' && expected === 'False');
+            row.hidden = !visible;
+            row.querySelectorAll('input,select,textarea').forEach(function (input) {
+                input.disabled = !visible;
+            });
+        });
+    }
+    function renderQuestionnaire(data) {
+        clearQuestionnaire();
+        if (!data || !data.version) return;
+        hiddenVersion.value = String(data.version);
+        data.questions.forEach(function (question) {
+            const row = document.createElement('div');
+            row.className = 'form__group';
+            row.dataset.questionKey = question.key;
+            const label = document.createElement('label');
+            const fieldId = 'id_q_' + question.key;
+            label.className = 'form__label';
+            label.htmlFor = fieldId;
+            label.textContent = question.label + (question.required ? ' *' : '');
+            row.append(label);
+            let field;
+            if (question.type === 'single' || question.type === 'boolean') {
+                field = document.createElement('select');
+                field.append(new Option('—', ''));
+                const choices = question.type === 'boolean'
+                    ? [{value:'true',label:'Yes'}, {value:'false',label:'No'}]
+                    : question.options;
+                choices.forEach(function (option) {
+                    field.add(new Option(option.label, option.value));
+                });
+            } else if (question.type === 'multiple') {
+                field = document.createElement('div');
+                question.options.forEach(function (option) {
+                    const optionLabel = document.createElement('label');
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.name = 'q_' + question.key;
+                    cb.value = option.value;
+                    optionLabel.append(cb, document.createTextNode(' ' + option.label));
+                    field.append(optionLabel);
+                });
+            } else {
+                field = document.createElement('input');
+                field.type = question.type === 'date' ? 'date'
+                    : question.type === 'number' ? 'number' : 'text';
+                if (question.type === 'text') field.maxLength = 500;
+                if (question.type === 'number') field.step = '0.01';
+            }
+            if (question.type !== 'multiple') {
+                field.name = 'q_' + question.key;
+                field.id = fieldId;
+            }
+            row.append(field);
+            if (question.depends_on) {
+                row.dataset.dependsKey = question.depends_on.key;
+                row.dataset.dependsEquals = String(question.depends_on.equals);
+            }
+            serviceFields.append(row);
+        });
+        manageDependencies();
+    }
+
+    serviceFields.addEventListener('change', manageDependencies);
+    subcategory.addEventListener('change', function () {
+        clearQuestionnaire();
+        if (!subcategory.value) return;
+        const selectedId = subcategory.value;
+        fetch('/api/questionnaire/' + encodeURIComponent(selectedId) + '/')
+            .then(function (response) {
+                if (!response.ok) throw new Error('Request failed');
+                return response.json();
+            })
+            .then(function (data) {
+                if (subcategory.value === selectedId) renderQuestionnaire(data);
+            })
+            .catch(clearQuestionnaire);
+    });
+    manageDependencies();
+
     category.addEventListener('change', function () {
+        clearQuestionnaire();
         const selectedId = category.value;
         subcategory.replaceChildren(new Option(selectedId ? loading : notSelected, ''));
         if (!selectedId) return;

@@ -1,4 +1,5 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import get_language
 
@@ -306,3 +307,88 @@ class Rating(models.Model):
 
     def __str__(self):
         return f'{self.worker} — {self.rating}/5'
+
+
+class ServiceQuestionnaire(models.Model):
+    """Editable draft for exactly one concrete Subcategory."""
+    service = models.OneToOneField(
+        Subcategory, on_delete=models.PROTECT, related_name='questionnaire',
+    )
+    draft_schema = models.JSONField(default=list, blank=True)
+    published_version = models.ForeignKey(
+        'QuestionnaireVersion', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='+',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'marketplace_service_questionnaire'
+        verbose_name = 'Анкета услуги'
+        verbose_name_plural = 'Анкеты услуг'
+
+    def clean(self):
+        super().clean()
+        from .questionnaires import validate_question_schema
+        validate_question_schema(self.draft_schema)
+        if self.published_version_id and self.published_version.questionnaire_id != self.pk:
+            raise ValidationError('Published version belongs to another questionnaire.')
+
+    def __str__(self):
+        return f'Анкета: {self.service}'
+
+
+class QuestionnaireVersion(models.Model):
+    """Published immutable version. Publishing a draft creates a NEW row."""
+    questionnaire = models.ForeignKey(
+        ServiceQuestionnaire, on_delete=models.PROTECT, related_name='versions',
+    )
+    number = models.PositiveIntegerField()
+    schema = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_questionnaire_version'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['questionnaire', 'number'], name='unique_questionnaire_version',
+            ),
+        ]
+        ordering = ['questionnaire_id', '-number']
+        verbose_name = 'Опубликованная версия анкеты'
+        verbose_name_plural = 'Опубликованные версии анкет'
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Published versions are immutable.')
+        from .questionnaires import validate_question_schema
+        validate_question_schema(self.schema)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.questionnaire.service} / v{self.number}'
+
+
+class OrderQuestionnaireAnswer(models.Model):
+    """Private immutable order-time snapshot; NEVER read current draft to display."""
+    order = models.OneToOneField(
+        Order, on_delete=models.CASCADE, related_name='questionnaire_answer',
+    )
+    version = models.ForeignKey(
+        QuestionnaireVersion, on_delete=models.PROTECT, related_name='order_answers',
+    )
+    schema_snapshot = models.JSONField(default=list)
+    answers = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_questionnaire_answer'
+        verbose_name = 'Ответы на анкету заказа'
+        verbose_name_plural = 'Ответы на анкеты заказов'
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Order questionnaire snapshots are immutable.')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Анкета заказа #{self.order_id} / v{self.version.number}'
