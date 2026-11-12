@@ -42,7 +42,10 @@ class AccountSecurityTests(TestCase):
         logged_in = self.client.post(reverse('accounts:login'), {
             'username': user.username, 'password': 'Synthetic-Password-9362!',
         })
-        self.assertRedirects(logged_in, reverse('marketplace:client_dashboard'))
+        self.assertRedirects(
+            logged_in, reverse('marketplace:client_dashboard'),
+            fetch_redirect_response=False,
+        )
 
     def test_missing_or_invalid_contact_registration_is_rejected(self):
         for username, email, phone in (
@@ -67,6 +70,15 @@ class AccountSecurityTests(TestCase):
         for wrong in ('+15551234567', '050123456', '+972999', '010-222-2222'):
             with self.subTest(wrong=wrong), self.assertRaises(ValueError):
                 normalize_israeli_phone(wrong)
+
+    def test_contact_labels_have_compiled_en_he_translations(self):
+        from django.utils.translation import gettext, override
+        for language, expected in (
+            ('en', 'Contact verification'),
+            ('he', 'אימות פרטי קשר'),
+        ):
+            with self.subTest(language=language), override(language):
+                self.assertEqual(gettext('Подтверждение контактов'), expected)
 
     def test_login_blocked_user_denied_and_logout_post_only(self):
         user = get_user_model().objects.create_user(
