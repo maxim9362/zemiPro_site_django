@@ -565,3 +565,10 @@
 - **Different deadlines preserved:** Stage 00.4 and verified legacy SEO URL inventory **before Stage 08**; complete official CBS catalogue **before nationwide rollout** (not before first Ashdod public pilot).
 - **Status now:** Stage 00 `CORE_VERIFIED / FOLLOW_UP_REQUIRED`, Stage 01 `LOCAL_VERIFIED / EXTERNAL_RELEASE_GATES_OPEN`, Stage 02 `TECHNICAL_IMPLEMENTATION_COMPLETE / CI_VERIFIED / RELEASE_GATES_DEFERRED_BY_OWNER / TARGETED_CODEX_REVIEW_PENDING / PR_DRAFT`, **not DONE**, **not MERGED**, **not DEPLOYED**. No permission to start Stage 03 implied by release-gate decision.
 
+## 2026-11-12 — Independent final Ashdod-only review and remote-profile fix
+
+- Review baseline `36cfb9965d7cffe7a09cb68b252b0d8ba9761acc` exposed one HIGH boundary bypass: an existing worker profile based outside Ashdod could use `offers_remote` to appear in an online category and respond to an Ashdod order.
+- Fix `3a8e99886d108f401b2247a1b4a918d633e4d33d` keeps all historical rows but requires an Ashdod home profile for public discovery, order-feed access and response creation. A regression covers catalogue/profile visibility, GET/POST tampering and direct service calls.
+- Independent loopback PostgreSQL 17/Docker verification: 13/13 Ashdod-only; 164/164 full Django; Ruff, compile, checks, migrations, repeatable seeds, persistence and synthetic backup/restore PASS; targeted service coverage 95.2%; real Chromium 180/180 across RU/EN/HE and 320–1440 px, with 54 screenshots sampled. Physical devices remain NOT_RUN.
+- GitHub Actions for the forthcoming documentation HEAD are pending. PR #8 remains Draft/NOT_MERGED; native Hebrew/editorial, real-device, owner UX and infrastructure release gates remain OPEN.
+
