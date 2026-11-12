@@ -8,7 +8,7 @@ from django.utils.translation import override
 
 from apps.locations.models import City
 from apps.marketplace.models import (
-    Category, Order, OrderQuestionnaireAnswer, OrderStatusEvent,
+    Category, Order, OrderQuestionnaireAnswer,
     ServiceQuestionnaire, Subcategory,
 )
 from apps.marketplace.questionnaire_examples import DEMO_QUESTIONNAIRES

@@ -11,7 +11,7 @@ from apps.accounts.models import User
 from apps.locations.services import city_is_public, get_public_cities
 
 from .models import (
-    Category, Order, OrderQuestionnaireAnswer, OrderStatusEvent,
+    Order, OrderQuestionnaireAnswer, OrderStatusEvent,
     ServiceQuestionnaire, Subcategory,
 )
 from .order_lifecycle import transition_order_status
