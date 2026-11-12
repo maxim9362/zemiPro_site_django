@@ -43,7 +43,17 @@ def inspect(page, lang, path, width):
         screen = 'order' if 'orders' in path else (
             'catalog' if 'categories' in path else 'cities'
         )
-        page.screenshot(path=str(OUT / f'{lang}-{screen}-{width}.png'), full_page=True)
+        screenshot = page.screenshot(
+            path=str(OUT / f'{lang}-{screen}-{width}.png'),
+            full_page=True,
+        )
+        # Chrome may enlarge full-page screenshots for overflowing descendants
+        # even when documentElement.scrollWidth does not report the overflow.
+        screenshot_width = int.from_bytes(screenshot[16:20], 'big')
+        if screenshot_width > width + 2:
+            raise AssertionError(
+                f'{lang}/{width}/{path}: screenshot width {screenshot_width} exceeds viewport'
+            )
 
 
 def main():

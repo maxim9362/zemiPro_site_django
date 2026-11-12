@@ -830,3 +830,11 @@ html[dir="rtl"] .order-card__field strong { text-align: start; }
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* Stage 02.6: default Django textarea cols=40 can widen a 320px viewport. */
+.form textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
