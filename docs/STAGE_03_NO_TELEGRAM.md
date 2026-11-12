@@ -1,6 +1,6 @@
 # Stage 03.7 — Telegram-free Django identity and fail-closed migration
 
-**Status:** `CODE_IMPLEMENTED / CI_PENDING` on code SHA `6f58ac77`. Full stage 03 still `IN_PROGRESS / STAGE_REVIEW_PENDING`. Stage 02 PR #8 is Draft/NOT_MERGED. No merge or production operation.
+**Status:** `CODE_IMPLEMENTED / CI_VERIFIED` on code SHA `6f58ac77` ([GitHub Django CI #43203817702](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43203817702) **SUCCESS**, 241/241 Django, 45/45 Chrome, 12/12 Ashdod-only). Full stage 03 still `IN_PROGRESS / STAGE_REVIEW_PENDING`; [Stage 03 PR #9](https://github.com/maxim9362/zemiPro_site_django/pull/9) is Draft/NOT_MERGED, based on Stage 02 branch. Stage 02 PR #8 is also Draft/NOT_MERGED. No merge or production operation.
 
 ## Actual runtime
 
@@ -19,5 +19,5 @@
 
 - `apps.accounts.tests.test_stage03_no_telegram` covers login/register, ORM/Admin absence of the obsolete field, in-app notifications, bot login/webhook URLs returning 404, and forged Telegram identifier ignored.
 - `apps.accounts.tests.test_stage03_telegram_migration` exercises the real migration against a disposable PostgreSQL **test** database with one synthetic non-null legacy ID, tests failure without loss, then verifies successful application only after clearing that one synthetic fixture.
-- Required CI gates: full Django tests, migration graph consistency, clean database migration, PostgreSQL behavior, Ruff, Ashdod-only 12 tests, 45 Chrome mobile RU/EN/HE cases and stricter staging/production configuration checks; final CI evidence must be recorded when complete.
+- Required CI gates: full Django tests, migration graph consistency, clean database migration, PostgreSQL behavior, Ruff, Ashdod-only 12 tests, 45 Chrome mobile RU/EN/HE cases and stricter staging/production configuration checks; full CI verified on code SHA `6f58ac77`, including synthetic data-preservation migration negative test; independent Codex review and production gates remain open.
 - Independent Codex Cloud review, Stage 02 unmerged dependency, operator acceptance, legal data retention, real contact delivery, native Hebrew/device tests and all public Ashdod launch gates remain OPEN. This code is not a live release or official Stage 03 acceptance.
