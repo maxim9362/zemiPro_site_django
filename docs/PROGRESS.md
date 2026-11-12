@@ -548,3 +548,9 @@
 - Independent targeted Codex review on this new scope: **PENDING**; previous `CODE_REVIEW_PASS` and expanded 180/180 shared browser were on an older code baseline. Native HE/content, physical devices, owner UX acceptance, nationwide CBS, off-host backup, alerts, legacy credentials, branch protection, real HTTPS staging and Stage 08 SEO inventory remain open.
 - Stage 02: `ASHDOD_SCOPE_CI_VERIFIED / TARGETED_CODEX_REVIEW_PENDING / MANUAL_AND_RELEASE_GATES_OPEN`, not `DONE`. PR #8 remains **Draft / NOT_MERGED**, no deployment or Stage 03 authorization.
 
+## 2026-11-12 — Final Ashdod-only code SHA `f21444d7`: all GitHub Actions PASS
+
+- After the previously verified `28133a2f`, the order-create address placeholder was changed from the Tel Aviv example to the existing localized generic “Адрес” label. Added a regression asserting no Tel Aviv example in the Ashdod-only order form. No migrations, seed changes or new application dependencies.
+- **Exact code SHA:** `f21444d72ab804bffca1dccc067d124ac97a5014`. [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111): **SUCCESS** — **12/12** Ashdod-only targeted, **163/163** full Django, **45/45** Chrome, Ruff/migrations/seed PASS, targeted service-layer coverage **94.7%**. [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632): **SUCCESS**.
+- CI evidence certifies isolated application behavior, not owner sign-off of original screenshots, real Android/iPhone, native HE, public infrastructure or entire national city catalogue. Independent **focused Codex review of the complete Ashdod-only diff remains PENDING**. PR #8 is still Draft/NOT_MERGED, Stage 02 not DONE, production unchanged.
+

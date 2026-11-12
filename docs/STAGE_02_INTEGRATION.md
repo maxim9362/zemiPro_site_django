@@ -51,3 +51,9 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - The first browser run `43c0b561` failed because synthetic test settings intentionally include full geography; fixed with a **test-only** pilot-mode switch for CI Chromium, not with a production bypass. Production and development default to Ashdod.
 - New-scope independent Codex review PENDING. The earlier 180-case shared browser screenshots and 151-test baseline pertain to earlier code; manual HE, Android/iPhone, owner UX approval and external release/backup/alert/secret/staging gates remain OPEN. No Stage 02 DONE, PR merge, or deployment.
 
+## Final code SHA `f21444d7` (2026-11-12)
+
+- Last application polish removes the obsolete Tel Aviv address placeholder from the Ashdod-only order form (uses existing localized “Адрес”). One extra positive UX regression added.
+- [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111): **SUCCESS**, 12/12 Ashdod-only, 163/163 full Django, 45/45 CI browser, targeted service coverage 94.7%. [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632): **SUCCESS**. The test database still seeds 25 technical cities; actual default public mode is only Ashdod.
+- Independent new-code Codex review, qualified Hebrew/content, physical mobile tests, UX owner sign-off, staging/backup/alert/credentials and other release gates remain OPEN. Stage 02 NOT DONE, PR #8 Draft/NOT_MERGED, no deploy.
+

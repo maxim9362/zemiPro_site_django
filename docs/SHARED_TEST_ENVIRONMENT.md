@@ -153,3 +153,5 @@ live database migration and public activation remain separate owner decisions.
 - Broad historical synthetic multi-city tests keep their behavior under `DJANGO_ENV=test`. Focused `test_stage02_ashdod_pilot` explicitly enables the pilot policy; CI headless Chrome sets `ZEMIPRO_TEST_ASHDOD_ONLY=1` and checks a single city in the city list/order form.
 - New code SHA `28133a2f`: CI #43170333703 passed 11/11 targeted, 162/162 full and 45/45 CI Chrome. **The earlier shared-environment 180/180 browser cases have NOT been rerun on this new SHA**; use `./scripts/shared_test_env.sh verify` and `browser` for fresh evidence when required.
 
+- **Final Ashdod-only code proof** (after address-placeholder cleanup): `f21444d7`, [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111) PASS **12/12** targeted, **163/163** full Django, **45/45** CI browser; [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632) SUCCESS. The standalone **180-case shared browser** has not yet been repeated on this exact SHA; do not equate its older result with this final revision.
+
