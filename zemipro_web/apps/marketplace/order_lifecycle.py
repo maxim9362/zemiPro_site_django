@@ -7,6 +7,7 @@ from django.db import transaction
 from apps.accounts.models import User
 from apps.locations.services import city_is_public
 from .models import Order, OrderStatusEvent
+from .order_quota import consume_order_quota
 
 
 ALLOWED_ORDER_TRANSITIONS = {
@@ -85,6 +86,7 @@ def transition_order_status(order, target_status, *, actor, operation_key=None,
         if target_status == Order.Status.ASSIGNED and locked.worker_id is None:
             raise ValueError('Нельзя назначить заявку без исполнителя.')
 
+        consume_order_quota(actor, 'state')
         previous = locked.status
         locked.status = target_status
         locked.save(update_fields=['status', 'updated_at'])

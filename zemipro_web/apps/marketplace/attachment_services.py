@@ -20,6 +20,7 @@ from apps.accounts.portfolio import (
 
 from .models import Order, OrderAttachment
 from .wizard_services import ensure_wizard_owner
+from .order_quota import consume_order_quota
 
 
 MAX_ORDER_PHOTOS = 5
@@ -81,6 +82,8 @@ def store_photos_on_locked_order(order, *, actor, cleaned, visibility,
     if OrderAttachment.objects.filter(order=order).count() + len(fresh) > MAX_ORDER_PHOTOS:
         raise OrderPhotoError(_('Можно добавить не более 5 фотографий.'))
 
+    if fresh:
+        consume_order_quota(actor, 'photo', units=len(fresh))
     storage = private_portfolio_storage()
     saved = []
     created = []
@@ -142,19 +145,28 @@ def can_read_order_photo(photo, user):
 
 @transaction.atomic
 def delete_order_photo(*, photo_id, actor):
-    """Owner may revoke sharing even after publication; no anonymous deletion."""
+    """Owner-only delete with the same lock order as upload/publication.
+
+    Lock ORDER before ATTACHMENT to avoid opposite lock ordering across workers.
+    """
     ensure_wizard_owner(actor)
-    photo = OrderAttachment.objects.select_for_update().select_related('order').filter(
+    photo_order_id = OrderAttachment.objects.filter(
         pk=photo_id, order__client_id=actor.pk,
+    ).values_list('order_id', flat=True).first()
+    if photo_order_id is None:
+        raise PermissionDenied
+    order = Order.objects.select_for_update().filter(
+        pk=photo_order_id, client_id=actor.pk,
+    ).first()
+    if order is None:
+        raise PermissionDenied
+    photo = OrderAttachment.objects.select_for_update().filter(
+        pk=photo_id, order_id=order.pk,
     ).first()
     if photo is None:
         raise PermissionDenied
-    # Serialize against a simultaneous upload/publication.
-    order = Order.objects.select_for_update().get(pk=photo.order_id)
-    if order.client_id != actor.pk:
-        raise PermissionDenied
-    storage = private_portfolio_storage()
     key = order_attachment_key(photo)
+    storage = private_portfolio_storage()
     photo.delete()
     transaction.on_commit(lambda: storage.delete(key))
     return order

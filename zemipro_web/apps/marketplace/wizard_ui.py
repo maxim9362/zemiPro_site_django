@@ -4,6 +4,7 @@ from django.utils.translation import get_language
 
 COPY = {
     'ru': {
+        'throttled': 'Слишком много действий. Повторите позже.',
         'draft': 'Черновик', 'edit': 'Редактировать условия',
         'withdraw': 'Снять с публикации', 'duplicate': 'Создать копию',
         'history': 'История заявки', 'conditions_changed': 'изменены условия',
@@ -46,6 +47,7 @@ COPY = {
         'no_description': 'Добавьте описание или ответьте на вопросы услуги.',
     },
     'en': {
+        'throttled': 'Too many actions. Please try later.',
         'draft': 'Draft', 'edit': 'Edit terms',
         'withdraw': 'Withdraw publication', 'duplicate': 'Create a copy',
         'history': 'Request history', 'conditions_changed': 'terms changed',
@@ -88,6 +90,7 @@ COPY = {
         'no_description': 'Add a description or answer the service questions.',
     },
     'he': {
+        'throttled': 'יותר מדי פעולות. יש לנסות שוב מאוחר יותר.',
         'draft': 'טיוטה', 'edit': 'עריכת פרטי הבקשה',
         'withdraw': 'ביטול פרסום', 'duplicate': 'יצירת עותק',
         'history': 'היסטוריית הבקשה', 'conditions_changed': 'פרטים השתנו',

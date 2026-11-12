@@ -5,6 +5,7 @@ from apps.accounts.models import User, WorkerProfile
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from .models import Category, Order, OrderStatusEvent, Response
 from .order_lifecycle import transition_order_status
+from .order_quota import consume_order_quota
 
 
 def can_view_private_order_details(user, order):
@@ -143,6 +144,7 @@ def create_order(
                     raise ValueError('Некорректные ответы на вопросы услуги.')
 
         def insert():
+            consume_order_quota(client, 'create')
             order = Order.objects.create(
                 client_id=client.pk, category=category, city=city,
                 subcategory=subcategory, address=address,
@@ -256,43 +258,40 @@ def get_available_orders_for_worker(worker_profile):
     ).order_by('city_priority', '-created_at', '-pk')
 
 def create_response(order, worker_user, message=''):
-    """Создать отклик мастера на заказ."""
-    if not hasattr(worker_user, 'worker_profile'):
-        raise ValueError('Пользователь не является мастером.')
-    if not User.objects.filter(
-        pk=worker_user.pk, is_active=True, is_blocked=False,
-        email_verification_required=False,
-    ).exists():
-        raise ValueError('Аккаунт недоступен.')
-
-    if public_city_slug() and not city_is_public(worker_user.worker_profile.city):
-        raise ValueError('Профиль мастера находится вне пилотного города.')
-
-    if not city_is_public(order.city):
-        raise ValueError('Город пока не обслуживается.')
-
-    if order.client_id == worker_user.pk:
-        raise ValueError('Нельзя откликнуться на собственную заявку.')
-
-    if order.status != Order.Status.PUBLISHED:
-        raise ValueError('Заказ уже не в статусе «В обработке».')
-
-    worker_profile = worker_user.worker_profile
-    if (not worker_profile.is_published or worker_profile.user.is_blocked
-            or not worker_profile.user.is_active
-            or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE):
-        raise ValueError('Анкета мастера не опубликована или недоступна.')
-
-    existing = Response.objects.filter(order=order, worker=worker_user).first()
-    if existing:
-        raise ValueError('Вы уже откликались на этот заказ.')
-
-    response = Response.objects.create(
-        order=order,
-        worker=worker_user,
-        message=message,
-    )
-    return response
+    """Serialize worker reply against assignment/cancellation and reply quota."""
+    if not getattr(worker_user, 'is_authenticated', False):
+        raise ValueError('Для отклика требуется авторизация.')
+    with transaction.atomic():
+        # Lock the order FIRST, just like acceptance and withdrawal.
+        # This prevents inserting PENDING after winner was selected.
+        order = Order.objects.select_for_update().select_related('city').get(pk=order.pk)
+        if not User.objects.filter(
+            pk=worker_user.pk, is_active=True, is_blocked=False,
+            email_verification_required=False,
+        ).exists():
+            raise ValueError('Аккаунт недоступен.')
+        worker_profile = WorkerProfile.objects.select_related('user', 'city').filter(
+            user_id=worker_user.pk,
+        ).first()
+        if worker_profile is None:
+            raise ValueError('Пользователь не является мастером.')
+        if public_city_slug() and not city_is_public(worker_profile.city):
+            raise ValueError('Профиль мастера находится вне пилотного города.')
+        if not city_is_public(order.city):
+            raise ValueError('Город пока не обслуживается.')
+        if order.client_id == worker_user.pk:
+            raise ValueError('Нельзя откликнуться на собственную заявку.')
+        if order.status != Order.Status.PUBLISHED:
+            raise ValueError('Заказ уже не в статусе «В обработке».')
+        if (not worker_profile.is_published
+                or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE):
+            raise ValueError('Анкета мастера не опубликована или недоступна.')
+        if Response.objects.filter(order=order, worker_id=worker_user.pk).exists():
+            raise ValueError('Вы уже откликались на этот заказ.')
+        consume_order_quota(worker_user, 'response')
+        return Response.objects.create(
+            order=order, worker_id=worker_user.pk, message=message,
+        )
 
 
 def accept_response(response, *, actor):

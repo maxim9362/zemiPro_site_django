@@ -457,6 +457,39 @@ class OrderQuestionnaireAnswerArchive(models.Model):
 
 
 
+class OrderWriteQuota(models.Model):
+    """Durable per-account fixed window for order mutations across web workers."""
+
+    class Kind(models.TextChoices):
+        CREATE = 'create', 'Создания заявок'
+        WIZARD = 'wizard', 'Сохранения шагов'
+        EDIT = 'edit', 'Редактирование условий'
+        RESPONSE = 'response', 'Отклики исполнителей'
+        PHOTO = 'photo', 'Новые фотографии'
+        STATE = 'state', 'Переходы статусов'
+
+    owner = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='order_write_quotas',
+    )
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    bucket_start = models.DateTimeField()
+    used = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'marketplace_order_write_quota'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['owner', 'kind', 'bucket_start'],
+                name='order_quota_owner_kind_window_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['bucket_start'], name='order_quota_window_idx'),
+        ]
+
+
+
+
 class Response(models.Model):
     """Отклик исполнителя на заказ."""
 

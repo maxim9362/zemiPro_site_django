@@ -16,6 +16,7 @@ from .order_lifecycle import transition_order_status
 from .wizard_forms import validate_approximate_area
 from .wizard_services import ensure_wizard_owner
 from .wizard_ui import wizard_copy
+from .order_quota import consume_order_quota
 
 
 def _operation_key(value):
@@ -187,6 +188,7 @@ def edit_published_order(*, order_id, actor, data, operation_key):
     if not changed:
         return order, False
 
+    consume_order_quota(actor, 'edit')
     # Preserve current wizard values for any later allowed withdrawal/edit.
     if order.wizard_token and (order.wizard_data or {}).get('steps'):
         steps = dict(order.wizard_data['steps'])
@@ -287,6 +289,7 @@ def duplicate_order(*, order_id, actor, operation_key):
     else:
         # Service selection is required for old category-only orders.
         steps = {}
+    consume_order_quota(actor, 'create')
     clone = Order.objects.create(
         client_id=actor.pk, category_id=source.category_id,
         subcategory_id=source.subcategory_id if valid_service else None,

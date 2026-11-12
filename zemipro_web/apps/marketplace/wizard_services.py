@@ -17,6 +17,7 @@ from .models import (
 from .order_lifecycle import transition_order_status
 from .wizard_forms import active_categories, active_services
 from .wizard_ui import wizard_copy
+from .order_quota import consume_order_quota
 
 
 def ensure_wizard_owner(user):
@@ -106,6 +107,7 @@ def start_order_wizard(*, actor, form, token):
             # Savepoint makes a parallel duplicate token safe without aborting
             # the outer transaction (PostgreSQL unique index).
             with transaction.atomic():
+                consume_order_quota(actor, 'create')
                 order = Order.objects.create(
                     client_id=actor.pk,
                     category_id=values['category_id'],
@@ -170,6 +172,8 @@ def save_order_wizard_step(*, order_id, actor, step, form, uploads=(),
             order.city_id = values['city_id']
             order.save(update_fields=['city', 'updated_at'])
 
+        if existing.get(str(step)) != values:
+            consume_order_quota(actor, 'wizard')
         existing[str(step)] = values
         order.wizard_data = {**(order.wizard_data or {}), 'steps': existing}
         order.save(update_fields=['wizard_data', 'updated_at'])

@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied
 from django.db.models import Avg, Count, F, Prefetch, Q
-from django.http import FileResponse, Http404, JsonResponse, HttpResponsePermanentRedirect
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
@@ -43,6 +43,7 @@ from .wizard_services import (
     wizard_max_step, wizard_summary,
 )
 from .wizard_ui import wizard_copy
+from .order_quota import OrderQuotaExceeded
 from .order_management import (
     OrderEditForm, duplicate_order, edit_published_order,
     management_timeline, withdraw_order,
@@ -55,6 +56,17 @@ from apps.accounts.portfolio import private_portfolio_storage
 from .models import OrderAttachment
 
 ITEMS_PER_PAGE = 10
+
+
+def _order_quota_response(error):
+    """Return a non-PII 429 rather than masking a durable quota as success."""
+    response = HttpResponse(
+        wizard_copy()['throttled'], status=429,
+        content_type='text/plain; charset=utf-8',
+    )
+    response['Retry-After'] = str(error.retry_after)
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 def home(request):
@@ -430,6 +442,8 @@ def order_create_view(request):
                 submission_key=request.POST.get('submission_key'),
                 return_created=True,
             )
+        except OrderQuotaExceeded as error:
+            return _order_quota_response(error)
         except ValueError as error:
             form.add_error(None, str(error))
         else:
@@ -508,6 +522,8 @@ def order_wizard_start_view(request):
                 order = start_order_wizard(
                     actor=request.user, form=form, token=token,
                 )
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
             except ValueError as error:
                 form.add_error(None, str(error))
             else:
@@ -587,6 +603,8 @@ def order_wizard_edit_view(request, pk):
                     reverse('marketplace:order_wizard_edit', args=[pk])
                     + f'?step={next_step}'
                 )
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
             except ValueError as error:
                 form.add_error(None, str(error))
         # Re-render bound fields and errors without losing the draft.
@@ -660,6 +678,8 @@ def order_management_edit_view(request, pk):
                 order_id=order.pk, actor=request.user, data=request.POST,
                 operation_key=request.POST.get('operation_key'),
             )
+        except OrderQuotaExceeded as error:
+            return _order_quota_response(error)
         except ValueError as exc:
             form = OrderEditForm(request.POST, order=order)
             form.is_valid()
@@ -691,6 +711,8 @@ def order_management_withdraw_view(request, pk):
             order_id=pk, actor=request.user,
             operation_key=request.POST.get('operation_key'),
         )
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
     except ValueError as exc:
         messages.error(request, str(exc))
         return redirect('marketplace:order_detail', pk=pk)
@@ -707,6 +729,8 @@ def order_management_duplicate_view(request, pk):
             order_id=pk, actor=request.user,
             operation_key=request.POST.get('operation_key'),
         )
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
     except ValueError as exc:
         messages.error(request, str(exc))
         return redirect('marketplace:order_detail', pk=pk)
@@ -864,6 +888,8 @@ def order_accept_response_view(request, order_id, response_id):
 
     try:
         response = accept_response(response, actor=request.user)
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
     except ValueError as error:
         messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
@@ -912,7 +938,10 @@ def order_cancel_view(request, pk):
         Response.objects.filter(order=order).values_list('worker_id', flat=True)
     )
 
-    cancel_order(order, actor=request.user)
+    try:
+        cancel_order(order, actor=request.user)
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
 
     from apps.accounts.models import User
     for worker_id in responding_workers:
@@ -938,7 +967,10 @@ def order_complete_view(request, pk):
         raise Http404
 
     order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.IN_PROGRESS)
-    complete_order(order, actor=request.user)
+    try:
+        complete_order(order, actor=request.user)
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
 
     if order.worker:
         create_notification(
@@ -1064,6 +1096,8 @@ def order_respond_view(request, pk):
 
                 messages.success(request, _('Отклик отправлен!'))
                 return redirect('marketplace:order_detail', pk=pk)
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
             except ValueError as e:
                 messages.error(request, _(str(e)))
     else:
