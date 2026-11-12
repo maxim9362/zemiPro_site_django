@@ -1,7 +1,7 @@
 # Stage 03.3 — Client profile, private settings, favorites and privacy requests
 
 **Pilot:** Ashdod ONLY. Existing Django 5.2 and PostgreSQL; no independent service.
-**Implementation state:** code prepared; CI evidence to be recorded separately.
+**Implementation state:** `CODE_IMPLEMENTED / CI_VERIFIED`, code SHA `789f7e52`. [Django CI #43188860565](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43188860565) SUCCESS (201/201 Django, 45/45 Chrome, 12/12 Ashdod-only, clean migration 0007, Ruff and production-config checks).
 
 ## Contracts
 
@@ -16,4 +16,4 @@
 - New migration `0007_client_privacy` adds nullable-free user/client preference defaults, a private pending request workflow and unique favorites. Existing 03.1/03.2 tables and seeds are untouched.
 - Negative tests exercise no-login, bad CSRF, forged owner ID, block status, non-Ashdod city, invalid locale, changed contact revocation, unrelated worker and order preservation, request idempotence, invisible foreign records, favorite isolation and prohibited nonpilot workers.
 - User-selected RU/EN/HE strings are included in compiled catalogs; human Hebrew signoff and real Android/iPhone remain mandatory pre-public release gates. Real fulfillment of access/erasure requests also requires an approved legal/privacy process.
-- This technical substage must be separately CI-verified before marking Stage 03.3 complete. No current authorization to merge PR #8, create Stage 03 final PR early, change live systems or start public launch.
+- This technical substage **has been CI-verified**. This does not satisfy independent end-of-Stage-03 Codex review or pre-public privacy-compliance, HE, UX, delivery and infrastructure gates. No current authorization to merge PR #8, create Stage 03 final PR early, change live systems or start public launch.
