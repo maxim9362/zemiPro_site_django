@@ -16,10 +16,6 @@ class User(AbstractUser):
         CLIENT = 'client', 'Заказчик'
         WORKER = 'worker', 'Исполнитель'
 
-    telegram_id = models.BigIntegerField(
-        unique=True, null=True, blank=True,
-        verbose_name='Telegram ID'
-    )
     role = models.CharField(
         max_length=10, choices=Role.choices, default=Role.CLIENT,
         verbose_name='Роль'
