@@ -8,7 +8,6 @@
         {% for message in messages %}
         <p role="status" class="form__hint">{{ message }}</p>
         {% endfor %}
-        <p>{% trans 'Сначала укажите email или телефон при регистрации.' %}</p>
         <form method="post" action="{% url 'accounts:request_verification' %}" class="form">
             {% csrf_token %}
             {{ request_form.as_p }}

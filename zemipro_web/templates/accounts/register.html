@@ -42,7 +42,8 @@
         {% if google_login_enabled %}
         <form method="post" action="{% url 'google_login' %}" class="form">
             {% csrf_token %}
-            <button type="submit" class="btn btn--secondary btn--lg">{% trans 'Продолжить с Google' %}</button>
+            <button type="submit" class="btn btn--secondary btn--lg">{% get_current_language as google_auth_lang %}
+                {% if google_auth_lang == 'he' %}המשך עם Google{% elif google_auth_lang == 'en' %}Continue with Google{% else %}Продолжить с Google{% endif %}</button>
         </form>
         {% endif %}
 

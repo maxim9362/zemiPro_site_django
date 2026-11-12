@@ -13,7 +13,7 @@
 - Blocked/inactive linked users cannot sign in with Google. Never grant worker or staff privileges through Google data. Unverified/duplicate email social signups are denied instead of shadowing existing identity.
 
 ## Deployment and test gates
-- Never set Google/SMPP credentials in Git, CI logs or user-visible documentation. Do not enable Google on live site until owner approval.
+- Never set Google/SMTP credentials in Git, CI logs or user-visible documentation. Do not enable Google on live site until owner approval.
 - Add provider credentials and verify Google OAuth consent screen, authorized redirect, HTTPS, state/PKCE, account creation, repeat login, blocked users, and explicit link conflict under controlled staging.
 - Verify real email receipt/retry, provider rate limits, bounce handling and email delivery before public signups; configure off-host secrets and monitor deliverability. Complete email verification gating before public release.
 - No production DB migration or live user data cleanup is permitted in this PR. New allauth schema migrations run only in isolated CI; production rollback and backup still require separate owner GO.
