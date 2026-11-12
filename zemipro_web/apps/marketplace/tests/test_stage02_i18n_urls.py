@@ -4,7 +4,7 @@ from django.urls import resolve, reverse
 from django.utils.translation import override
 
 from apps.accounts.models import WorkerProfile
-from apps.locations.models import City, CityAlias
+from apps.locations.models import City, CityAlias, District
 from apps.marketplace.models import Category, ServiceSection, Subcategory
 from apps.marketplace.tests.factories import make_user
 
@@ -281,3 +281,156 @@ class CatalogLanguageUrlTests(TestCase):
             category_slug=self.category.slug, service_slug=self.service.slug,
         ))
         self.assertContains(category_page, '/worker/' + str(self.worker.pk) + '/')
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=True)
+    def test_complete_translations_can_index_lists_and_supplied_details(self):
+        """Opt-in SEO still works for a complete and genuinely supplied page."""
+        for language in ('ru', 'en', 'he'):
+            with self.subTest(language=language):
+                urls = (
+                    self.localized(language, 'categories_list'),
+                    self.localized(language, 'cities_list'),
+                    self.localized(language, 'section_detail', slug=self.section.slug),
+                    self.localized(language, 'category_detail', slug=self.category.slug),
+                    self.localized(language, 'city_detail', slug=self.city.slug),
+                )
+                for url in urls:
+                    response = self.client.get(url)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertNotContains(
+                        response, '<meta name="robots" content="noindex,follow">',
+                    )
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=True)
+    def test_incomplete_category_name_blocks_list_section_and_detail_indexing(self):
+        self.category.name_en = ''
+        self.category.save(update_fields=['name_en'])
+        for language in ('en', 'he'):
+            with self.subTest(language=language):
+                urls = (
+                    self.localized(language, 'categories_list'),
+                    self.localized(language, 'section_detail', slug=self.section.slug),
+                    self.localized(language, 'category_detail', slug=self.category.slug),
+                    self.localized(language, 'city_detail', slug=self.city.slug),
+                )
+                for url in urls:
+                    response = self.client.get(url)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertContains(
+                        response, '<meta name="robots" content="noindex,follow">',
+                    )
+        # The ordinary page continues to display a safe Russian fallback.
+        response = self.client.get(self.localized('en', 'categories_list'))
+        self.assertContains(response, self.category.name_ru)
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=True)
+    def test_missing_localized_description_blocks_lists_and_details(self):
+        self.category.description_he = '   '
+        self.category.save(update_fields=['description_he'])
+        for language in ('en', 'he'):
+            with self.subTest(language=language):
+                for url in (
+                    self.localized(language, 'categories_list'),
+                    self.localized(language, 'section_detail', slug=self.section.slug),
+                    self.localized(language, 'category_detail', slug=self.category.slug),
+                ):
+                    self.assertContains(
+                        self.client.get(url),
+                        '<meta name="robots" content="noindex,follow">',
+                    )
+        # Section descriptions are also required; no Russian fallback is indexable.
+        self.category.description_he = 'תיקונים ואינסטלציה.'
+        self.category.save(update_fields=['description_he'])
+        self.section.description_en = ''
+        self.section.save(update_fields=['description_en'])
+        self.assertContains(
+            self.client.get(self.localized(
+                'en', 'section_detail', slug=self.section.slug,
+            )),
+            '<meta name="robots" content="noindex,follow">',
+        )
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=True)
+    def test_incomplete_city_or_district_blocks_visible_location_indexing(self):
+        self.city.name_he = ''
+        self.city.save(update_fields=['name_he'])
+        for language in ('en', 'he'):
+            with self.subTest(language=language):
+                for url in (
+                    self.localized(language, 'cities_list'),
+                    self.localized(language, 'city_detail', slug=self.city.slug),
+                    self.localized(language, 'category_detail', slug=self.category.slug),
+                ):
+                    self.assertContains(
+                        self.client.get(url),
+                        '<meta name="robots" content="noindex,follow">',
+                    )
+        self.city.name_he = 'אשדוד בדיקה'
+        district = District.objects.create(
+            slug='seo-incomplete-district',
+            name_ru='Округ', name_en='District', name_he='',
+        )
+        self.city.district = district
+        self.city.save(update_fields=['name_he', 'district'])
+        self.assertContains(
+            self.client.get(self.localized('he', 'cities_list')),
+            '<meta name="robots" content="noindex,follow">',
+        )
+        district.name_he = 'מחוז'
+        district.save(update_fields=['name_he'])
+        self.assertNotContains(
+            self.client.get(self.localized('he', 'cities_list')),
+            '<meta name="robots" content="noindex,follow">',
+        )
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=True)
+    def test_missing_service_name_blocks_category_detail_indexing(self):
+        self.service.name_he = ''
+        self.service.save(update_fields=['name_he'])
+        self.assertContains(
+            self.client.get(self.localized(
+                'en', 'category_detail', slug=self.category.slug,
+            )),
+            '<meta name="robots" content="noindex,follow">',
+        )
+        self.assertNotContains(
+            self.client.get(self.localized('en', 'cities_list')),
+            '<meta name="robots" content="noindex,follow">',
+        )
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=True)
+    def test_unassigned_category_and_filtering_still_follow_indexing_gates(self):
+        new = Category.objects.create(
+            slug='seo-unassigned-incomplete', name_ru='Новая категория',
+            name_en='', name_he='קטגוריה', description='Описание',
+            description_en='Description', description_he='תיאור',
+        )
+        self.assertContains(
+            self.client.get(self.localized('en', 'categories_list')),
+            '<meta name="robots" content="noindex,follow">',
+        )
+        self.assertContains(
+            self.client.get(self.localized(
+                'en', 'category_detail', slug=self.category.slug,
+            ) + '?city=' + self.city.slug),
+            '<meta name="robots" content="noindex,follow">',
+        )
+        new.name_en = 'New category'
+        new.save(update_fields=['name_en'])
+        self.assertNotContains(
+            self.client.get(self.localized('en', 'categories_list')),
+            '<meta name="robots" content="noindex,follow">',
+        )
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=True)
+    def test_feature_default_and_legacy_routes_remain_unaffected(self):
+        legacy = self.client.get('/categories/')
+        self.assertEqual(legacy.status_code, 200)
+        self.assertNotContains(legacy, 'rel="canonical"')
+        self.assertNotContains(
+            self.client.get(self.localized('en', 'service_detail',
+                category_slug=self.category.slug,
+                service_slug=self.service.slug,
+            )),
+            '<meta name="robots" content="index,follow">',
+        )

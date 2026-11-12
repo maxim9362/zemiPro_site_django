@@ -13,7 +13,7 @@ from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
 from apps.locations.models import City, CityAlias
 from apps.notifications.services import create_notification
-from .catalog_seo import catalog_context, complete_names
+from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
 from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
@@ -57,8 +57,21 @@ def categories_list(request):
         'sections': sections,
         'unassigned_categories': unassigned_categories,
     }
+    def ready_for_indexing():
+        if not categories.exists():
+            return False
+        # Sections without categories are not rendered by the template.
+        for section in sections:
+            visible = list(section.categories.all())
+            if visible and not (
+                complete_names(section)
+                and complete_collection(visible, description=True)
+            ):
+                return False
+        return complete_collection(unassigned_categories, description=True)
+
     context.update(catalog_context(
-        request, 'categories_list', indexable=categories.exists(),
+        request, 'categories_list', indexable=ready_for_indexing,
     ))
     return render(request, 'pages/categories.html', context)
 
@@ -162,8 +175,16 @@ def category_detail(request, slug):
     }
     context.update(catalog_context(
         request, 'category_detail', kwargs={'slug': category.slug},
-        indexable=complete_names(category) and page.paginator.count > 0
-        and bool(category.localized_description),
+        indexable=lambda: (
+            page.paginator.count > 0
+            and complete_content(category, description=True)
+            and complete_collection(subcategories)
+            and complete_collection(cities)
+            and all(
+                worker.city is None or complete_names(worker.city)
+                for worker in page.object_list
+            )
+        ),
     ))
     return render(request, 'pages/category_detail.html', context)
 
@@ -174,7 +195,14 @@ def cities_list(request):
     ).order_by('name_ru', 'pk')
     context = {'cities': cities}
     context.update(catalog_context(
-        request, 'cities_list', indexable=cities.exists(),
+        request, 'cities_list', indexable=lambda: (
+            cities.exists()
+            and all(
+                complete_names(city)
+                and (city.district is None or complete_names(city.district))
+                for city in cities
+            )
+        ),
     ))
     return render(request, 'pages/cities.html', context)
 
@@ -229,7 +257,15 @@ def city_detail(request, slug):
     }
     context.update(catalog_context(
         request, 'city_detail', kwargs={'slug': city.slug},
-        indexable=complete_names(city) and page.paginator.count > 0,
+        indexable=lambda: (
+            complete_names(city)
+            and page.paginator.count > 0
+            and complete_collection(categories)
+            and all(
+                complete_collection(worker.skills.all())
+                for worker in page.object_list
+            )
+        ),
     ))
     return render(request, 'pages/city_detail.html', context)
 
@@ -245,8 +281,11 @@ def section_detail(request, slug):
     context = {'section': section, 'categories': categories}
     context.update(catalog_context(
         request, 'section_detail', kwargs={'slug': section.slug},
-        indexable=complete_names(section) and bool(section.localized_description)
-        and categories.exists(),
+        indexable=lambda: (
+            complete_content(section, description=True)
+            and categories.exists()
+            and complete_collection(categories, description=True)
+        ),
     ))
     return render(request, 'pages/section_detail.html', context)
 

@@ -30,12 +30,14 @@ def catalog_context(request, route_name, *, kwargs=None, indexable=False):
         (entry['url'] for entry in urls if entry['language'] == current),
         request.build_absolute_uri(),
     )
-    # Prevent indexing of provisional or empty pages and paginated/filtered
-    # variants. Canonical is always the stable, query-free resource URL.
+    # Only evaluate the potentially large translated-content gate when
+    # indexing was explicitly enabled and this is an unfiltered public route.
+    # Canonical is always the stable, query-free resource URL.
     has_query_filters = bool(request.GET)
-    can_index = (
-        settings.ZEMIPRO_CATALOG_INDEXING_ENABLED and indexable
+    can_index = bool(
+        settings.ZEMIPRO_CATALOG_INDEXING_ENABLED
         and not has_query_filters
+        and (indexable() if callable(indexable) else indexable)
     )
     return {
         'catalog_localized': True,
@@ -46,5 +48,37 @@ def catalog_context(request, route_name, *, kwargs=None, indexable=False):
 
 
 def complete_names(entity):
-    """No indexed translated aliases when human review/name is missing."""
-    return all(getattr(entity, f'name_{lang}', '') for lang in LANGUAGES)
+    """Do not treat whitespace or a Russian fallback as a translation."""
+    return all(
+        isinstance(name := getattr(entity, f'name_{lang}', None), str)
+        and bool(name.strip())
+        for lang in LANGUAGES
+    )
+
+
+def complete_content(entity, *, description=False):
+    """Gate SEO without changing normal RU-fallback rendering.
+
+    The explicitly enabled indexer requires all three authored names.
+    When the entity's description appears on the page, its RU/EN/HE
+    description must also be populated; for legacy Category, RU is stored
+    in the original `description` column.
+    """
+    if not complete_names(entity):
+        return False
+    if not description:
+        return True
+    return all(
+        isinstance(value := getattr(
+            entity,
+            'description' if lang == 'ru' and hasattr(entity, 'description')
+            else f'description_{lang}',
+            None,
+        ), str) and bool(value.strip())
+        for lang in LANGUAGES
+    )
+
+
+def complete_collection(entities, *, description=False):
+    """Every visible item must be completely translated before indexing."""
+    return all(complete_content(item, description=description) for item in entities)
