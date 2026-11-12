@@ -118,7 +118,24 @@
             <div class="order-card__footer">
                 {# Кнопки для владельца заявки #}
                 {% if is_owner %}
-                    {% if order.status == 'published' %}
+
+                    {% if can_edit_order %}
+                        <a class="btn btn--secondary" href="{% url 'marketplace:order_management_edit' pk=order.pk %}">{{ management_copy.edit }}</a>
+                    {% endif %}
+                    {% if can_withdraw_order %}
+                        <form method="post" action="{% url 'marketplace:order_management_withdraw' pk=order.pk %}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="operation_key" value="{{ operation_withdraw }}">
+                            <button type="submit" class="btn btn--secondary">{{ management_copy.withdraw }}</button>
+                        </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'marketplace:order_management_duplicate' pk=order.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="operation_key" value="{{ operation_duplicate }}">
+                        <button type="submit" class="btn btn--secondary">{{ management_copy.duplicate }}</button>
+                    </form>
+
+                    {% if can_cancel_order %}
                     <form method="post" action="{% url 'marketplace:order_cancel' pk=order.pk %}" style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn--danger" onclick="return confirm('{% trans 'Отменить заявку?' %}')">
@@ -180,6 +197,24 @@
                 {% endif %}
             </div>
         </div>
+
+
+        {% if is_owner and order_history %}
+        <section class="order-card" style="margin-top:24px;max-width:700px;margin-inline:auto;">
+            <div class="order-card__header"><h2>{{ management_copy.history }}</h2></div>
+            <ol style="list-style:decimal;padding-inline-start:28px;">
+                {% for event in order_history %}
+                <li>
+                    <time datetime="{{ event.when|date:'c' }}">{{ event.when|date:"d.m.Y H:i" }}</time>
+                    — {{ event.summary }}
+                    {% if event.changed %}
+                    <span class="form__hint">({{ management_copy.conditions_changed }})</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+        </section>
+        {% endif %}
 
         {# Блок откликов для владельца заявки #}
         {% if is_owner and responses %}

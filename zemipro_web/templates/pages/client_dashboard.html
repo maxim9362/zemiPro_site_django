@@ -45,20 +45,50 @@
         </div>
         {% endif %}
 
+
+        {% if draft_orders %}
+        <section class="dashboard__section">
+            <h2>{{ management_copy.drafts }}</h2>
+            <div class="orders-list">
+                {% for draft in draft_orders %}
+                <article class="order-card-sm">
+                    <div class="order-card-sm__header">
+                        <span class="order-card__status order-card__status--draft">{{ management_copy.draft }}</span>
+                        <span class="order-card__category">{{ draft.category.localized_name }}</span>
+                    </div>
+                    <div class="order-card-sm__body">
+                        <p class="order-card-sm__city">{{ draft.city.localized_name }}</p>
+                    </div>
+                    <div class="order-card-sm__actions">
+                        {% if draft.wizard_token %}
+                        <a class="btn btn--primary btn--sm" href="{% url 'marketplace:order_wizard_edit' pk=draft.pk %}">{{ management_copy.resume }}</a>
+                        {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% if draft_orders.has_other_pages %}
+            <nav class="pagination" aria-label="{{ management_copy.drafts }}">
+                {% if draft_orders.has_previous %}<a href="?draft_page={{ draft_orders.previous_page_number }}">{{ management_copy.back }}</a>{% endif %}
+                <span>{{ draft_orders.number }} / {{ draft_orders.paginator.num_pages }}</span>
+                {% if draft_orders.has_next %}<a href="?draft_page={{ draft_orders.next_page_number }}">{{ management_copy.next }}</a>{% endif %}
+            </nav>
+            {% endif %}
+        </section>
+        {% endif %}
+
         {% if active_orders %}
         <div class="dashboard__section">
             <h2>{% trans 'Активные заявки' %}</h2>
             <div class="orders-list">
                 {% for item in orders_with_responses %}
-                {% if item.order.status == 'published' %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--new">{% trans 'В обработке' %}</span>
+                        <span class="order-card__status order-card__status--{{ item.order.status }}">{% trans item.order.get_status_display %}</span>
                         <span class="order-card__category">{{ item.order.category.emoji }} {{ item.order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
-                        <p class="order-card-sm__city">{{ item.order.city.localized_name }} · {{ item.order.address }}</p>
-                        <p class="order-card-sm__desc">{{ item.order.description|truncatewords:20 }}</p>
+                        <p class="order-card-sm__city">{{ item.order.city.localized_name }}</p>
                         <p class="order-card-sm__price">{% trans item.order.price %}</p>
                         <p class="order-card-sm__date">{% trans 'Откликов:' %} {{ item.response_count }}</p>
                     </div>
@@ -66,7 +96,6 @@
                         <a href="{% url 'marketplace:order_detail' pk=item.order.pk %}" class="btn btn--primary btn--sm">{% trans 'Открыть' %}</a>
                     </div>
                 </div>
-                {% endif %}
                 {% endfor %}
             </div>
             {% if active_orders.has_other_pages %}
@@ -90,12 +119,11 @@
                 {% for order in in_progress_orders %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--in_progress">{% trans 'В процессе' %}</span>
+                        <span class="order-card__status order-card__status--{{ order.status }}">{% trans order.get_status_display %}</span>
                         <span class="order-card__category">{{ order.category.emoji }} {{ order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
-                        <p class="order-card-sm__city">{{ order.city.localized_name }} · {{ order.address }}</p>
-                        <p class="order-card-sm__desc">{{ order.description|truncatewords:20 }}</p>
+                        <p class="order-card-sm__city">{{ order.city.localized_name }}</p>
                         <p class="order-card-sm__price">{% trans order.price %}</p>
                         {% if order.worker %}
                         <p class="order-card-sm__date">{% trans 'Мастер:' %} {{ order.worker }}</p>
@@ -162,7 +190,7 @@
                 {% for order in cancelled_orders %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--cancelled">{% trans 'Отменён' %}</span>
+                        <span class="order-card__status order-card__status--{{ order.status }}">{% trans order.get_status_display %}</span>
                         <span class="order-card__category">{{ order.category.emoji }} {{ order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
@@ -189,7 +217,7 @@
         </div>
         {% endif %}
 
-        {% if not active_orders and not in_progress_orders and not completed_orders and not cancelled_orders %}
+        {% if not draft_orders and not active_orders and not in_progress_orders and not completed_orders and not cancelled_orders %}
         <p class="empty-state">{% trans 'У вас пока нет заявок.' %} <a href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создайте первую заявку' %}</a></p>
         {% endif %}
 

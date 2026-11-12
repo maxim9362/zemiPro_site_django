@@ -398,6 +398,28 @@ class OrderStatusEvent(models.Model):
         ]
 
 
+class OrderQuestionnaireAnswerArchive(models.Model):
+    """Private immutable copy of a questionnaire before re-publication."""
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT,
+        related_name='questionnaire_answer_archives',
+    )
+    version = models.ForeignKey(
+        'QuestionnaireVersion', on_delete=models.PROTECT,
+        related_name='archived_order_answers',
+    )
+    schema_snapshot = models.JSONField(default=list)
+    answers = models.JSONField(default=dict)
+    archived_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_questionnaire_answer_archive'
+        ordering = ['archived_at', 'pk']
+
+
+
+
 class Response(models.Model):
     """Отклик исполнителя на заказ."""
 

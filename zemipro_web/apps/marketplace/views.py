@@ -43,6 +43,10 @@ from .wizard_services import (
     wizard_max_step, wizard_summary,
 )
 from .wizard_ui import wizard_copy
+from .order_management import (
+    OrderEditForm, duplicate_order, edit_published_order,
+    management_timeline, owner_order, withdraw_order,
+)
 from .attachment_services import (
     OrderPhotoError, can_read_order_photo, delete_order_photo,
     order_attachment_key, visible_order_photos,
@@ -636,6 +640,82 @@ def order_attachment_delete_view(request, pk):
 
 
 @login_required
+@never_cache
+def order_management_edit_view(request, pk):
+    """Edit all safe conditions pre-assignment; require POST for mutations."""
+    order = get_object_or_404(
+        Order.objects.select_related('category', 'subcategory'), pk=pk,
+        client=request.user,
+    )
+    ensure_wizard_owner(request.user)
+    if request.method not in ('GET', 'POST'):
+        raise Http404
+    if order.worker_id or order.status not in (
+        Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION,
+    ):
+        raise Http404
+    if request.method == 'POST':
+        try:
+            result, changed = edit_published_order(
+                order_id=order.pk, actor=request.user, data=request.POST,
+                operation_key=request.POST.get('operation_key'),
+            )
+        except ValueError as exc:
+            form = OrderEditForm(request.POST, order=order)
+            form.is_valid()
+            form.add_error(None, str(exc))
+        else:
+            if isinstance(result, OrderEditForm):
+                form = result
+            else:
+                if changed:
+                    messages.success(request, wizard_copy()['edit_saved'])
+                return redirect('marketplace:order_detail', pk=order.pk)
+    else:
+        form = OrderEditForm(order=order)
+    return render(request, 'pages/order_management_edit.html', {
+        'form': form, 'order': order, 'copy': wizard_copy(),
+        'operation_key': (request.POST.get('operation_key')
+                          if request.method == 'POST' else uuid.uuid4()),
+        'seo_noindex': True,
+    })
+
+
+@login_required
+@require_POST
+@never_cache
+def order_management_withdraw_view(request, pk):
+    get_object_or_404(Order, pk=pk, client=request.user)
+    try:
+        order, _ = withdraw_order(
+            order_id=pk, actor=request.user,
+            operation_key=request.POST.get('operation_key'),
+        )
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect('marketplace:order_detail', pk=pk)
+    return redirect('marketplace:order_wizard_edit', pk=order.pk)
+
+
+@login_required
+@require_POST
+@never_cache
+def order_management_duplicate_view(request, pk):
+    get_object_or_404(Order, pk=pk, client=request.user)
+    try:
+        clone, _ = duplicate_order(
+            order_id=pk, actor=request.user,
+            operation_key=request.POST.get('operation_key'),
+        )
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect('marketplace:order_detail', pk=pk)
+    return redirect('marketplace:order_wizard_edit', pk=clone.pk)
+
+
+
+
+@login_required
 def order_detail_view(request, pk):
     order = get_object_or_404(
         Order.objects.select_related('category', 'subcategory', 'city', 'client', 'worker'),
@@ -693,6 +773,20 @@ def order_detail_view(request, pk):
             (wizard_copy()['urgency'], wizard_copy().get(order.urgency, '')),
         ] if order.price_kind != Order.PriceKind.LEGACY else [],
         'photo_is_owner': is_owner,
+        'can_edit_order': is_owner and order.worker_id is None
+            and order.status in (Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION),
+        'can_withdraw_order': is_owner and order.worker_id is None
+            and order.status in (Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION)
+            and not Response.objects.filter(order=order).exists(),
+        'can_cancel_order': is_owner and order.status in (
+            Order.Status.DRAFT, Order.Status.PUBLISHED,
+            Order.Status.IN_DISCUSSION, Order.Status.ASSIGNED,
+            Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
+        ),
+        'order_history': management_timeline(order) if is_owner else [],
+        'management_copy': wizard_copy(),
+        'operation_withdraw': uuid.uuid4(),
+        'operation_duplicate': uuid.uuid4(),
     })
 
 
@@ -708,15 +802,24 @@ def client_dashboard_view(request):
         client=request.user
     ).select_related('category', 'city', 'worker').order_by('-created_at', '-pk')
 
+    draft_orders = Paginator(
+        my_orders.filter(status=Order.Status.DRAFT),
+        ITEMS_PER_PAGE,
+    ).get_page(request.GET.get('draft_page'))
+
     active_orders = Paginator(
-        my_orders.filter(status=Order.Status.PUBLISHED).annotate(
+        my_orders.filter(status__in=(
+            Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION,
+        )).annotate(
             response_count=Count('responses')
         ),
         ITEMS_PER_PAGE,
     ).get_page(request.GET.get('active_page'))
 
     in_progress_orders = Paginator(
-        my_orders.filter(status=Order.Status.IN_PROGRESS),
+        my_orders.filter(status__in=(
+            Order.Status.ASSIGNED, Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
+        )),
         ITEMS_PER_PAGE,
     ).get_page(request.GET.get('progress_page'))
 
@@ -726,7 +829,7 @@ def client_dashboard_view(request):
     ).get_page(request.GET.get('completed_page'))
 
     cancelled_orders = Paginator(
-        my_orders.filter(status=Order.Status.CANCELLED),
+        my_orders.filter(status__in=(Order.Status.CANCELLED, Order.Status.EXPIRED)),
         ITEMS_PER_PAGE,
     ).get_page(request.GET.get('cancelled_page'))
 
@@ -737,6 +840,8 @@ def client_dashboard_view(request):
 
     return render(request, 'pages/client_dashboard.html', {
         'profile': profile,
+        'draft_orders': draft_orders,
+        'management_copy': wizard_copy(),
         'active_orders': active_orders,
         'in_progress_orders': in_progress_orders,
         'completed_orders': completed_orders,
@@ -795,7 +900,13 @@ def order_cancel_view(request, pk):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.PUBLISHED)
+    order = get_object_or_404(
+        Order, pk=pk, client=request.user, status__in=(
+            Order.Status.DRAFT, Order.Status.PUBLISHED,
+            Order.Status.IN_DISCUSSION, Order.Status.ASSIGNED,
+            Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
+        ),
+    )
 
     responding_workers = list(
         Response.objects.filter(order=order).values_list('worker_id', flat=True)

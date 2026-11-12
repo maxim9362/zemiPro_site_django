@@ -12,11 +12,11 @@ from .models import Order, OrderStatusEvent
 ALLOWED_ORDER_TRANSITIONS = {
     Order.Status.DRAFT: frozenset({Order.Status.PUBLISHED, Order.Status.CANCELLED}),
     Order.Status.PUBLISHED: frozenset({
-        Order.Status.IN_DISCUSSION, Order.Status.ASSIGNED,
+        Order.Status.DRAFT, Order.Status.IN_DISCUSSION, Order.Status.ASSIGNED,
         Order.Status.CANCELLED, Order.Status.EXPIRED,
     }),
     Order.Status.IN_DISCUSSION: frozenset({
-        Order.Status.PUBLISHED, Order.Status.ASSIGNED,
+        Order.Status.DRAFT, Order.Status.PUBLISHED, Order.Status.ASSIGNED,
         Order.Status.CANCELLED, Order.Status.EXPIRED,
     }),
     Order.Status.ASSIGNED: frozenset({
@@ -76,6 +76,10 @@ def transition_order_status(order, target_status, *, actor, operation_key=None,
             return locked
         if target_status not in ALLOWED_ORDER_TRANSITIONS.get(locked.status, frozenset()):
             raise ValueError('Недопустимый переход статуса заявки.')
+        if target_status == Order.Status.DRAFT:
+            from .models import Response
+            if locked.worker_id is not None or Response.objects.filter(order=locked).exists():
+                raise ValueError('Нельзя снимать заявку с публикации после откликов.')
         if target_status == Order.Status.PUBLISHED and not city_is_public(locked.city):
             raise ValueError('Город пока не обслуживается.')
         if target_status == Order.Status.ASSIGNED and locked.worker_id is None:

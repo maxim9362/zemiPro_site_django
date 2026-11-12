@@ -51,3 +51,7 @@ Step 6 accepts at most 5 JPEG/PNG/WebP images, 5 MiB each, via multipart upload.
 ## Stage 04.4 verification summary
 
 The protected image and structured-value implementation passed [CI #43287699309](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43287699309) (306/306 Django, 13/13 Ashdod and 45/45 shared mobile Chrome). The dedicated mobile browser end-to-end check of the new attachment wizard and independent Codex Cloud stage-wide audit remain for final Stage 04 acceptance; public media storage is not deployed.
+
+## Stage 04.5 draft management
+
+A duplicated order always begins as an owner-only draft. Only step 1 may be marked complete if the copied service remains active; later steps are prefilled for convenience **but not pre-approved**. Reusing a copy/withdraw operation key is idempotent. Withdrawal of an already published order is allowed only with no responses or worker; editing already published safe conditions uses a separate owner-only form. Historical questionnaire snapshots are privately archived on revision so they cannot be overwritten when an order is re-published.

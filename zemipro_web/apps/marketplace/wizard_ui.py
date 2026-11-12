@@ -4,6 +4,10 @@ from django.utils.translation import get_language
 
 COPY = {
     'ru': {
+        'draft': 'Черновик', 'edit': 'Редактировать условия',
+        'withdraw': 'Снять с публикации', 'duplicate': 'Создать копию',
+        'history': 'История заявки', 'conditions_changed': 'изменены условия',
+        'edit_saved': 'Изменения сохранены', 'save_changes': 'Сохранить изменения',
         'photos': 'Добавьте до 5 фотографий (JPEG, PNG, WebP; до 5 МБ каждая). Они очищаются от метаданных.',
         'photo_input': 'Фотографии', 'photo_access': 'Кто сможет увидеть фотографии',
         'photo_private': 'Только я и уполномоченный модератор',
@@ -42,6 +46,10 @@ COPY = {
         'no_description': 'Добавьте описание или ответьте на вопросы услуги.',
     },
     'en': {
+        'draft': 'Draft', 'edit': 'Edit terms',
+        'withdraw': 'Withdraw publication', 'duplicate': 'Create a copy',
+        'history': 'Request history', 'conditions_changed': 'terms changed',
+        'edit_saved': 'Changes saved', 'save_changes': 'Save changes',
         'photos': 'Add up to 5 photos (JPEG, PNG, WebP; up to 5 MB each). Metadata is removed.',
         'photo_input': 'Photos', 'photo_access': 'Who can see these photos',
         'photo_private': 'Only me and an authorized moderator',
@@ -80,6 +88,10 @@ COPY = {
         'no_description': 'Add a description or answer the service questions.',
     },
     'he': {
+        'draft': 'טיוטה', 'edit': 'עריכת פרטי הבקשה',
+        'withdraw': 'ביטול פרסום', 'duplicate': 'יצירת עותק',
+        'history': 'היסטוריית הבקשה', 'conditions_changed': 'פרטים השתנו',
+        'edit_saved': 'השינויים נשמרו', 'save_changes': 'שמירת שינויים',
         'photos': 'עד 5 תמונות (JPEG, PNG, WebP; עד 5MB לכל תמונה). נתוני המטא מוסרים.',
         'photo_input': 'תמונות', 'photo_access': 'מי יכול לראות את התמונות',
         'photo_private': 'רק אני ומנהל מורשה',

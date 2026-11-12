@@ -79,6 +79,18 @@ class QuestionsStepForm(forms.Form):
         return data
 
 
+def validate_approximate_area(value):
+    area = (value or '').strip()
+    # Approximate area only: never accept likely street addresses or contacts.
+    if re.search(
+        r'\d|@|\b(?:street|apartment|apt|house|road)\b|'
+        r'רחוב|דירה|כתובת|улица|квартира|дом',
+        area, re.IGNORECASE,
+    ):
+        raise forms.ValidationError(wizard_copy()['area_private'])
+    return area
+
+
 class PlaceStepForm(forms.Form):
     city = LocalizedModelChoiceField(queryset=City.objects.none(), empty_label='—')
     mode = forms.ChoiceField(choices=())
@@ -100,15 +112,7 @@ class PlaceStepForm(forms.Form):
         self.fields['mode'].choices = choices
 
     def clean_area(self):
-        area = self.cleaned_data.get('area', '').strip()
-        # Approximate area must not become a street address or contact field.
-        if re.search(
-            r'\d|@|\b(?:street|apartment|apt|house|road)\b|'
-            r'רחוב|דירה|כתובת|улица|квартира|дом',
-            area, re.IGNORECASE,
-        ):
-            raise forms.ValidationError(wizard_copy()['area_private'])
-        return area
+        return validate_approximate_area(self.cleaned_data.get('area', ''))
 
 
 class ScheduleStepForm(forms.Form):

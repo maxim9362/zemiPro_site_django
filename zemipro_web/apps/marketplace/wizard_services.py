@@ -11,8 +11,8 @@ from apps.accounts.models import User
 from apps.locations.services import city_is_public, get_public_cities
 
 from .models import (
-    Order, OrderQuestionnaireAnswer, OrderStatusEvent,
-    ServiceQuestionnaire, Subcategory,
+    Order, OrderQuestionnaireAnswer, OrderQuestionnaireAnswerArchive,
+    OrderStatusEvent, ServiceQuestionnaire, Subcategory,
 )
 from .order_lifecycle import transition_order_status
 from .wizard_forms import active_categories, active_services
@@ -152,6 +152,7 @@ def save_order_wizard_step(*, order_id, actor, step, form, uploads=(),
             previous = existing.get('1')
             if previous != values:
                 existing = {}
+                order.wizard_data = {'steps': {}}
                 order.category_id = values['category_id']
                 order.subcategory_id = values['subcategory_id']
                 order.save(update_fields=['category', 'subcategory', 'updated_at'])
@@ -170,7 +171,7 @@ def save_order_wizard_step(*, order_id, actor, step, form, uploads=(),
             order.save(update_fields=['city', 'updated_at'])
 
         existing[str(step)] = values
-        order.wizard_data = {'steps': existing}
+        order.wizard_data = {**(order.wizard_data or {}), 'steps': existing}
         order.save(update_fields=['wizard_data', 'updated_at'])
         if step == 6 and clean_images:
             from .attachment_services import store_photos_on_locked_order
@@ -182,7 +183,8 @@ def save_order_wizard_step(*, order_id, actor, step, form, uploads=(),
 
 
 def wizard_initial(order, step):
-    values = (order.wizard_data or {}).get('steps', {}).get(str(step), {})
+    state = order.wizard_data or {}
+    values = state.get('steps', {}).get(str(step)) or state.get('prefill', {}).get(str(step), {})
     if step == 1:
         return {
             'category': values.get('category_id', order.category_id),
@@ -317,7 +319,24 @@ def publish_order_wizard(*, order_id, actor):
             'work_mode', 'approximate_area', 'description',
             'customer_name', 'customer_phone', 'address', 'updated_at',
         ])
-        if version:
+        saved_answer = OrderQuestionnaireAnswer.objects.select_for_update().filter(
+            order=order,
+        ).first()
+        if saved_answer and (
+            version is None
+            or saved_answer.version_id != version.pk
+            or saved_answer.answers != questions['answers']
+        ):
+            # Never modify an immutable historical snapshot in place. Archive
+            # the previous private value before installing the new current one.
+            OrderQuestionnaireAnswerArchive.objects.create(
+                order=order, version_id=saved_answer.version_id,
+                schema_snapshot=saved_answer.schema_snapshot,
+                answers=saved_answer.answers,
+            )
+            saved_answer.delete()
+            saved_answer = None
+        if version and saved_answer is None:
             OrderQuestionnaireAnswer.objects.create(
                 order=order, version=version,
                 schema_snapshot=version.schema,
