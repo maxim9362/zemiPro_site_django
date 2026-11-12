@@ -8,23 +8,22 @@ from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, transaction
 from django.db.models.deletion import ProtectedError
-from django.test import Client, RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.admin import PrivacyRequestAdmin, UserAdmin
-from apps.accounts.client_settings import request_own_privacy_action
 from apps.accounts.models import ClientProfile, PrivacyRequest, WorkerProfile
 from apps.accounts.services import select_active_role
 from apps.locations.models import City
 from apps.marketplace.models import Category, Order, Response
 from apps.marketplace.services import (
     accept_response, can_view_private_order_details, create_order,
-    create_response, get_available_orders_for_worker,
+    create_response,
 )
 from apps.moderation.admin import ComplaintAdmin, ModerationEventAdmin
 from apps.moderation.models import Complaint, ModerationEvent
 from apps.moderation.services import (
-    block_user, create_complaint, dismiss_complaint,
+    block_user, dismiss_complaint,
     resolve_complaint, review_privacy_request, unblock_user,
 )
 
