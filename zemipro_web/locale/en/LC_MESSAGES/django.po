@@ -1080,3 +1080,126 @@ msgstr "Post a request and receive offers from professionals"
 
 msgid "Для откликов сначала опубликуйте анкету мастера."
 msgstr "Publish your professional profile before responding to requests."
+
+msgid "Фотография"
+msgstr "Photo"
+
+msgid "Описание фотографии"
+msgstr "Photo description"
+
+msgid "Порядок"
+msgstr "Order"
+
+msgid "Показывать в публичной анкете"
+msgstr "Show on public profile"
+
+msgid "Подтверждаю, что имею право публиковать эту фотографию"
+msgstr "I confirm that I have permission to publish this photo"
+
+msgid "Выберите фотографию."
+msgstr "Choose a photo."
+
+msgid "Разрешены только фотографии JPEG, PNG и WebP."
+msgstr "Only JPEG, PNG and WebP photos are allowed."
+
+msgid "Размер фотографии не должен превышать 5 МБ."
+msgstr "The photo must not exceed 5 MB."
+
+msgid "Не удалось прочитать фотографию."
+msgstr "The photo could not be read."
+
+msgid "Тип файла не соответствует его содержимому."
+msgstr "The filename type does not match its actual contents."
+
+msgid "Анимированные изображения не поддерживаются."
+msgstr "Animated images are not supported."
+
+msgid "Слишком большое разрешение фотографии."
+msgstr "The photo resolution is too large."
+
+msgid "Файл не является безопасной фотографией."
+msgstr "This is not a safe, valid photo."
+
+msgid "Можно загрузить не более 10 фотографий."
+msgstr "You can upload up to 10 photos."
+
+msgid "Недопустимый порядок фотографии."
+msgstr "Invalid photo position."
+
+msgid "Описание слишком длинное."
+msgstr "The description is too long."
+
+msgid "Недопустимое значение публикации."
+msgstr "Invalid visibility setting."
+
+msgid "Сначала создайте профиль мастера."
+msgstr "Create your professional profile first."
+
+msgid "Недопустимые данные фотографии."
+msgstr "Invalid photo details."
+
+msgid "Некорректный путь к фотографии."
+msgstr "Invalid photo storage path."
+
+msgid "Подтвердите право на использование фотографии."
+msgstr "Confirm you have the right to use this photo."
+
+msgid "Фотография добавлена."
+msgstr "Photo added."
+
+msgid "Фотография обновлена."
+msgstr "Photo updated."
+
+msgid "Фотография удалена."
+msgstr "Photo deleted."
+
+msgid "Некорректные данные фотографии."
+msgstr "Invalid photo data."
+
+msgid "Портфолио мастера"
+msgstr "Professional portfolio"
+
+msgid "До 10 фотографий, каждая не более 5 МБ. JPEG, PNG или WebP."
+msgstr "Up to 10 photos, each no larger than 5 MB. JPEG, PNG or WebP."
+
+msgid "Фото по умолчанию закрыто. Публикация требует вашего разрешения и опубликованной анкеты."
+msgstr "Photos are private by default. To share them publicly, you must allow it and have a published profile."
+
+msgid "Вернуться к анкете"
+msgstr "Back to profile"
+
+msgid "Добавить фотографию"
+msgstr "Add a photo"
+
+msgid "Загрузить фотографию"
+msgstr "Upload photo"
+
+msgid "Мои фотографии"
+msgstr "My photos"
+
+msgid "Пример работы"
+msgstr "Example of work"
+
+msgid "Разрешена публичная демонстрация"
+msgstr "Allowed for public display"
+
+msgid "Только для вас"
+msgstr "Only visible to you"
+
+msgid "Сохранить изменения"
+msgstr "Save changes"
+
+msgid "Удалить фотографию"
+msgstr "Delete photo"
+
+msgid "В портфолио пока нет фотографий."
+msgstr "Your portfolio has no photos yet."
+
+msgid "Примеры работ"
+msgstr "Work examples"
+
+msgid "Фотографии предоставлены исполнителем; ZemiPro не подтверждает выполнение показанных работ."
+msgstr "Photos are supplied by the professional; ZemiPro has not verified that the pictured work was performed."
+
+msgid "Управлять портфолио"
+msgstr "Manage portfolio"
