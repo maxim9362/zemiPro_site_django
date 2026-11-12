@@ -195,6 +195,17 @@ class AshdodPilotPublicAccessTests(TestCase):
             'contact': 'synthetic', 'offers_remote': '',
         }).is_valid())
 
+    def test_order_form_does_not_suggest_another_city_in_address(self):
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse('marketplace:order_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Тель-Авив')
+        self.assertEqual(
+            list(response.context['form'].fields['city'].queryset.values_list(
+                'slug', flat=True,
+            )), ['ashdod'],
+        )
+
     def test_order_creation_rejects_forged_other_city_but_accepts_ashdod(self):
         self.client.force_login(self.client_user)
         url = reverse('marketplace:order_create')

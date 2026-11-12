@@ -49,7 +49,7 @@ class OrderCreateForm(forms.ModelForm):
         max_length=255,
         label=_('Адрес'),
         widget=forms.TextInput(attrs={
-            'placeholder': _('Herzl 45, Тель-Авив'),
+            'placeholder': _('Адрес'),
         }),
     )
     description = forms.CharField(
