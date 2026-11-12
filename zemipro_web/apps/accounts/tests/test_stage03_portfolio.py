@@ -14,7 +14,7 @@ from PIL import Image, PngImagePlugin
 from apps.accounts.models import WorkerPortfolioPhoto, WorkerProfile
 from apps.accounts.portfolio import (
     MAX_UPLOAD_BYTES, PortfolioError, add_own_portfolio_photo,
-    delete_own_portfolio_photo, private_portfolio_storage,
+    private_portfolio_storage,
     sanitize_portfolio_image,
 )
 from apps.locations.models import City
