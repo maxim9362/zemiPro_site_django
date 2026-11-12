@@ -1,5 +1,5 @@
 from django.contrib.auth import views as auth_views
-from django.urls import path
+from django.urls import path, reverse_lazy
 
 from . import views
 
@@ -7,8 +7,38 @@ app_name = 'accounts'
 
 urlpatterns = [
     path('register/', views.register_view, name='register'),
-    path('login/', auth_views.LoginView.as_view(template_name='accounts/login.html'), name='login'),
+    path('login/', views.SafeLoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('client/profile/', views.client_profile_view, name='client_profile'),
+    path('client/settings/', views.client_settings_view, name='client_settings'),
+    path('client/privacy/request/', views.client_privacy_request_view,
+         name='client_privacy_request'),
     path('worker/profile/', views.worker_profile_view, name='worker_profile'),
+    path('worker/portfolio/', views.worker_portfolio_view, name='worker_portfolio'),
+    path('worker/portfolio/add/', views.worker_portfolio_add_view,
+         name='worker_portfolio_add'),
+    path('worker/portfolio/<int:pk>/edit/', views.worker_portfolio_edit_view,
+         name='worker_portfolio_edit'),
+    path('worker/portfolio/<int:pk>/delete/', views.worker_portfolio_delete_view,
+         name='worker_portfolio_delete'),
+    path('worker/portfolio/<int:pk>/image/', views.worker_portfolio_image_view,
+         name='worker_portfolio_image'),
+    path('switch-role/', views.switch_role_view, name='switch_role'),
+    path('verification/', views.contact_verification_view, name='contact_verification'),
+    path('verification/request/', views.request_verification_view, name='request_verification'),
+    path('verification/confirm/', views.confirm_verification_view, name='confirm_verification'),
+    path('password-reset/', views.VerifiedPasswordResetView.as_view(), name='password_reset'),
+    path('phone-recovery/', views.phone_recovery_view, name='phone_recovery'),
+    path('phone-recovery/confirm/', views.phone_recovery_confirm_view,
+         name='phone_recovery_confirm'),
+    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='accounts/password_reset_done.html',
+    ), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='accounts/password_reset_confirm.html',
+        success_url=reverse_lazy('accounts:password_reset_complete'),
+    ), name='password_reset_confirm'),
+    path('reset/complete/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='accounts/password_reset_complete.html',
+    ), name='password_reset_complete'),
 ]

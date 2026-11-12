@@ -7,6 +7,7 @@ class RegistrationAndLoginTests(TestCase):
     def test_registration_creates_custom_user_and_authenticates_session(self):
         response = self.client.post(reverse('accounts:register'), {
             'username': 'new-customer',
+            'email': 'new-customer@example.invalid',
             'password1': 'Strong-test-password-9362',
             'password2': 'Strong-test-password-9362',
         })
@@ -38,6 +39,7 @@ class RegistrationAndLoginTests(TestCase):
     def test_invalid_registration_does_not_create_account(self):
         response = self.client.post(reverse('accounts:register'), {
             'username': 'invalid-customer',
+            'email': 'invalid-customer@example.invalid',
             'password1': 'different-password-1',
             'password2': 'different-password-2',
         })

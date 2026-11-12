@@ -18,7 +18,9 @@ class CatalogPageTests(TestCase):
         self.client_user = User.objects.create_user(username='client')
         self.worker_user = User.objects.create_user(username='rated-worker')
         self.profile = WorkerProfile.objects.create(
-            user=self.worker_user, city=self.city, description='Experienced worker'
+            user=self.worker_user, city=self.city, display_name='rated-worker',
+            description='Synthetic published experienced worker in CI.',
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
         )
         self.profile.skills.add(self.category)
         completed_order = Order.objects.create(
@@ -101,7 +103,12 @@ class CatalogPageTests(TestCase):
     def test_rated_worker_sorts_before_unrated_with_stable_tiebreak(self):
         for number in range(2):
             user = User.objects.create_user(username=f'zz-unrated-{number}')
-            profile = WorkerProfile.objects.create(user=user, city=self.city)
+            profile = WorkerProfile.objects.create(
+                user=user, city=self.city, display_name=user.username,
+                description='Synthetic published unrated worker profile in CI.',
+                pricing_details='Negotiable', spoken_languages=['ru'],
+                is_published=True,
+            )
             profile.skills.add(self.category)
 
         for url in (

@@ -51,6 +51,17 @@ class OrderAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
 
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Order/response/rating transitions belong to guarded services.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent cascading historical loss through Django Admin.
+        return False
+
 @admin.register(Response)
 class ResponseAdmin(admin.ModelAdmin):
     list_display = ('id', 'order', 'worker', 'status', 'created_at')
@@ -60,6 +71,17 @@ class ResponseAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
 
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Order/response/rating transitions belong to guarded services.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent cascading historical loss through Django Admin.
+        return False
+
 @admin.register(Rating)
 class RatingAdmin(admin.ModelAdmin):
     list_display = ('id', 'order', 'worker', 'client', 'rating', 'created_at')
@@ -68,6 +90,17 @@ class RatingAdmin(admin.ModelAdmin):
     raw_id_fields = ('order', 'worker', 'client')
     readonly_fields = ('created_at',)
 
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Order/response/rating transitions belong to guarded services.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent cascading historical loss through Django Admin.
+        return False
 
 @admin.register(ServiceQuestionnaire)
 class ServiceQuestionnaireAdmin(admin.ModelAdmin):

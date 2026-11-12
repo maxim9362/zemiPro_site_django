@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans 'Портфолио мастера' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>{% trans 'Портфолио мастера' %}</h1>
+        <p>{% trans 'До 10 фотографий, каждая не более 5 МБ. JPEG, PNG или WebP.' %}</p>
+        <p>{% trans 'Фото по умолчанию закрыто. Публикация требует вашего разрешения и опубликованной анкеты.' %}</p>
+    </div>
+</section>
+<section class="order-form">
+    <div class="container" style="max-width:760px">
+        <p><a href="{% url 'accounts:worker_profile' %}">{% trans 'Вернуться к анкете' %}</a></p>
+        {% if messages %}{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}{% endif %}
+        <h2>{% trans 'Добавить фотографию' %}</h2>
+        <form method="post" enctype="multipart/form-data" action="{% url 'accounts:worker_portfolio_add' %}" class="form">
+            {% csrf_token %}
+            {{ upload_form.non_field_errors }}
+            <div class="form__group">
+                <label for="{{ upload_form.image.id_for_label }}">{% trans 'Фотография' %}</label>
+                {{ upload_form.image }}{{ upload_form.image.errors }}
+            </div>
+            <div class="form__group">
+                <label for="{{ upload_form.caption.id_for_label }}">{% trans 'Описание фотографии' %}</label>
+                {{ upload_form.caption }}{{ upload_form.caption.errors }}
+            </div>
+            <div class="form__group">
+                <label for="{{ upload_form.sort_order.id_for_label }}">{% trans 'Порядок' %}</label>
+                {{ upload_form.sort_order }}{{ upload_form.sort_order.errors }}
+            </div>
+            <div class="form__group">
+                <label for="{{ upload_form.is_public.id_for_label }}">{{ upload_form.is_public }} {% trans 'Показывать в публичной анкете' %}</label>
+            </div>
+            <div class="form__group">
+                <label for="{{ upload_form.rights_confirmed.id_for_label }}">{{ upload_form.rights_confirmed }} {% trans 'Подтверждаю, что имею право публиковать эту фотографию' %}</label>
+                {{ upload_form.rights_confirmed.errors }}
+            </div>
+            <button type="submit" class="btn btn--primary">{% trans 'Загрузить фотографию' %}</button>
+        </form>
+
+        <h2 style="margin-top:32px">{% trans 'Мои фотографии' %}</h2>
+        {% for photo in photos %}
+        <div class="order-card" style="margin-bottom:20px;padding:16px">
+            <img src="{% url 'accounts:worker_portfolio_image' pk=photo.pk %}"
+                 alt="{% trans 'Пример работы' %}" loading="lazy"
+                 style="max-width:100%;max-height:240px;object-fit:contain;">
+            <p>{% if photo.is_public %}{% trans 'Разрешена публичная демонстрация' %}{% else %}{% trans 'Только для вас' %}{% endif %}</p>
+            <form method="post" action="{% url 'accounts:worker_portfolio_edit' pk=photo.pk %}" class="form">
+                {% csrf_token %}
+                <div class="form__group">
+                    <label for="caption-{{ photo.pk }}">{% trans 'Описание фотографии' %}</label>
+                    <input id="caption-{{ photo.pk }}" name="caption" type="text" maxlength="300" value="{{ photo.caption }}">
+                </div>
+                <div class="form__group">
+                    <label for="sort-{{ photo.pk }}">{% trans 'Порядок' %}</label>
+                    <input id="sort-{{ photo.pk }}" name="sort_order" type="number" min="0" max="999" value="{{ photo.sort_order }}">
+                </div>
+                <label><input name="is_public" type="checkbox" {% if photo.is_public %}checked{% endif %}>
+                    {% trans 'Показывать в публичной анкете' %}
+                </label>
+                <button type="submit" class="btn btn--secondary">{% trans 'Сохранить изменения' %}</button>
+            </form>
+            <form method="post" action="{% url 'accounts:worker_portfolio_delete' pk=photo.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn--secondary">{% trans 'Удалить фотографию' %}</button>
+            </form>
+        </div>
+        {% empty %}
+        <p>{% trans 'В портфолио пока нет фотографий.' %}</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

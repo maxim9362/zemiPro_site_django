@@ -7,7 +7,7 @@
 <section class="page-header">
     <div class="container">
         <h1>{% trans 'Профиль мастера' %}</h1>
-        <p>{% trans 'Укажите город, категории работ и описание ваших услуг' %}</p>
+        <p>{% trans 'Заполните анкету и опубликуйте её, когда будете готовы.' %}</p>
     </div>
 </section>
 
@@ -21,6 +21,11 @@
         </div>
         {% endif %}
 
+        <p>{% if profile.is_published %}{% trans 'Анкета опубликована.' %}{% else %}{% trans 'Анкета пока не опубликована.' %}{% endif %}</p>
+        {% if profile %}<a href="{% url 'accounts:worker_portfolio' %}" class="btn btn--secondary">{% trans 'Управлять портфолио' %}</a>{% endif %}
+        {% if profile.is_published %}
+        <a href="{% url 'marketplace:worker_public_profile' pk=profile.pk %}" class="btn btn--secondary">{% trans 'Посмотреть публичную анкету' %}</a>
+        {% endif %}
         <form method="post" class="form">
             {% csrf_token %}
 
@@ -34,6 +39,16 @@
 
             <div class="form__row">
                 <div class="form__group">
+                    <label for="id_provider_type" class="form__label">{% trans 'Тип исполнителя' %}</label>
+                    {{ form.provider_type }}{{ form.provider_type.errors }}
+                </div>
+                <div class="form__group">
+                    <label for="id_display_name" class="form__label">{% trans 'Публичное имя или компания' %}</label>
+                    {{ form.display_name }}{{ form.display_name.errors }}
+                </div>
+            </div>
+            <div class="form__row">
+                <div class="form__group">
                     <label for="id_city" class="form__label">{% trans 'Город *' %}</label>
                     {{ form.city }}
                     {% if form.city.errors %}
@@ -42,7 +57,7 @@
                 </div>
 
                 <div class="form__group">
-                    <label for="id_contact" class="form__label">{% trans 'Контакт для связи *' %}</label>
+                    <label for="id_contact" class="form__label">{% trans 'Контакт для связи (виден только вам)' %}</label>
                     {{ form.contact }}
                     {% if form.contact.errors %}
                     <span class="form__error">{{ form.contact.errors.0 }}</span>
@@ -56,7 +71,7 @@
                 {% if form.description.errors %}
                 <span class="form__error">{{ form.description.errors.0 }}</span>
                 {% endif %}
-                <span class="form__hint">{% trans 'Минимум 20 символов' %}</span>
+                <span class="form__hint">{% trans 'Для публикации нужно минимум 20 символов' %}</span>
             </div>
 
             <div class="form__group">
@@ -96,16 +111,40 @@
             </div>
 
             <div class="form__group">
+                <label class="form__label">{% trans 'Языки общения' %}</label>
+                <div class="checkbox-grid">{{ form.spoken_languages }}</div>
+                {{ form.spoken_languages.errors }}
+            </div>
+            <div class="form__group">
+                <label for="id_pricing_details" class="form__label">{% trans 'Цены или принцип расчёта' %}</label>
+                {{ form.pricing_details }}{{ form.pricing_details.errors }}
+            </div>
+            <div class="form__row">
+                <div class="form__group">
+                    <label for="id_availability" class="form__label">{% trans 'Доступность' %}</label>
+                    {{ form.availability }}{{ form.availability.errors }}
+                </div>
+                <div class="form__group">
+                    <label for="id_working_hours" class="form__label">{% trans 'График работы' %}</label>
+                    {{ form.working_hours }}{{ form.working_hours.errors }}
+                </div>
+            </div>
+            <div class="form__group">
                 <label class="form__label">
                     {{ form.receive_notifications }}
                     {% trans 'Получать уведомления о новых заявках' %}
                 </label>
             </div>
 
-            <button type="submit" class="btn btn--primary btn--lg">
-                {% trans 'Сохранить профиль' %}
-            </button>
+            <button type="submit" name="action" value="save" class="btn btn--secondary btn--lg">{% trans 'Сохранить черновик' %}</button>
+            <button type="submit" name="action" value="publish" class="btn btn--primary btn--lg">{% trans 'Опубликовать анкету' %}</button>
         </form>
+        {% if profile.is_published %}
+        <form method="post" action="{% url 'accounts:worker_profile' %}" class="form">
+            {% csrf_token %}
+            <button type="submit" name="action" value="unpublish" class="btn btn--secondary">{% trans 'Снять с публикации' %}</button>
+        </form>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

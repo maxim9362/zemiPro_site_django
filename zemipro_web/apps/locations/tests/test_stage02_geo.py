@@ -138,7 +138,11 @@ class Stage02WorkerServiceZonesTests(TestCase):
         cls.netanya = make_city(slug='qa-netanya')
         cls.owner = make_user('geo-owner')
         cls.worker = make_user('geo-worker')
-        cls.profile = WorkerProfile.objects.create(user=cls.worker, city=cls.ashdod)
+        cls.profile = WorkerProfile.objects.create(
+            user=cls.worker, city=cls.ashdod, display_name='geo-worker',
+            description='Synthetic published worker for geography regression.',
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
+        )
         cls.repair = Category.objects.create(
             slug='geo-repair', name_ru='Ремонт', work_mode='onsite',
         )

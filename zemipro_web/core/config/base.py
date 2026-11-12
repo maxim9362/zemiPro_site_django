@@ -33,6 +33,7 @@ MIDDLEWARE = [
     'core.middleware.SensitivePostThrottleMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.BlockedAccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -89,6 +90,9 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# Stage 03.5: never expose worker portfolio originals through MEDIA_URL/static serving.
+# Deployment must mount persistent, private storage with backups before public release.
+ZEMIPRO_PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
@@ -96,6 +100,12 @@ AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/client/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+PASSWORD_RESET_TIMEOUT = 3600
+# External contact delivery is explicitly disabled until a provider is
+# configured and accepted before the first public release.
+ZEMIPRO_CONTACT_DELIVERY_MODE = 'disabled'
+EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@zemipro.invalid'
 
 # Structured logs deliberately exclude request paths, query strings, headers,
 # exception messages, tracebacks and user input. Use stable events only.

@@ -78,6 +78,7 @@ def main():
                 page = context.new_page()
                 page.goto(BASE + '/accounts/register/', wait_until='networkidle')
                 page.locator('input[name="username"]').fill(f'stage02_browser_{lang}')
+                page.locator('input[name="email"]').fill(f'stage02_{lang}@example.invalid')
                 page.locator('input[name="password1"]').fill('SyntheticStage02Sample!84')
                 page.locator('input[name="password2"]').fill('SyntheticStage02Sample!84')
                 page.locator('form').filter(

@@ -19,7 +19,7 @@ class Complaint(models.Model):
         DISMISSED = 'dismissed', 'Отклонена'
 
     reporter = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='complaints_filed', verbose_name='Кто пожаловался'
     )
     target_user = models.ForeignKey(
@@ -64,3 +64,47 @@ class Complaint(models.Model):
     def __str__(self):
         target = self.target_user or self.target_order or '?'
         return f'Жалоба от {self.reporter} на {target} ({self.get_reason_display()})'
+
+
+class ModerationEvent(models.Model):
+    """An append-only minimal trace of verified moderation decisions."""
+
+    class Action(models.TextChoices):
+        RESOLVE = 'complaint_resolved', 'Рассмотрена жалоба'
+        DISMISS = 'complaint_dismissed', 'Жалоба отклонена'
+        BLOCK = 'account_blocked', 'Пользователь заблокирован'
+        UNBLOCK = 'account_unblocked', 'Пользователь разблокирован'
+        PRIVACY_REVIEW = 'privacy_processing', 'Запрос на рассмотрении'
+        PRIVACY_REJECT = 'privacy_rejected', 'Запрос отклонён'
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='moderation_actions_performed',
+    )
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True, related_name='moderation_actions_received',
+    )
+    complaint = models.ForeignKey(
+        Complaint, on_delete=models.PROTECT,
+        null=True, blank=True, related_name='audit_events',
+    )
+    privacy_request = models.ForeignKey(
+        'accounts.PrivacyRequest', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='audit_events',
+    )
+    action = models.CharField(max_length=40, choices=Action.choices)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'moderation_event'
+        ordering = ['-occurred_at', '-pk']
+        permissions = [
+            ('moderate_accounts', 'Can block and unblock user accounts'),
+            ('review_complaints', 'Can review complaints'),
+            ('review_privacy_requests', 'Can review privacy requests'),
+        ]
+        indexes = [
+            models.Index(fields=['target_user', '-occurred_at'],
+                         name='moderation_target_time_idx'),
+        ]

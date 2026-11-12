@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Подтверждение контактов' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="order-form">
+    <div class="container">
+        <h1>{% trans 'Подтверждение контактов' %}</h1>
+        {% for message in messages %}
+        <p role="status" class="form__hint">{{ message }}</p>
+        {% endfor %}
+        <p>{% trans 'Сначала укажите email или телефон при регистрации.' %}</p>
+        <form method="post" action="{% url 'accounts:request_verification' %}" class="form">
+            {% csrf_token %}
+            {{ request_form.as_p }}
+            <button type="submit" class="btn btn--primary">{% trans 'Отправить код' %}</button>
+        </form>
+        <form method="post" action="{% url 'accounts:confirm_verification' %}" class="form">
+            {% csrf_token %}
+            {{ confirm_form.as_p }}
+            <button type="submit" class="btn btn--primary">{% trans 'Подтвердить контакт' %}</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

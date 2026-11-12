@@ -32,6 +32,7 @@
                 {% endfor %}
             </p>
             <a href="{% url 'accounts:worker_profile' %}" class="btn btn--secondary">{% trans 'Редактировать профиль' %}</a>
+            {% if not profile.is_published %}<p>{% trans 'Анкета пока не опубликована.' %}</p>{% endif %}
         </div>
 
         <div class="dashboard__section">

@@ -4,12 +4,15 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.translation import gettext as _
 
 from apps.notifications.services import create_notification
+from django.core.exceptions import PermissionDenied
 from .forms import ComplaintForm
 from .services import create_complaint
 
 
 @login_required
 def complaint_create_view(request):
+    if not request.user.is_active or request.user.is_blocked:
+        raise PermissionDenied
     target_user_id = request.GET.get('user')
     target_order_id = request.GET.get('order')
     target_rating_id = request.GET.get('rating')

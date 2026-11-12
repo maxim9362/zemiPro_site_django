@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Личные данные и приватность' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="page-header"><div class="container">
+    <h1>{% trans 'Личные данные и приватность' %}</h1>
+    <p>{% trans 'Данные доступны только владельцу аккаунта.' %}</p>
+</div></section>
+<section class="order-form"><div class="container">
+    {% if messages %}{% for message in messages %}
+    <p class="form__hint" role="status">{{ message }}</p>
+    {% endfor %}{% endif %}
+    <form method="post" class="form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="form__errors">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+        <div class="form__group">
+            <label class="form__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<span class="form__error">{{ field.errors.0 }}</span>{% endif %}
+        </div>
+        {% endfor %}
+        <p class="form__hint">{% trans 'При смене email или телефона потребуется повторное подтверждение. Системные уведомления о заказах остаются в личном кабинете.' %}</p>
+        <button type="submit" class="btn btn--primary">{% trans 'Сохранить настройки' %}</button>
+    </form>
+    <section class="dashboard__section">
+        <h2>{% trans 'Запросы по персональным данным' %}</h2>
+        <p>{% trans 'Запросы рассматриваются вручную. Отправка запроса не удаляет аккаунт или историю заказов автоматически.' %}</p>
+        <form method="post" action="{% url 'accounts:client_privacy_request' %}">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="export">
+            <button type="submit" class="btn btn--secondary">{% trans 'Запросить экспорт данных' %}</button>
+        </form>
+        <form method="post" action="{% url 'accounts:client_privacy_request' %}">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="delete">
+            <button type="submit" class="btn btn--secondary">{% trans 'Запросить удаление данных' %}</button>
+        </form>
+        {% if privacy_requests %}
+        <ul>{% for item in privacy_requests %}
+            <li>{{ item.get_kind_display }} — {{ item.get_status_display }} ({{ item.created_at|date:"d.m.Y" }})</li>
+        {% endfor %}</ul>
+        {% endif %}
+    </section>
+</div></section>
+{% endblock %}

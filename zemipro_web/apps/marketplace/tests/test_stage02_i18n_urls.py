@@ -46,7 +46,8 @@ class CatalogLanguageUrlTests(TestCase):
         cls.worker = WorkerProfile.objects.create(
             user=cls.user, city=cls.city,
             description='A synthetic worker with no private contact published.',
-            contact='PRIVATE_024_MARKER',
+            contact='PRIVATE_024_MARKER', display_name=cls.user.username,
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
         )
         cls.worker.skills.add(cls.category)
 

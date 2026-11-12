@@ -27,6 +27,7 @@ dist/
 build/
 staticfiles/
 media/
+private_media/
 *.sqlite3
 *.sqlite3-*
 

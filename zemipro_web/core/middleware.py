@@ -10,9 +10,10 @@ import ipaddress
 
 from django.conf import settings
 from django.db import DatabaseError, connection
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.middleware.locale import LocaleMiddleware
 from django.utils import translation
+from django.utils.translation import gettext as _
 from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
 
@@ -87,6 +88,11 @@ class SensitivePostThrottleMiddleware(MiddlewareMixin):
     RULES = {
         '/accounts/login/': (12, 300),
         '/accounts/register/': (6, 900),
+        '/accounts/verification/request/': (5, 900),
+        '/accounts/verification/confirm/': (12, 900),
+        '/accounts/password-reset/': (5, 900),
+        '/accounts/phone-recovery/': (5, 900),
+        '/accounts/phone-recovery/confirm/': (12, 900),
     }
 
     def process_view(self, request, view_func, view_args, view_kwargs):
@@ -117,6 +123,37 @@ class SensitivePostThrottleMiddleware(MiddlewareMixin):
         if count > limit:
             response = HttpResponse('Too many attempts', status=429)
             response['Retry-After'] = str(window)
+            response['Cache-Control'] = 'private, no-store'
+            return response
+        return None
+
+
+class BlockedAccountMiddleware(MiddlewareMixin):
+    """Reject already-authenticated blocked sessions at every private endpoint.
+
+    Django authentication itself rejects is_active=False; this additionally
+    handles an is_blocked=True account whose session has not yet expired.
+    Public catalog access remains available after signing out.
+    """
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        user = request.user
+        public_catalog = {
+            'marketplace:home', 'marketplace:categories_list',
+            'marketplace:category_detail', 'marketplace:cities_list',
+            'marketplace:city_detail', 'marketplace:section_detail',
+            'marketplace:service_detail', 'marketplace:worker_public_profile',
+            'catalog_i18n:home', 'catalog_i18n:categories_list',
+            'catalog_i18n:category_detail', 'catalog_i18n:cities_list',
+            'catalog_i18n:city_detail', 'catalog_i18n:section_detail',
+            'catalog_i18n:service_detail',
+        }
+        view_name = getattr(request.resolver_match, 'view_name', '')
+        safe_public_read = request.method == 'GET' and view_name in public_catalog
+        if (user.is_authenticated and user.is_blocked
+                and request.path_info != '/accounts/logout/'
+                and not safe_public_read):
+            response = HttpResponseForbidden(_('Аккаунт недоступен.'))
             response['Cache-Control'] = 'private, no-store'
             return response
         return None

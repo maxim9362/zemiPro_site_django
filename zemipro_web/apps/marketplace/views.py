@@ -9,6 +9,10 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from apps.accounts.forms import RatingCreateForm
+from apps.accounts.models import FavoriteWorker
+from apps.accounts.client_favorites import (
+    own_visible_favorites, toggle_own_favorite, public_worker_queryset,
+)
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
 from apps.locations.models import CityAlias
@@ -146,9 +150,9 @@ def category_detail(request, slug):
     cities = get_public_cities().order_by('name_ru')
     selected_city = request.GET.get('city')
 
-    workers = WorkerProfile.objects.filter(
-        skills=category, user__is_active=True, user__is_blocked=False
-    ).select_related('city', 'user').annotate(
+    workers = public_worker_queryset().filter(
+        skills=category,
+    ).annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
@@ -237,9 +241,7 @@ def city_detail(request, slug):
     ).order_by('sort_order', 'pk')
     selected_category = request.GET.get('category')
 
-    workers = WorkerProfile.objects.filter(
-        user__is_active=True, user__is_blocked=False
-    ).select_related('user').prefetch_related('skills').annotate(
+    workers = public_worker_queryset().prefetch_related('skills').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
@@ -323,9 +325,7 @@ def service_detail(request, category_slug, service_slug):
 
 
 def worker_public_profile_view(request, pk):
-    workers = WorkerProfile.objects.filter(
-        user__is_active=True, user__is_blocked=False
-    ).select_related('city', 'user').prefetch_related('skills', 'service_cities')
+    workers = public_worker_queryset().prefetch_related('skills', 'service_cities')
     if public_city_slug():
         pilot_city = get_public_cities().first()
         workers = (
@@ -342,10 +342,32 @@ def worker_public_profile_view(request, pk):
 
     return render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
+        'public_photos': profile.portfolio_photos.filter(is_public=True),
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),
         'review_count': review_count,
+        'is_favorite': (
+            request.user.is_authenticated
+            and FavoriteWorker.objects.filter(
+                client=request.user, worker=profile,
+            ).exists()
+        ),
     })
+
+
+@login_required
+def toggle_favorite_worker_view(request, pk):
+    """Add/remove the authenticated user's private favorite via POST only."""
+    if request.method != 'POST':
+        raise Http404
+    worker = get_object_or_404(
+        WorkerProfile.objects.select_related('user'), pk=pk,
+    )
+    try:
+        toggle_own_favorite(request.user, worker)
+    except ValueError:
+        raise Http404 from None
+    return redirect('marketplace:worker_public_profile', pk=pk)
 
 
 @login_required
@@ -481,6 +503,7 @@ def client_dashboard_view(request):
         'completed_orders': completed_orders,
         'cancelled_orders': cancelled_orders,
         'orders_with_responses': orders_with_responses,
+        'favorite_workers': own_visible_favorites(request.user)[:12],
     })
 
 @login_required
@@ -646,8 +669,10 @@ def worker_dashboard_view(request):
 @login_required
 def order_respond_view(request, pk):
     profile = get_worker_profile(request.user)
-    if not profile:
-        messages.warning(request, _('Сначала заполните профиль мастера.'))
+    if not profile or not profile.is_published or request.user.is_blocked:
+        messages.warning(
+            request, _('Для откликов сначала опубликуйте анкету мастера.'),
+        )
         return redirect('accounts:worker_profile')
     if public_city_slug() and not city_is_public(profile.city):
         raise Http404

@@ -29,7 +29,11 @@ def make_category(slug='qa-cleaning', **kwargs):
 
 
 def make_worker_profile(user, *, city, category):
-    profile = WorkerProfile.objects.create(user=user, city=city)
+    profile = WorkerProfile.objects.create(
+        user=user, city=city, display_name=user.username,
+        description='Synthetic published profile for isolated test fixtures.',
+        pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
+    )
     profile.skills.add(category)
     return profile
 

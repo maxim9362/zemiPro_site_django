@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{{ profile.user }} — ZemiPro{% endblock %}
-{% block meta_description %}{% trans 'Профиль мастера' %} {{ profile.user }}. {% trans 'Город:' %} {{ profile.city.localized_name }}. {% trans 'Категории:' %} {% for s in profile.skills.all %}{{ s.localized_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
+{% block title %}{{ profile.display_name }} — ZemiPro{% endblock %}
+{% block meta_description %}{% trans 'Профиль мастера' %} {{ profile.display_name }}. {% trans 'Город:' %} {{ profile.city.localized_name }}. {% trans 'Категории:' %} {% for s in profile.skills.all %}{{ s.localized_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>{{ profile.user }}</h1>
+        <h1>{{ profile.display_name }}</h1>
         <p>{{ profile.city.localized_name }} · {{ review_count }} {% trans 'отзывов' %} · {{ avg_rating }}/5</p>
     </div>
 </section>
@@ -43,6 +43,15 @@
                     <span class="tag">{{ skill.emoji }} {{ skill.localized_name }}</span>
                     {% endfor %}
                 </div>
+                <div class="order-card__field"><strong>{% trans 'Тип исполнителя' %}:</strong> {{ profile.get_provider_type_display }}</div>
+                <div class="order-card__field"><strong>{% trans 'Языки общения' %}:</strong>
+                    {% for language in profile.spoken_languages %}
+                    {% if language == 'ru' %}{% trans 'Русский' %}{% elif language == 'en' %}{% trans 'Английский' %}{% elif language == 'he' %}{% trans 'Иврит' %}{% endif %}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="order-card__field"><strong>{% trans 'Цены или принцип расчёта' %}:</strong> {{ profile.pricing_details }}</div>
+                <div class="order-card__field"><strong>{% trans 'Доступность' %}:</strong> {{ profile.get_availability_display }}</div>
+                {% if profile.working_hours %}<div class="order-card__field"><strong>{% trans 'График работы' %}:</strong> {{ profile.working_hours }}</div>{% endif %}
                 {% if avg_rating > 0 %}
                 <div class="order-card__field">
                     <strong>{% trans 'Рейтинг:' %}</strong> {{ avg_rating }}/5 ({{ review_count }} {% trans 'отзывов' %})
@@ -51,12 +60,39 @@
             </div>
         </div>
 
+        {% if user.is_authenticated and user.pk != profile.user_id %}
+        <form method="post" action="{% url 'marketplace:toggle_favorite_worker' pk=profile.pk %}">
+            {% csrf_token %}
+            {% if is_favorite %}
+            <button type="submit" class="btn btn--secondary">{% trans 'Убрать из избранного' %}</button>
+            {% else %}
+            <button type="submit" class="btn btn--secondary">{% trans 'Добавить в избранное' %}</button>
+            {% endif %}
+        </form>
+        {% endif %}
         {% if user.is_authenticated %}
         <div style="margin-top: 16px; text-align: right;">
             <a href="{% url 'moderation:complaint_create' %}?user={{ profile.user.pk }}" style="font-size: 0.8125rem; color: var(--color-text-light);">
                 {% trans 'Пожаловаться на пользователя' %}
             </a>
         </div>
+        {% endif %}
+
+        {% if public_photos %}
+        <section aria-label="{% trans 'Примеры работ' %}" style="margin-top: 32px;">
+            <h2>{% trans 'Примеры работ' %}</h2>
+            <p>{% trans 'Фотографии предоставлены исполнителем; ZemiPro не подтверждает выполнение показанных работ.' %}</p>
+            <div class="orders-list">
+            {% for photo in public_photos %}
+                <figure class="order-card-sm">
+                    <img src="{% url 'accounts:worker_portfolio_image' pk=photo.pk %}"
+                         alt="{% trans 'Пример работы' %}" loading="lazy"
+                         style="max-width:100%;height:auto;max-height:320px;object-fit:contain;">
+                    {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+                </figure>
+            {% endfor %}
+            </div>
+        </section>
         {% endif %}
 
         {% if reviews %}
