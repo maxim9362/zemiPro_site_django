@@ -1,6 +1,6 @@
 # Stage 03.2 — Account contacts, verification and password recovery
 
-**First public geography:** Ashdod ONLY. **Environment:** existing Django 5.2 / PostgreSQL; no independent authentication service. **Stage:** implementation complete, verification by CI pending at initial commit.
+**First public geography:** Ashdod ONLY. **Environment:** existing Django 5.2 / PostgreSQL; no independent authentication service. **Stage:** `CODE_IMPLEMENTED / CI_VERIFIED` on SHA `d6982384`; **real SMS/email transport `NOT_CONFIGURED`** until public-release approval.
 
 ## Contracts and security boundary
 
@@ -27,3 +27,10 @@
 - Test isolated PostgreSQL migrations, contact normalization, token expiry and replay, brute-force limit, CSRF/auth, known/unknown reset responses, email/SMS adapter mocks, delivery record privacy, blocked login and existing 03.1/Stage 02 regressions.
 - RU/EN/HE text is present for the new pages in `django.po` and compiled `django.mo`; human Hebrew/content review remains a deferred mandatory release gate.
 - No changes to production, VPS, DNS, Cloudflare, real data, PR #8 or public publication. One Stage 03 branch, one final PR after 03.7, independent Codex review at stage close.
+
+## Final Stage 03.2 CI evidence
+
+- [Django CI #43186353804](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43186353804): **SUCCESS**, full **188/188** Django tests, 45/45 synthetic Chrome mobile cases in RU/EN/HE, 12/12 Ashdod city boundary tests, fresh isolated PostgreSQL migrations and seed, Ruff/static checks and production-settings sanity PASS. Scope of the 94.7% coverage figure is solely `marketplace.services`.
+- Code commits: `d5e1a331` (registration, email/phone proof, generic reset), `53db447d` (verified contact login aliases), `d6982384` (purpose-separated phone-only password recovery); intermediate test/CSS/translation fixes in same Stage 03 branch. This is **test-only proof**, not evidence of actual email or SMS delivery.
+- Operational release gate **STILL OPEN**: provider credentials, real delivery and receipt, bounces/retries, safe provider quotas, contact storage/retention and manual Hebrew/content/device acceptance. SMTP is dummy and SMS disabled by default; do not enable any real transport or launch publicly without separate owner permission.
+
