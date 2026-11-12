@@ -1,6 +1,6 @@
 # Stage 02.4 — additive multilingual public catalog routes
 
-**State (2026-11-12):** `CODE_VERIFIED / ZP-02-001_FIXED / CODEX_RECHECK_PENDING / NO_DEPLOY`. Single Stage 02 branch and Draft PR #8.
+**State (2026-11-12):** `CODE_VERIFIED / ZP-02-001_FIXED / CODE_REVIEW_PASS / NO_DEPLOY`. Single Stage 02 branch and Draft PR #8.
 No production URL rewrite, DNS/PSEO migration, sitemap/robots changes or merge.
 
 ## Route contract
@@ -121,4 +121,4 @@ Fixed in **`067da9da669a9c66645404b1ec293cada1144f74`**. The indexing predicate 
 
 - [Django CI #43162334570](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162334570): **SUCCESS**, updated 02.4 tests `16/16 PASS` (7 new, including the reproduction and fully translated positive cases); complete suite `151/151 PASS`, Chrome `45/45 PASS`, Ruff/migrations PASS, targeted service coverage `94.0%`.
 - [Isolated Docker smoke #43162342520](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162342520): **SUCCESS** on the same correction SHA.
-- Independent **targeted Codex re-review of this corrected SHA: PENDING**. Editorial approval and physical devices: NOT_RUN. `ZEMIPRO_CATALOG_INDEXING_ENABLED` remains off by default; live site untouched, PR #8 Draft/NOT_MERGED.
+- Independent targeted Codex review of documentation HEAD `cad90a071a169a9d70d99629422ff852db610e7c`: **`CODE_REVIEW_PASS`, `ZP-02-001 FIXED`, `ZP-02-002 FIXED`**, no new blockers. [Final Django CI #43162656220](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656220): SUCCESS (SEO 16/16, full 151/151, Chrome 45/45); [final isolated Docker #43162656363](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656363): SUCCESS. This follow-up changes only review metadata; source code was already verified in `067da9da`. Editorial approval, physical devices, screenshot UX sign-off and official locality coverage remain unverified. `ZEMIPRO_CATALOG_INDEXING_ENABLED` remains off by default; live site untouched, PR #8 Draft/NOT_MERGED.

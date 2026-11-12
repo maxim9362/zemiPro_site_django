@@ -1,6 +1,6 @@
 # Stage 02.6: integration and mobile RTL acceptance
 
-Status (2026-11-12): CI_VERIFIED / TARGETED_CODEX_RECHECK_PENDING / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
+Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
 All seeds, schema checks, browser registration and order tests use isolated, disposable PostgreSQL in GitHub Actions. Never run these commands on production.
 
 ## Automated matrix
@@ -24,5 +24,6 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - Fix commit `067da9da669a9c66645404b1ec293cada1144f74`: SEO noindex now checks all displayed names and required descriptions in RU/EN/HE; default indexing still disabled and normal Russian display fallback unchanged. Seven regression tests added.
 - [GitHub Django CI #43162334570](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162334570): **SUCCESS**, targeted SEO `16/16`, Stage 02.6 integration `4/4`, RU/EN/HE locale `10/10`, Chrome emulation `45/45`, **full Django `151/151` PASS**; migration consistency, Ruff and isolated seed roundtrips PASS, service-only coverage **94.0%**.
 - [Disposable Docker staging smoke #43162342520](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162342520): **SUCCESS** on the same fix commit.
-- Next: Codex should independently confirm only corrected `ZP-02-001` and linked acceptance docs against the new HEAD, without re-running unrelated unchanged areas. The correction has **not** received its own independent Codex verdict yet.
-- Outstanding manual gates and earlier Stage 00/01 infrastructure follow-ups remain as listed above; CI cannot substitute for native Hebrew sign-off or physical devices. **PR #8 remains Draft, no merge or deployment**.
+- Independent Codex re-review of `cad90a071a169a9d70d99629422ff852db610e7c`: **`CODE_REVIEW_PASS`**. `ZP-02-001 FIXED`, `ZP-02-002 FIXED`, new blockers: none. Targeted local checks covered 16/16 SEO cases, Ruff, Django system/migration checks, legacy links/canonical/hreflang and private contact marker. Unchanged full suite and Chrome were not re-run locally.
+- The reviewed exact HEAD `cad90a071` also has [Django CI #43162656220](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656220) **SUCCESS** (full 151/151, SEO 16/16, Chrome 45/45, targeted coverage 94.0%) and [isolated Docker smoke #43162656363](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656363) **SUCCESS**.
+- **Not Stage 02 DONE:** native Hebrew and category/city/questionnaire content review, official nationwide CBS coverage, physical Android/iPhone, original screenshot artifact final UX approval and Stage 08 legacy URL inventory remain open. Off-host backup, real alert delivery, credential rotation, branch protection and publicly trusted staging HTTPS are not verified. **PR #8 remains Draft / NOT_MERGED**, no production/deploy authorization.
