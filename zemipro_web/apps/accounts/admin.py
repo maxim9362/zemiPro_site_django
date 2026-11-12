@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
+from apps.moderation.services import review_privacy_request
+
 from .models import (
     User, ClientProfile, WorkerProfile, PrivacyRequest, WorkerPortfolioPhoto,
 )
@@ -21,6 +23,22 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('telegram_id', 'role', 'phone'),
         }),
     )
+
+    # Manual blocked/status toggles bypass the audit. Only moderation actions
+    # may block/unblock. User deletion risks erasing responses, notifications.
+    readonly_fields = ('is_blocked', 'is_active')
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            fields.extend((
+                'is_superuser', 'is_staff', 'groups', 'user_permissions',
+                'role', 'active_role', 'email', 'phone',
+            ))
+        return tuple(dict.fromkeys(fields))
 
 
 @admin.register(ClientProfile)
@@ -51,8 +69,32 @@ class PrivacyRequestAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'kind', 'status', 'created_at', 'reviewed_at')
     list_filter = ('kind', 'status')
     search_fields = ('user__username',)
-    readonly_fields = ('user', 'kind', 'created_at')
-    fields = ('user', 'kind', 'status', 'created_at', 'reviewed_at')
+    readonly_fields = ('user', 'kind', 'status', 'created_at', 'reviewed_at')
+    fields = readonly_fields
+    actions = ('mark_processing', 'reject_request')
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not request.user.has_perm('moderation.review_privacy_requests'):
+            actions.pop('mark_processing', None)
+            actions.pop('reject_request', None)
+        return actions
+
+    @admin.action(description='Передать на ручное рассмотрение')
+    def mark_processing(self, request, queryset):
+        count = 0
+        for item in queryset.filter(status=PrivacyRequest.Status.PENDING):
+            review_privacy_request(item, actor=request.user)
+            count += 1
+        self.message_user(request, f'Принято на рассмотрение: {count}')
+
+    @admin.action(description='Отклонить запрос')
+    def reject_request(self, request, queryset):
+        count = 0
+        for item in queryset.filter(status=PrivacyRequest.Status.PENDING):
+            review_privacy_request(item, actor=request.user, reject=True)
+            count += 1
+        self.message_user(request, f'Отклонено запросов: {count}')
 
     def has_add_permission(self, request):
         return False
