@@ -1,6 +1,6 @@
 # Stage 02.6: integration and mobile RTL acceptance
 
-Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / SHARED_ENV_VERIFIED / PILOT_25_APPROVED / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
+Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / SHARED_ENV_VERIFIED / ASHDOD_ONLY_PILOT_APPROVED / PUBLIC_ACCESS_GATE_PENDING / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
 All seeds, schema checks, browser registration and order tests use isolated, disposable PostgreSQL in GitHub Actions. Never run these commands on production.
 
 ## Automated matrix
@@ -36,4 +36,11 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - **Still OPEN before public 25-city pilot:** Hebrew native editorial sign-off for UI and names; approval of 11 added categories, 25 city translations, 4 demo questionnaire texts; physical Android/iPhone checks (`NOT_RUN`); original screenshot and final mobile/RTL UX owner approval. Existing browser checks (CI 45/45 and shared Chromium 180/180) remain validated **emulations only**.
 - **Security/infrastructure remain OPEN for corresponding deployment/release:** off-host backup, delivered alert, legacy credential rotation, branch protection, publicly trusted staging HTTPS and authorized DNS/Cloudflare/VPS/production actions. Legacy SEO URL inventory remains mandatory before Stage 08. These are not converted into `PASS` or silently declared `DEFERRED` by the city-scope decision.
 - **Stage 02 status remains `CODE_VERIFIED / SHARED_ENV_VERIFIED / MANUAL_GATES_OPEN`, not `DONE`.** Draft PR #8 must not be marked ready, merged or deployed without a new explicit owner instruction.
+
+## Superseding owner clarification: FIRST PILOT = ASHDOD ONLY (2026-11-12)
+
+- The previous 25-city pilot approval is **superseded**, not another supported release scope. Public pilot geography is **Ashdod only**. The existing 25-city seed/6 districts/4 aliases remain *technical test/reference data*; no mass deletion or PK/FK changes authorized.
+- **Blocking pre-publication code gate not yet done:** current views/forms use active cities, so add and verify **server-side** Ashdod-only allowlist for public city list/details (legacy and RU/EN/HE routes), city selectors, order create/update and worker search/service areas/API as applicable. Other-city direct access must not advertise availability or accept an order. Avoid merely masking frontend controls. Existing migrations/seed counts and legacy contracts must remain intact unless consciously revised with tests. A future CI + focused independent review is required; previous 151/151 and 180/180 counts verify the older wider-scope behavior, not the new pilot restriction.
+- Only Ashdod city-name/transliteration requires pilot geography content review now; other city content is for future expansion. Hebrew translations of shared UI, proposed categories and four demo questionnaires still need qualified review. Physical Android/iPhone, owner UX approval, trusted HTTPS staging, backup/alerts/secrets, branch protection and Stage 08 legacy SEO inventory remain open. Full CBS registry remains required before nationwide rollout.
+- **Do not mark Stage 02 DONE or merge PR #8.** This entry documents the owner decision only; no code/deployment change.
 
