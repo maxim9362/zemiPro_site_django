@@ -8,11 +8,16 @@ from .models import Complaint, ModerationEvent
 
 
 def _require_moderator(actor, permission):
-    if (actor is None or not actor.is_authenticated or not actor.is_active
-            or actor.is_blocked or not actor.is_staff or not actor.has_perm(
-                f'moderation.{permission}',
-            )):
+    if actor is None or not actor.is_authenticated or actor.pk is None:
         raise PermissionDenied('Недостаточно прав для модерации.')
+    # Read current database state and permissions, not cached User/has_perm.
+    # All callers are transactional and keep this row locked during mutation.
+    stored = User.objects.select_for_update().filter(
+        pk=actor.pk, is_active=True, is_blocked=False, is_staff=True,
+    ).first()
+    if stored is None or not stored.has_perm(f'moderation.{permission}'):
+        raise PermissionDenied('Недостаточно прав для модерации.')
+    return stored
 
 
 def create_complaint(reporter, reason, message, target_user=None,
@@ -31,7 +36,7 @@ def create_complaint(reporter, reason, message, target_user=None,
 
 @transaction.atomic
 def resolve_complaint(complaint, admin_note='', *, actor):
-    _require_moderator(actor, 'review_complaints')
+    actor = _require_moderator(actor, 'review_complaints')
     row = Complaint.objects.select_for_update().get(pk=complaint.pk)
     if row.status != Complaint.Status.PENDING:
         raise ValueError('Жалоба уже рассмотрена.')
@@ -48,7 +53,7 @@ def resolve_complaint(complaint, admin_note='', *, actor):
 
 @transaction.atomic
 def dismiss_complaint(complaint, admin_note='', *, actor):
-    _require_moderator(actor, 'review_complaints')
+    actor = _require_moderator(actor, 'review_complaints')
     row = Complaint.objects.select_for_update().get(pk=complaint.pk)
     if row.status != Complaint.Status.PENDING:
         raise ValueError('Жалоба уже рассмотрена.')
@@ -65,7 +70,7 @@ def dismiss_complaint(complaint, admin_note='', *, actor):
 
 @transaction.atomic
 def block_user(user, *, actor, complaint=None):
-    _require_moderator(actor, 'moderate_accounts')
+    actor = _require_moderator(actor, 'moderate_accounts')
     target = User.objects.select_for_update().get(pk=user.pk)
     if target.pk == actor.pk or target.is_superuser or target.is_staff:
         raise PermissionDenied('Нельзя блокировать административный аккаунт.')
@@ -83,7 +88,7 @@ def block_user(user, *, actor, complaint=None):
 
 @transaction.atomic
 def unblock_user(user, *, actor, complaint=None):
-    _require_moderator(actor, 'moderate_accounts')
+    actor = _require_moderator(actor, 'moderate_accounts')
     target = User.objects.select_for_update().get(pk=user.pk)
     if target.pk == actor.pk or target.is_superuser or target.is_staff:
         raise PermissionDenied('Нельзя изменять административный аккаунт.')
@@ -102,7 +107,7 @@ def unblock_user(user, *, actor, complaint=None):
 @transaction.atomic
 def review_privacy_request(item, *, actor, reject=False):
     """Never mark completed or silently export/delete any personal data."""
-    _require_moderator(actor, 'review_privacy_requests')
+    actor = _require_moderator(actor, 'review_privacy_requests')
     request = PrivacyRequest.objects.select_for_update().get(pk=item.pk)
     if request.status != PrivacyRequest.Status.PENDING:
         raise ValueError('Запрос уже обрабатывается.')
