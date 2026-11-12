@@ -31,3 +31,10 @@ Isolated PostgreSQL 17 migration and `makemigrations --check`, new 04.4 unit/int
 **Draft photo access:** even an explicitly marked public photo remains inaccessible to anonymous users and selected workers until publication; owner and active, granularly authorized moderation staff can review the draft image. Authorization is checked against current persisted user flags on every request.
 
 **Database price integrity:** migration `0011` also adds `order_structured_price_valid`, enforcing null bounds for legacy/negotiable, a nonnegative single amount for fixed, and nonnegative ascending non-null bounds for range. This prevents API/direct ORM writes from persisting contradictory combinations; no historical text data are converted.
+
+## Stage 04.4 code/CI verification (2026-11-12)
+
+- [GitHub Actions #43287699309](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43287699309): **SUCCESS**, code commit `dad73d19dc9a74dc86c8b8c33296f3178b8e6618`.
+- Django **306/306 PASS**, isolated PostgreSQL 17.11 migration `0011`/integrity constraint and `makemigrations --check` PASS, existing Ashdod-only **13/13 PASS** and shared mobile/RTL Chrome **45/45 PASS**. The browser suite is not an end-to-end automated traversal of the new step-6 attachment UI.
+- Security-specific regressions cover private JPEG image metadata stripping, invalid file types, oversized uploads, animation, five-file limit and idempotent duplicates, draft/assignee/public visibility, explicit public consent, blocked/other accounts, owner deletion and revocation, private filesystem root and lossless historical orders.
+- **Remaining deployment prerequisite:** physically provision persistent private media volume, permissions, backups, cleanup/restore policy and confirm Nginx/Cloudflare do not serve these files directly. No malware engine or detection of phone numbers/addresses visible **inside image pixels** is included. This substage marks code and isolated CI as verified, **not production-ready media activation**.
