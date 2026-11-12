@@ -1,8 +1,23 @@
+from apps.locations.services import city_is_public
+
 from .models import User, ClientProfile, WorkerProfile
+
+
+def _validate_public_profile_cities(form_data):
+    """Enforce the pilot boundary even for direct service/API callers."""
+    city = form_data.get('city')
+    if city is not None and not city_is_public(city):
+        raise ValueError('Город пока не обслуживается.')
+    service_cities = form_data.get('service_cities')
+    if service_cities is not None and any(
+        not city_is_public(item) for item in service_cities
+    ):
+        raise ValueError('Город обслуживания пока не доступен.')
 
 
 def create_client_profile(user, city=None, contact=''):
     """Создать профиль заказчика для пользователя."""
+    _validate_public_profile_cities({'city': city})
     profile, created = ClientProfile.objects.get_or_create(
         user=user,
         defaults={'city': city, 'contact': contact},
@@ -12,6 +27,7 @@ def create_client_profile(user, city=None, contact=''):
 
 def create_or_update_client_profile(user, form_data):
     """Создать или обновить профиль клиента."""
+    _validate_public_profile_cities(form_data)
     profile, created = ClientProfile.objects.get_or_create(user=user)
     profile.city = form_data.get('city', profile.city)
     profile.contact = form_data.get('contact', profile.contact)
@@ -34,6 +50,7 @@ def get_client_profile(user):
 
 def create_or_update_worker_profile(user, form_data):
     """Создать или обновить профиль мастера. Возвращает профиль."""
+    _validate_public_profile_cities(form_data)
     profile, created = WorkerProfile.objects.get_or_create(user=user)
 
     profile.city = form_data.get('city', profile.city)

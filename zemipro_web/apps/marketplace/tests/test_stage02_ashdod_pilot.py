@@ -8,6 +8,10 @@ from django.urls import reverse
 from django.utils.translation import override
 
 from apps.accounts.forms import ClientProfileForm, WorkerProfileForm
+from apps.accounts.services import (
+    create_client_profile, create_or_update_client_profile,
+    create_or_update_worker_profile,
+)
 from apps.accounts.models import WorkerProfile
 from apps.locations.models import City, CityAlias
 from apps.locations.services import city_is_public, get_active_cities, get_public_cities
@@ -248,6 +252,26 @@ class AshdodPilotPublicAccessTests(TestCase):
             reverse('marketplace:order_detail', args=[historic.pk]),
         ).status_code, 200)
         self.assertEqual(Order.objects.filter(pk=historic.pk).count(), 1)
+
+    def test_direct_profile_services_reject_out_of_city_without_partial_writes(self):
+        other_client = make_user('direct-pilot-client')
+        other_worker = make_user('direct-pilot-worker')
+        with self.assertRaisesMessage(ValueError, 'Город пока не обслуживается'):
+            create_client_profile(other_client, city=self.other)
+        with self.assertRaisesMessage(ValueError, 'Город пока не обслуживается'):
+            create_or_update_client_profile(
+                other_client, {'city': self.other, 'contact': 'synthetic'},
+            )
+        with self.assertRaisesMessage(ValueError, 'Город обслуживания пока не доступен'):
+            create_or_update_worker_profile(other_worker, {
+                'city': self.ashdod, 'service_cities': [self.other],
+            })
+        self.assertFalse(hasattr(other_client, 'client_profile'))
+        self.assertFalse(hasattr(other_worker, 'worker_profile'))
+        self.assertEqual(
+            create_client_profile(other_client, city=self.ashdod).city_id,
+            self.ashdod.pk,
+        )
 
     def test_inactive_ashdod_fails_closed(self):
         self.ashdod.is_active = False

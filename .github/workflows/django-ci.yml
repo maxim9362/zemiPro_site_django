@@ -134,11 +134,19 @@ jobs:
         run: |
           python manage.py test apps.marketplace.tests.test_stage02_integration
 
+      - name: Stage 02 Ashdod-only public pilot regression tests
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_ashdod_pilot
+
       - name: Install pinned isolated Chrome driver for mobile viewport checks
         run: |
           python -m pip install playwright==1.56.0
 
       - name: Stage 02.6 browser mobile RTL smoke (isolated synthetic CI)
+        # Public-browser checks must exercise the real Ashdod-only policy;
+        # historical multi-city unit tests run separately in general test mode.
+        env:
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
         run: |
           set -euo pipefail
           python manage.py runserver --insecure --noreload 127.0.0.1:8765 > /tmp/stage02-django-browser.log 2>&1 &

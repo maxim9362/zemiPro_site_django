@@ -3,13 +3,16 @@ from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F403
 from .base import DATABASES as DATABASES
+from .env import env_bool
 
 
 ENVIRONMENT = 'test'
 # Keep historical multi-city service-zone/SEO regression cases functional.
 # New Ashdod-only regression suite explicitly enables the production pilot gate
 # with override_settings and tests HTTP, service, and query boundaries.
-ZEMIPRO_PILOT_CITY_SLUG = None
+ZEMIPRO_PILOT_CITY_SLUG = (
+    'ashdod' if env_bool('ZEMIPRO_TEST_ASHDOD_ONLY', False) else None
+)
 DEBUG = False
 SECRET_KEY = 'django-insecure-test-environment-key-not-for-deployment'
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
