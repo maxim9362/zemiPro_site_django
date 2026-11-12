@@ -23,3 +23,9 @@ The command processes bounded pending local receipts only; it does not schedule 
 Required synthetic PostgreSQL tests: atomic rollback of the source order and events, draft-vs-published semantics, unique emission on replay, duplicate HTTP submit, one notification per recipient, worker update/cancel distribution, blocked recipients, safe event schema, localized updated notices, replay of a failed receipt and parallel delivery races. CI verifies actual migrations `marketplace.0014` and `notifications.0002` plus `makemigrations --check` and full Django regressions.
 
 Legacy pre-04.7 orders are left unchanged and are **not** backfilled into a misleading event history. Production email/SMS/push, scheduled background sender, GA4 and payment integrations remain disabled; future Stage 07 controls their activation. Full Stage 04 acceptance still requires independent Codex Cloud code review, security/RTL browser E2E on new wizard/management screens, production private media readiness and owner approval for the single PR/merge.
+
+## Stage 04.7 verification (2026-11-12)
+
+[GitHub Actions #43299139914](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43299139914) — **SUCCESS** on `5ce626fffbac0db6cce1e3352a0aea49229d4f55`. All **339/339 Django** tests PASS; isolated PostgreSQL 17 migrations 0014 and notifications.0002, `makemigrations --check`, Ruff/compile, Ashdod-only **13/13**, headless Chrome mobile RTL legacy/catalog smoke **45/45**. New 04.7-specific event/delivery tests included. The previous failed Ruff-only build was addressed; no known open failure from the current GitHub CI.
+
+**No outbound messaging was enabled.** Manual replay is still opt-in and works on the internal database only. The UI/real-device and independent Codex Cloud review of the full Stage 04 are **not** covered by these tests; do not merge or deploy solely based on the CI status.
