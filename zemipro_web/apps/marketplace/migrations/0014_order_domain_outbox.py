@@ -1,6 +1,4 @@
 """Stage 04.7 durable, PII-free outbox plus in-app/analytics receipts."""
-import uuid
-
 from django.db import migrations, models
 import django.db.models.deletion
 
