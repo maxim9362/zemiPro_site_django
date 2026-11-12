@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from apps.locations.services import city_is_public
+from apps.locations.services import city_is_public, get_public_cities
 
 from .models import User, ClientProfile, WorkerProfile
 
