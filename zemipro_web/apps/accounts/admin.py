@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User, ClientProfile, WorkerProfile, PrivacyRequest
+from .models import (
+    User, ClientProfile, WorkerProfile, PrivacyRequest, WorkerPortfolioPhoto,
+)
 
 
 @admin.register(User)
@@ -53,6 +55,28 @@ class PrivacyRequestAdmin(admin.ModelAdmin):
     fields = ('user', 'kind', 'status', 'created_at', 'reviewed_at')
 
     def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+@admin.register(WorkerPortfolioPhoto)
+class WorkerPortfolioPhotoAdmin(admin.ModelAdmin):
+    """Metadata only. Uploaded images are not exposed from Django admin."""
+
+    list_display = ('id', 'worker', 'is_public', 'sort_order', 'created_at')
+    list_filter = ('is_public',)
+    raw_id_fields = ('worker',)
+    readonly_fields = (
+        'worker', 'file_key', 'caption', 'sort_order', 'is_public',
+        'rights_confirmed_at', 'created_at',
+    )
+    fields = readonly_fields
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):

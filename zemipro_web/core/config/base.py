@@ -89,6 +89,9 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# Stage 03.5: never expose worker portfolio originals through MEDIA_URL/static serving.
+# Deployment must mount persistent, private storage with backups before public release.
+ZEMIPRO_PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'

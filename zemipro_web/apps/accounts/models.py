@@ -176,6 +176,30 @@ class WorkerProfile(models.Model):
     def __str__(self):
         return f'Мастер: {self.user}'
 
+class WorkerPortfolioPhoto(models.Model):
+    """Worker-owned image with opaque, private storage and opt-in public access."""
+
+    worker = models.ForeignKey(
+        WorkerProfile, on_delete=models.PROTECT, related_name='portfolio_photos',
+    )
+    file_key = models.CharField(max_length=96, unique=True)
+    caption = models.CharField(max_length=300, blank=True, default='')
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_public = models.BooleanField(default=False)
+    rights_confirmed_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'accounts_worker_portfolio_photo'
+        ordering = ['sort_order', 'pk']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(sort_order__lte=999),
+                name='worker_portfolio_sort_order_max_999',
+            ),
+        ]
+
+
 class SensitivePostCounter(models.Model):
     """Opaque time-window counters shared atomically between Gunicorn workers.
 
