@@ -811,3 +811,9 @@
 - Correct lock ordering: owner photo DELETE now locks **Order before OrderAttachment**, matching uploads and avoiding a cross-transaction inversion. Changes remain owner-only.
 - New `test_stage04_concurrency_limits` covers quota saturation, replay, transactional rollback, wizard no-op, status no-op, worker reply limit, image dedup, blocked owner, parallel publication, and parallel accept/reply outcome on isolated PostgreSQL. Existing stage 04.1–04.5 tests and Ashdod-only / RU-EN-HE shared UI smoke remain required.
 - **Status:** code committed only after CI check. Production storage, VPS, production DB, DNS, payment or SMTP not touched.
+
+### 04.6 verification — 2026-11-12
+
+- Code commit `38b8c4007498660716e257fe17eb991748027379`; [CI #43296466886](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43296466886) **SUCCESS**: full Django **328/328 PASS**; isolated PostgreSQL 17.11 schema migrated through `marketplace.0013_order_write_quota`, `makemigrations --check` **PASS**; Ruff, Django checks and Python compilation **PASS**; Ashdod-only **13/13 PASS**, existing headless Chrome mobile/RTL **45/45 PASS**. Reported coverage **87.7%** applies only to `apps.marketplace.services`.
+- Initial code commit failed Ruff because of an unused `transaction` import in `order_quota.py`. Fixed in the same stage branch and reran full CI successfully. No destructive migrations, live data changes or external delivery.
+- **04.6 CODE_IMPLEMENTED / CI_VERIFIED**, Stage 04 whole remains `IN_PROGRESS` until Stage 04.7, independent Codex Cloud review and explicit owner-approved PR merge. Threaded race tests verify a single publication and no unhandled pending response after worker selection. Production DDoS/Web Application Firewall/PII image recognition, deployment and observability are not claimed.

@@ -18,3 +18,7 @@
 ## Test plan / pending verification
 
 Synthetic PostgreSQL 17 with parallel thread/connection tests for response-vs-accept, publish-vs-publish and quota serialization; targeted HTTP 429/CSRF/IDOR, image safety and replay, rollback, no-op quota; full Django suite + compile/Ruff/migrations + Ashdod-only and existing mobile/RTL smoke. Stage 04.7 may build a distinct durable notification/analytics outbox on top of these exactly-once mutations.
+
+## Completed CI (2026-11-12)
+
+[GitHub Actions #43296466886](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43296466886): **SUCCESS** on code SHA `38b8c4007498660716e257fe17eb991748027379`. Django **328/328 PASS**, clean PostgreSQL 17.11 migration 0013, model consistency/Ruff/compile, Ashdod **13/13** and standard mobile/RTL Chrome **45/45**. The browser smoke is not a full interactive E2E of the new admin/order forms. Rate thresholds are initial caps, not statistical anti-bot detection.
