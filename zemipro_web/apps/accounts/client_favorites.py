@@ -10,6 +10,9 @@ from .models import FavoriteWorker, User, WorkerProfile
 def public_worker_queryset():
     workers = WorkerProfile.objects.filter(
         user__is_active=True, user__is_blocked=False,
+        is_published=True, city__in=get_public_cities(),
+    ).exclude(display_name='').exclude(description='').exclude(
+        pricing_details='',
     ).select_related('city', 'user')
     if public_city_slug():
         city = get_public_cities().first()

@@ -11,7 +11,7 @@ from django.utils.translation import gettext as _
 from apps.accounts.forms import RatingCreateForm
 from apps.accounts.models import FavoriteWorker
 from apps.accounts.client_favorites import (
-    own_visible_favorites, toggle_own_favorite,
+    own_visible_favorites, toggle_own_favorite, public_worker_queryset,
 )
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
@@ -150,9 +150,9 @@ def category_detail(request, slug):
     cities = get_public_cities().order_by('name_ru')
     selected_city = request.GET.get('city')
 
-    workers = WorkerProfile.objects.filter(
-        skills=category, user__is_active=True, user__is_blocked=False
-    ).select_related('city', 'user').annotate(
+    workers = public_worker_queryset().filter(
+        skills=category,
+    ).annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
@@ -241,9 +241,7 @@ def city_detail(request, slug):
     ).order_by('sort_order', 'pk')
     selected_category = request.GET.get('category')
 
-    workers = WorkerProfile.objects.filter(
-        user__is_active=True, user__is_blocked=False
-    ).select_related('user').prefetch_related('skills').annotate(
+    workers = public_worker_queryset().prefetch_related('skills').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
@@ -327,9 +325,7 @@ def service_detail(request, category_slug, service_slug):
 
 
 def worker_public_profile_view(request, pk):
-    workers = WorkerProfile.objects.filter(
-        user__is_active=True, user__is_blocked=False
-    ).select_related('city', 'user').prefetch_related('skills', 'service_cities')
+    workers = public_worker_queryset().prefetch_related('skills', 'service_cities')
     if public_city_slug():
         pilot_city = get_public_cities().first()
         workers = (
@@ -672,8 +668,10 @@ def worker_dashboard_view(request):
 @login_required
 def order_respond_view(request, pk):
     profile = get_worker_profile(request.user)
-    if not profile:
-        messages.warning(request, _('Сначала заполните профиль мастера.'))
+    if not profile or not profile.is_published or request.user.is_blocked:
+        messages.warning(
+            request, _('Для откликов сначала опубликуйте анкету мастера.'),
+        )
         return redirect('accounts:worker_profile')
 
     order = get_object_or_404(

@@ -37,7 +37,7 @@
             <ul>
             {% for favorite in favorite_workers %}
                 <li>
-                    <a href="{% url 'marketplace:worker_public_profile' pk=favorite.worker.pk %}">{{ favorite.worker.user }}</a>
+                    <a href="{% url 'marketplace:worker_public_profile' pk=favorite.worker.pk %}">{{ favorite.worker.display_name }}</a>
                     — {{ favorite.worker.city.localized_name }}
                 </li>
             {% endfor %}

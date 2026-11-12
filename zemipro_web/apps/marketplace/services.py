@@ -72,6 +72,10 @@ def workers_serving_city(queryset, city, *, category=None):
 
 def get_available_orders_for_worker(worker_profile):
     """New orders only in selected zones or eligible opted-in online skills."""
+    if (not worker_profile.is_published or not worker_profile.user.is_active
+            or worker_profile.user.is_blocked
+            or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE):
+        return Order.objects.none()
     skills = worker_profile.skills.filter(is_active=True).filter(
         Q(section__isnull=True) | Q(section__is_active=True)
     )
@@ -112,6 +116,12 @@ def create_response(order, worker_user, message=''):
 
     if order.status != Order.Status.NEW:
         raise ValueError('Заказ уже не в статусе «В обработке».')
+
+    worker_profile = worker_user.worker_profile
+    if (not worker_profile.is_published or worker_profile.user.is_blocked
+            or not worker_profile.user.is_active
+            or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE):
+        raise ValueError('Анкета мастера не опубликована или недоступна.')
 
     existing = Response.objects.filter(order=order, worker=worker_user).first()
     if existing:
