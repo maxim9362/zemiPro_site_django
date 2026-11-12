@@ -415,3 +415,29 @@ class ClientSettingsForm(forms.Form):
                 _('Оставьте хотя бы один способ восстановления доступа.')
             )
         return result
+
+
+class PortfolioUploadForm(forms.Form):
+    """No owner, file path or privileged model fields are user-writable."""
+
+    image = forms.FileField(label=_('Фотография'))
+    caption = forms.CharField(
+        max_length=300, required=False, label=_('Описание фотографии'),
+    )
+    sort_order = forms.IntegerField(
+        required=False, initial=0, min_value=0, max_value=999,
+        label=_('Порядок'),
+    )
+    is_public = forms.BooleanField(
+        required=False, label=_('Показывать в публичной анкете'),
+    )
+    rights_confirmed = forms.BooleanField(
+        required=True,
+        label=_('Подтверждаю, что имею право публиковать эту фотографию'),
+    )
+
+
+class PortfolioEditForm(forms.Form):
+    caption = forms.CharField(max_length=300, required=False)
+    sort_order = forms.IntegerField(min_value=0, max_value=999)
+    is_public = forms.BooleanField(required=False)

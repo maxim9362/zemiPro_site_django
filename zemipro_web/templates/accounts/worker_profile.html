@@ -22,6 +22,7 @@
         {% endif %}
 
         <p>{% if profile.is_published %}{% trans 'Анкета опубликована.' %}{% else %}{% trans 'Анкета пока не опубликована.' %}{% endif %}</p>
+        {% if profile %}<a href="{% url 'accounts:worker_portfolio' %}" class="btn btn--secondary">{% trans 'Управлять портфолио' %}</a>{% endif %}
         {% if profile.is_published %}
         <a href="{% url 'marketplace:worker_public_profile' pk=profile.pk %}" class="btn btn--secondary">{% trans 'Посмотреть публичную анкету' %}</a>
         {% endif %}

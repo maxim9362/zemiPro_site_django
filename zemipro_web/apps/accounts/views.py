@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, FileResponse, Http404
 from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.conf import settings
@@ -9,7 +9,7 @@ from django.utils import translation
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST, require_http_methods
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.translation import gettext as _
 
 from .forms import (
@@ -17,14 +17,20 @@ from .forms import (
     RequestContactVerificationForm, ConfirmContactVerificationForm,
     SafeAuthenticationForm, VerifiedPasswordResetForm,
     PhoneRecoveryRequestForm, PhoneRecoveryConfirmForm,
-    ClientSettingsForm,
+    ClientSettingsForm, PortfolioUploadForm, PortfolioEditForm,
 )
 from .verification import (
     request_contact_verification, confirm_contact_verification,
     request_phone_password_recovery, confirm_phone_password_recovery,
 )
-from .models import PrivacyRequest
+from .models import PrivacyRequest, WorkerPortfolioPhoto
 from .client_settings import save_client_settings, request_own_privacy_action
+from .client_favorites import public_worker_queryset
+from .portfolio import (
+    PortfolioError, add_own_portfolio_photo, update_own_portfolio_photo,
+    delete_own_portfolio_photo, owner_portfolio, portfolio_storage_key,
+    private_portfolio_storage,
+)
 from .services import (
     create_or_update_client_profile, get_client_profile,
     create_or_update_worker_profile, get_worker_profile, select_active_role,
@@ -260,3 +266,116 @@ def client_privacy_request_view(request):
         return HttpResponseBadRequest(_('Недопустимый запрос.'))
     messages.success(request, _('Запрос принят на рассмотрение.'))
     return redirect('accounts:client_settings')
+
+
+def _portfolio_owner(request):
+    if not request.user.is_authenticated or request.user.is_blocked or not request.user.is_active:
+        raise PermissionDenied
+    profile = get_worker_profile(request.user)
+    if profile is None:
+        return None
+    return profile
+
+
+@login_required
+@require_http_methods(['GET'])
+def worker_portfolio_view(request):
+    profile = _portfolio_owner(request)
+    if profile is None:
+        return redirect('accounts:worker_profile')
+    return render(request, 'accounts/worker_portfolio.html', {
+        'profile': profile, 'photos': owner_portfolio(request.user),
+        'upload_form': PortfolioUploadForm(),
+    })
+
+
+@login_required
+@require_POST
+def worker_portfolio_add_view(request):
+    profile = _portfolio_owner(request)
+    if profile is None:
+        return redirect('accounts:worker_profile')
+    form = PortfolioUploadForm(request.POST, request.FILES)
+    if form.is_valid():
+        try:
+            add_own_portfolio_photo(
+                request.user, form.cleaned_data['image'],
+                caption=form.cleaned_data['caption'],
+                sort_order=form.cleaned_data['sort_order'] or 0,
+                is_public=form.cleaned_data['is_public'],
+                rights_confirmed=form.cleaned_data['rights_confirmed'],
+            )
+        except PortfolioError as exc:
+            form.add_error('image', str(exc))
+        else:
+            messages.success(request, _('Фотография добавлена.'))
+            return redirect('accounts:worker_portfolio')
+    return render(request, 'accounts/worker_portfolio.html', {
+        'profile': profile, 'photos': owner_portfolio(request.user),
+        'upload_form': form,
+    }, status=400)
+
+
+@login_required
+@require_POST
+def worker_portfolio_edit_view(request, pk):
+    _portfolio_owner(request)
+    form = PortfolioEditForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest(_('Некорректные данные фотографии.'))
+    try:
+        update_own_portfolio_photo(
+            request.user, pk,
+            caption=form.cleaned_data['caption'],
+            sort_order=form.cleaned_data['sort_order'],
+            is_public=form.cleaned_data['is_public'],
+        )
+    except PortfolioError:
+        return HttpResponseBadRequest(_('Некорректные данные фотографии.'))
+    messages.success(request, _('Фотография обновлена.'))
+    return redirect('accounts:worker_portfolio')
+
+
+@login_required
+@require_POST
+def worker_portfolio_delete_view(request, pk):
+    _portfolio_owner(request)
+    try:
+        delete_own_portfolio_photo(request.user, pk)
+    except PortfolioError:
+        raise Http404 from None
+    messages.success(request, _('Фотография удалена.'))
+    return redirect('accounts:worker_portfolio')
+
+
+@require_http_methods(['GET'])
+def worker_portfolio_image_view(request, pk):
+    """Stream a normalized JPEG only to owner or via explicit public consent."""
+    photo = get_object_or_404(
+        WorkerPortfolioPhoto.objects.select_related('worker__user'), pk=pk,
+    )
+    is_owner = bool(
+        request.user.is_authenticated
+        and request.user.pk == photo.worker.user_id
+        and request.user.is_active and not request.user.is_blocked
+    )
+    is_visible = (
+        photo.is_public and public_worker_queryset().filter(
+            pk=photo.worker_id,
+        ).exists()
+    )
+    if not is_owner and not is_visible:
+        raise Http404
+    try:
+        key = portfolio_storage_key(photo)
+        image_file = private_portfolio_storage().open(key, 'rb')
+    except (PortfolioError, OSError, FileNotFoundError):
+        raise Http404 from None
+    response = FileResponse(
+        image_file, content_type='image/jpeg',
+        as_attachment=False, filename='work-photo.jpg',
+    )
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Content-Security-Policy'] = "default-src 'none'; sandbox"
+    return response

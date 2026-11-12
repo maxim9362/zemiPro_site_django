@@ -78,6 +78,23 @@
         </div>
         {% endif %}
 
+        {% if public_photos %}
+        <section aria-label="{% trans 'Примеры работ' %}" style="margin-top: 32px;">
+            <h2>{% trans 'Примеры работ' %}</h2>
+            <p>{% trans 'Фотографии предоставлены исполнителем; ZemiPro не подтверждает выполнение показанных работ.' %}</p>
+            <div class="orders-list">
+            {% for photo in public_photos %}
+                <figure class="order-card-sm">
+                    <img src="{% url 'accounts:worker_portfolio_image' pk=photo.pk %}"
+                         alt="{% trans 'Пример работы' %}" loading="lazy"
+                         style="max-width:100%;height:auto;max-height:320px;object-fit:contain;">
+                    {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+                </figure>
+            {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
         {% if reviews %}
         <div style="margin-top: 32px;">
             <h2>{% trans 'Отзывы' %}</h2>

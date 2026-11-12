@@ -342,6 +342,7 @@ def worker_public_profile_view(request, pk):
 
     return render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
+        'public_photos': profile.portfolio_photos.filter(is_public=True),
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),
         'review_count': review_count,
