@@ -6,7 +6,7 @@ An idempotent replay or failed transaction consumes no quota.
 from datetime import datetime, timedelta, timezone
 
 from django.core.exceptions import PermissionDenied
-from django.db import connection, transaction
+from django.db import connection
 from django.utils import timezone as django_timezone
 
 from apps.accounts.models import User
