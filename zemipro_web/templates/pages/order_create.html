@@ -15,8 +15,8 @@
     <div class="container">
         <form method="post" class="form" id="order-form">
             {% csrf_token %}
-            <p class="form__hint">{% trans 'Точный адрес и телефон не запрашиваются при создании заявки. Передать контакты выбранному мастеру можно позднее в приватном чате.' %}</p>
-            <p><a href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Открыть пошаговую форму' %}</a></p>
+            <p class="form__hint">{{ order_contact_privacy }}</p>
+            <p><a href="{% url 'marketplace:order_wizard_start' %}">{{ wizard_link_label }}</a></p>
             <input type="hidden" name="submission_key" id="submission-key">
 
             {% if form.non_field_errors %}

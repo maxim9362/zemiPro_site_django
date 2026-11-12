@@ -19,3 +19,7 @@
 
 - Stage 04.3 targets tests for HTTP/session CSRF, privileged/unprivileged staff, worker contact privacy, blocked/unverified accounts, forged IDs, service-layer ownership, questionnaire bypass, repeated identical HTTP and direct calls, parallel race and Ashdod-only.
 - Stage 04.4 will formalize structured price/date/location and secure photo uploads. Stage 04.5 adds complete edit/history. Stage 04.6 will harden broader throttle/concurrency/abuse limits; 04.7 adds domain delivery events. Independent Codex Cloud review and full staging/real-device security acceptance remain after 04.7.
+
+## Django Admin and legacy browser privacy regression
+
+The Order, Response and OrderQuestionnaireAnswer Django Admin views require a re-fetched active, unblocked and email-cleared staff identity with `moderation.review_complaints`. Generic model-view access alone does not grant raw order details, response messages, exact contacts or private questionnaire answers. The legacy HTML no longer asks for precise address or phone (while historical POST clients remain supported); both browser smoke scripts now assert their absence. Privacy guidance is localized from the existing RU/EN/HE wizard copy.

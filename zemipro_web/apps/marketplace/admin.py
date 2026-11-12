@@ -1,6 +1,8 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 
+from apps.accounts.models import User
+
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating,
     ServiceQuestionnaire, QuestionnaireVersion, OrderQuestionnaireAnswer,
@@ -41,6 +43,18 @@ class SubcategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name_en',)}
 
 
+def _can_review_private_order_admin(request):
+    """Plain Django model-view permissions must never expose customer data."""
+    user = getattr(request, 'user', None)
+    if user is None or not getattr(user, 'is_authenticated', False):
+        return False
+    stored = User.objects.filter(
+        pk=user.pk, is_active=True, is_staff=True, is_blocked=False,
+        email_verification_required=False,
+    ).first()
+    return bool(stored and stored.has_perm('moderation.review_complaints'))
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'customer_name', 'customer_phone', 'client', 'worker', 'category', 'city', 'status', 'created_at')
@@ -50,6 +64,9 @@ class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'created_at'
 
+
+    def has_view_permission(self, request, obj=None):
+        return _can_review_private_order_admin(request)
 
     def has_add_permission(self, request):
         return False
@@ -70,6 +87,9 @@ class ResponseAdmin(admin.ModelAdmin):
     raw_id_fields = ('order', 'worker')
     readonly_fields = ('created_at', 'updated_at')
 
+
+    def has_view_permission(self, request, obj=None):
+        return _can_review_private_order_admin(request)
 
     def has_add_permission(self, request):
         return False
@@ -152,6 +172,9 @@ class OrderQuestionnaireAnswerAdmin(admin.ModelAdmin):
     readonly_fields = (
         'order', 'version', 'schema_snapshot', 'answers', 'created_at',
     )
+
+    def has_view_permission(self, request, obj=None):
+        return _can_review_private_order_admin(request)
 
     def has_add_permission(self, request):
         return False

@@ -385,8 +385,8 @@ def toggle_favorite_worker_view(request, pk):
 def order_create_view(request):
     """Retain legacy POST compatibility but route writes through owner service.
 
-    New GET sessions are sent to the wizard rather than collecting unnecessary
-    address/phone fields in the old form.
+    New CTAs open the wizard; the old GET remains for integrations.
+    Legacy writes use the same centralized owner and replay checks.
     """
     if request.method not in ('GET', 'POST'):
         raise Http404
@@ -396,6 +396,8 @@ def order_create_view(request):
         initial = {'city': profile.city} if profile else {}
         return render(request, 'pages/order_create.html', {
             'form': OrderCreateForm(initial=initial), 'seo_noindex': True,
+            'order_contact_privacy': wizard_copy()['privacy'],
+            'wizard_link_label': wizard_copy()['heading'],
         })
     form = OrderCreateForm(request.POST)
     if form.is_valid():
@@ -428,7 +430,11 @@ def order_create_view(request):
                     related_order=order,
                 )
             return redirect('marketplace:order_detail', pk=order.pk)
-    return render(request, 'pages/order_create.html', {'form': form, 'seo_noindex': True})
+    return render(request, 'pages/order_create.html', {
+        'form': form, 'seo_noindex': True,
+        'order_contact_privacy': wizard_copy()['privacy'],
+        'wizard_link_label': wizard_copy()['heading'],
+    })
 
 
 

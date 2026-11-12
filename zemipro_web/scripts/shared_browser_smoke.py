@@ -88,10 +88,10 @@ def assert_page(page: Page, lang: str, label: str, path: str, width: int) -> Non
             raise AssertionError(f"{lang}/{width}: order form must offer exactly Ashdod")
         if not page.locator("#order-form").is_visible():
             raise AssertionError(f"{lang}/{width}: authenticated order form missing")
-        phone = page.locator('input[name="customer_phone"]')
-        phone.fill("050-123-4567")
-        if phone.evaluate("node => getComputedStyle(node).direction") != "ltr":
-            raise AssertionError(f"{lang}/{width}: telephone field is not LTR")
+        if page.locator('input[name="customer_phone"], input[name="address"]').count():
+            raise AssertionError(f"{lang}/{width}: legacy form leaked private contact input")
+        if not page.locator('a[href="/orders/new/"]').count():
+            raise AssertionError(f"{lang}/{width}: expected wizard link")
         page.locator('textarea[name="description"]').fill(
             "בדיקה mixed text 12345 — synthetic only"
         )

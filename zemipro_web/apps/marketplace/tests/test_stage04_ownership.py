@@ -3,6 +3,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
+from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import AnonymousUser, Permission
 from django.core.exceptions import PermissionDenied
 from django.db import close_old_connections, connections
@@ -10,6 +11,9 @@ from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
 from apps.locations.models import City
+from apps.marketplace.admin import (
+    OrderAdmin, OrderQuestionnaireAnswerAdmin, ResponseAdmin,
+)
 from apps.marketplace.models import (
     Category, Order, OrderQuestionnaireAnswer, OrderStatusEvent,
     Response, ServiceQuestionnaire, Subcategory,
@@ -245,6 +249,40 @@ class OrderOwnershipAndIdempotencyTests(TestCase):
         response = self.client.get(reverse('marketplace:order_detail', args=[order.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'PRIVATE_043_TEXT')
+
+    def test_admin_order_and_questionnaire_views_require_moderator_permission(self):
+        from django.test import RequestFactory
+
+        regular = make_user('s043-basic-staff', is_staff=True)
+        regular.user_permissions.add(Permission.objects.get(
+            content_type__app_label='marketplace', codename='view_order',
+        ))
+        factory = RequestFactory()
+        req = factory.get('/admin/marketplace/order/')
+        site = AdminSite()
+        for actor, expected in ((regular, False), (self.other, False), (self.staff, True)):
+            req.user = actor
+            for model, admin_type in (
+                (Order, OrderAdmin),
+                (Response, ResponseAdmin),
+                (OrderQuestionnaireAnswer, OrderQuestionnaireAnswerAdmin),
+            ):
+                with self.subTest(actor=actor.username, admin=admin_type.__name__):
+                    self.assertEqual(
+                        admin_type(model, site).has_view_permission(req), expected,
+                    )
+        sensitive = Order.objects.create(
+            client=self.owner, worker=self.worker,
+            category=self.category, city=self.city,
+            address='PRIVATE_ADMIN_ADDRESS_043',
+            customer_phone='PRIVATE_ADMIN_PHONE_043',
+            description='PRIVATE_ADMIN_DESCRIPTION_043',
+        )
+        self.client.force_login(regular)
+        response = self.client.get(reverse('admin:marketplace_order_changelist'))
+        self.assertEqual(response.status_code, 403)
+        self.assertNotContains(response, sensitive.address, status_code=403)
+        self.assertNotContains(response, sensitive.customer_phone, status_code=403)
 
     def test_unverified_session_cannot_create_or_edit(self):
         self.client.force_login(self.owner)
