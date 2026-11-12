@@ -3,6 +3,7 @@ from io import BytesIO
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ImproperlyConfigured
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -250,7 +251,7 @@ class WorkerPortfolioTests(TestCase):
                                     rights_confirmed=True)
 
     def test_storage_never_inside_public_media_and_rejects_bad_saved_key(self):
-        with override_settings(ZEMIPRO_PRIVATE_MEDIA_ROOT='zemipro_web/media'):
+        with override_settings(ZEMIPRO_PRIVATE_MEDIA_ROOT=settings.MEDIA_ROOT):
             # Relative path is not safe either; guard comparison to real MEDIA_ROOT.
             with self.assertRaises(ImproperlyConfigured):
                 private_portfolio_storage()
