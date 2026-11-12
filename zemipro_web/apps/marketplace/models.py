@@ -245,7 +245,7 @@ class Response(models.Model):
         related_name='responses', verbose_name='Заказ'
     )
     worker = models.ForeignKey(
-        'accounts.User', on_delete=models.CASCADE,
+        'accounts.User', on_delete=models.PROTECT,
         related_name='responses', verbose_name='Исполнитель'
     )
     message = models.TextField(blank=True, default='', verbose_name='Сообщение')
@@ -284,7 +284,7 @@ class Rating(models.Model):
         related_name='rating', verbose_name='Заказ'
     )
     worker = models.ForeignKey(
-        'accounts.User', on_delete=models.CASCADE,
+        'accounts.User', on_delete=models.PROTECT,
         related_name='received_ratings', verbose_name='Исполнитель'
     )
     client = models.ForeignKey(

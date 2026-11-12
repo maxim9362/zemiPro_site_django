@@ -19,7 +19,7 @@ class Complaint(models.Model):
         DISMISSED = 'dismissed', 'Отклонена'
 
     reporter = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='complaints_filed', verbose_name='Кто пожаловался'
     )
     target_user = models.ForeignKey(
