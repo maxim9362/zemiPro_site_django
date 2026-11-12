@@ -15,7 +15,8 @@ from apps.accounts.admin import PrivacyRequestAdmin, UserAdmin
 from apps.accounts.models import ClientProfile, PrivacyRequest, WorkerProfile
 from apps.accounts.services import select_active_role
 from apps.locations.models import City
-from apps.marketplace.models import Category, Order, Response
+from apps.marketplace.models import Category, Order, Response, Rating
+from apps.marketplace.admin import OrderAdmin, ResponseAdmin, RatingAdmin
 from apps.marketplace.services import (
     accept_response, can_view_private_order_details, create_order,
     create_response,
@@ -307,6 +308,17 @@ class ModerationAndPermissionTests(TestCase):
         self.assertFalse(user_admin.has_delete_permission(req))
         self.assertIn('is_blocked', user_admin.get_readonly_fields(req))
         self.assertIn('is_staff', user_admin.get_readonly_fields(req))
+        self.assertFalse(user_admin.has_change_permission(req, self.owner))
+        for model, admin_class in (
+            (Order, OrderAdmin),
+            (Response, ResponseAdmin),
+            (Rating, RatingAdmin),
+        ):
+            with self.subTest(model=model.__name__):
+                record_admin = admin_class(model, site)
+                self.assertFalse(record_admin.has_change_permission(req))
+                self.assertFalse(record_admin.has_delete_permission(req))
+                self.assertFalse(record_admin.has_add_permission(req))
         audit_admin = ModerationEventAdmin(ModerationEvent, site)
         self.assertFalse(audit_admin.has_add_permission(req))
         self.assertFalse(audit_admin.has_change_permission(req))
