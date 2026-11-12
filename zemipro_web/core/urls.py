@@ -23,6 +23,10 @@ urlpatterns = [
     path('analytics/', include('apps.analytics.urls')),
 ]
 
+if settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED:
+    # Dedicated prefix avoids allauth's local signup/password URLs shadowing Django.
+    urlpatterns.append(path('oauth/', include('allauth.urls')))
+
 # Additive catalog routes only. Never wrap legacy marketplace/auth/health routes
 # in i18n_patterns: existing URLs, SEO/PSEO links and external clients stay valid.
 urlpatterns += i18n_patterns(
