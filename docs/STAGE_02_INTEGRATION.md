@@ -1,6 +1,6 @@
 # Stage 02.6: integration and mobile RTL acceptance
 
-Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / SHARED_ENV_VERIFIED / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
+Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / SHARED_ENV_VERIFIED / PILOT_25_APPROVED / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
 All seeds, schema checks, browser registration and order tests use isolated, disposable PostgreSQL in GitHub Actions. Never run these commands on production.
 
 ## Automated matrix
@@ -28,3 +28,12 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - The reviewed exact HEAD `cad90a071` also has [Django CI #43162656220](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656220) **SUCCESS** (full 151/151, SEO 16/16, Chrome 45/45, targeted coverage 94.0%) and [isolated Docker smoke #43162656363](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656363) **SUCCESS**.
 - Reusable isolated environment verification on application baseline `632226b3`: Python 3.12.14 / PostgreSQL 17.11 / existing Docker Compose, clean 34 migrations, repeated seeds and PK/FK/order/questionnaire regressions, normal restart persistence, synthetic checksum dump/restore, full **151/151 PASS**, targeted service coverage **94.0%**. Real headless Chromium checked **180/180** page/language/viewport combinations (320/360/375/390/768/1440), generated 54 screenshots and a RU/EN/HE mobile/desktop sample was visually inspected without clipping. See `docs/SHARED_TEST_ENVIRONMENT.md`. Physical devices and native Hebrew editorial quality remain unverified.
 - **Not Stage 02 DONE:** native Hebrew and category/city/questionnaire content review, official nationwide CBS coverage, physical Android/iPhone, original screenshot artifact final UX approval and Stage 08 legacy URL inventory remain open. Off-host backup, real alert delivery, credential rotation, branch protection and publicly trusted staging HTTPS are not verified. **PR #8 remains Draft / NOT_MERGED**, no production/deploy authorization.
+
+## Approved pilot geography and unchanged release gates (2026-11-12)
+
+- **Owner decision:** the technical acceptance boundary for Stage 02 is the existing **25-city pilot** (`6 districts / 25 cities / 4 aliases`), with stable PK/FK, seeds and previously verified automated scenarios. This accepts the limited **scope**, not the quality of all translated content or a real release.
+- **Deferred obligation, not waived:** the **official complete CBS Israel locality registry**, alias/name/translation reconciliation and safe data expansion remain **`DEFERRED / REQUIRED_BEFORE_NATIONWIDE_ROLLOUT`**. Do not represent this as nationally complete; do not silently extend coverage or create synthetic supply outside supported locations.
+- **Still OPEN before public 25-city pilot:** Hebrew native editorial sign-off for UI and names; approval of 11 added categories, 25 city translations, 4 demo questionnaire texts; physical Android/iPhone checks (`NOT_RUN`); original screenshot and final mobile/RTL UX owner approval. Existing browser checks (CI 45/45 and shared Chromium 180/180) remain validated **emulations only**.
+- **Security/infrastructure remain OPEN for corresponding deployment/release:** off-host backup, delivered alert, legacy credential rotation, branch protection, publicly trusted staging HTTPS and authorized DNS/Cloudflare/VPS/production actions. Legacy SEO URL inventory remains mandatory before Stage 08. These are not converted into `PASS` or silently declared `DEFERRED` by the city-scope decision.
+- **Stage 02 status remains `CODE_VERIFIED / SHARED_ENV_VERIFIED / MANUAL_GATES_OPEN`, not `DONE`.** Draft PR #8 must not be marked ready, merged or deployed without a new explicit owner instruction.
+
