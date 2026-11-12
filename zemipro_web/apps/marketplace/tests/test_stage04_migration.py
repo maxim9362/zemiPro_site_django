@@ -2,6 +2,7 @@
 
 No real users, archived production database, or external services are touched.
 """
+from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
@@ -13,11 +14,12 @@ class OrderLegacyStatusMigrationTests(TransactionTestCase):
         latest = ('marketplace', '0008_order_lifecycle')
         MigrationExecutor(connection).migrate([previous])
         state = MigrationExecutor(connection).loader.project_state([previous]).apps
-        User = state.get_model('accounts', 'User')
         Category = state.get_model('marketplace', 'Category')
         City = state.get_model('locations', 'City')
         Order = state.get_model('marketplace', 'Order')
-        user = User.objects.create(username='synthetic-stage04-history')
+        # Marketplace 0007 historically references pre-Stage-03 User schema.
+        # The physical accounts table remains at the current migration head.
+        user = get_user_model().objects.create_user(username='synthetic-stage04-history')
         category = Category.objects.create(slug='synthetic-historical-service', name_ru='Услуга')
         city = City.objects.create(slug='synthetic-historical-ashdod', name_ru='Ашдод')
         old = Order.objects.create(
