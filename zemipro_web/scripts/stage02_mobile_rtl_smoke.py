@@ -72,11 +72,12 @@ def inspect(page, lang, path, width):
             raise AssertionError(f'{lang}/{width}: order form exposes nonpilot cities')
         if not page.locator('#order-form').is_visible():
             raise AssertionError(f'{lang}/{width}: authenticated order form missing')
-        phone_direction = page.locator('input[name="customer_phone"]').evaluate(
-            '(node) => getComputedStyle(node).direction'
-        )
-        if phone_direction != 'ltr':
-            raise AssertionError(f'{lang}/{width}: phone direction={phone_direction}')
+        # Stage 04.3 privacy: legacy HTML no longer asks for precise
+        # address/phone; callers with old POST integrations stay supported.
+        if page.locator('input[name="customer_phone"], input[name="address"]').count():
+            raise AssertionError(f'{lang}/{width}: private contact input exposed')
+        if not page.locator('a[href="/orders/new/"]').count():
+            raise AssertionError(f'{lang}/{width}: wizard link missing')
     if lang == 'he' or width in (320, 390):
         screen = 'order' if 'orders' in path else (
             'catalog' if 'categories' in path else 'cities'
