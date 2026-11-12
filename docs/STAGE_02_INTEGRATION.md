@@ -1,6 +1,6 @@
 # Stage 02.6: integration and mobile RTL acceptance
 
-Status (2026-11-12): CI_VERIFIED / CODE_REVIEW_PASS / SHARED_ENV_VERIFIED / ASHDOD_ONLY_PILOT_APPROVED / ASHDOD_SCOPE_CI_VERIFIED / NEW_SCOPE_CODEX_REVIEW_PENDING / MANUAL_GATES_OPEN. Branch stage-02-catalog-localization; Draft PR #8.
+Status (2026-11-12): TECHNICAL_IMPLEMENTATION_COMPLETE / ASHDOD_SCOPE_CI_VERIFIED / OWNER_APPROVED_RELEASE_GATE_DEFERRAL / NEW_SCOPE_CODEX_REVIEW_PENDING / PR_DRAFT. Branch stage-02-catalog-localization; Draft PR #8.
 All seeds, schema checks, browser registration and order tests use isolated, disposable PostgreSQL in GitHub Actions. Never run these commands on production.
 
 ## Automated matrix
@@ -56,4 +56,10 @@ All seeds, schema checks, browser registration and order tests use isolated, dis
 - Last application polish removes the obsolete Tel Aviv address placeholder from the Ashdod-only order form (uses existing localized “Адрес”). One extra positive UX regression added.
 - [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111): **SUCCESS**, 12/12 Ashdod-only, 163/163 full Django, 45/45 CI browser, targeted service coverage 94.7%. [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632): **SUCCESS**. The test database still seeds 25 technical cities; actual default public mode is only Ashdod.
 - Independent new-code Codex review, qualified Hebrew/content, physical mobile tests, UX owner sign-off, staging/backup/alert/credentials and other release gates remain OPEN. Stage 02 NOT DONE, PR #8 Draft/NOT_MERGED, no deploy.
+
+## Owner decision: shift manual/infra gates to pre-public launch (2026-11-12)
+
+- **Approved:** native Hebrew/visible-content editorial signoff, 11 proposed categories, four demo questionnaires, real Android/iPhone, screenshot/mobile RTL owner acceptance, legacy credential revocation, off-host backup/recovery, real alert delivery, branch protection and trusted staging HTTPS are **required BEFORE first public Ashdod pilot**, but do not block technical implementation acceptance or continued isolated development. All remain `OPEN/NOT_RUN/NOT_VERIFIED` and are NOT waived.
+- **Still required BEFORE technical closure of Stage 02:** fresh focused **independent Codex review of the Ashdod-only diff**. Previous CODE_REVIEW_PASS concerns earlier code. After PASS, any necessary fixes and matching CI, owner must separately authorize PR #8 Ready/merge. No Stage 02 formal DONE or public activation yet.
+- **Preserved earlier deadlines:** Stage 00.4 and legacy SEO URL inventory before Stage 08; full CBS nationwide register before nationwide rollout. Exact obligations and proof: [Stage 02 Release Gates](STAGE_02_RELEASE_GATES.md).
 
