@@ -59,13 +59,13 @@ def main():
                 page = context.new_page()
                 page.goto(BASE + '/accounts/register/', wait_until='networkidle')
                 page.locator('input[name="username"]').fill(f'stage02_browser_{lang}')
-                page.locator('input[name="password1"]').fill('ZemiPro-Stage02-CI-Test!84')
-                page.locator('input[name="password2"]').fill('ZemiPro-Stage02-CI-Test!84')
+                page.locator('input[name="password1"]').fill('SyntheticStage02Sample!84')
+                page.locator('input[name="password2"]').fill('SyntheticStage02Sample!84')
                 page.locator('form').filter(
                     has=page.locator('input[name="password1"]')
                 ).locator('button[type="submit"]').click()
                 page.wait_for_url(
-                    lambda url: '/accounts/register/' not in url.path,
+                    lambda url: '/accounts/register/' not in url,
                     timeout=15000,
                 )
                 for width in WIDTHS:
