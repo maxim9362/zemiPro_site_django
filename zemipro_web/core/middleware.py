@@ -13,6 +13,7 @@ from django.db import DatabaseError, connection
 from django.http import HttpResponse, HttpResponseForbidden
 from django.middleware.locale import LocaleMiddleware
 from django.utils import translation
+from django.utils.translation import gettext as _
 from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
 
@@ -152,7 +153,7 @@ class BlockedAccountMiddleware(MiddlewareMixin):
         if (user.is_authenticated and user.is_blocked
                 and request.path_info != '/accounts/logout/'
                 and not safe_public_read):
-            response = HttpResponseForbidden('Аккаунт недоступен.')
+            response = HttpResponseForbidden(_('Аккаунт недоступен.'))
             response['Cache-Control'] = 'private, no-store'
             return response
         return None
