@@ -128,7 +128,7 @@ class WorkerPublicationTests(TestCase):
         bad = self.client.post(
             self.url, {**self.data, 'action': 'publish', 'pricing_details': ''},
         )
-        self.assertContains(bad, 'Для публикации укажите')
+        self.assertContains(bad, 'Укажите ориентировочные цены')
         draft.refresh_from_db()
         self.assertFalse(draft.is_published)
         profile = self.publish()
