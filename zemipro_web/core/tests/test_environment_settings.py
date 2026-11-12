@@ -28,6 +28,15 @@ class EnvironmentSettingsTests(SimpleTestCase):
             'DJANGO_CSRF_COOKIE_SECURE',
             'DJANGO_SECURE_HSTS_SECONDS',
             'DJANGO_TRUST_X_FORWARDED_PROTO',
+            'ZEMIPRO_GOOGLE_LOGIN_ENABLED',
+            'ZEMIPRO_GOOGLE_CLIENT_ID',
+            'ZEMIPRO_GOOGLE_CLIENT_SECRET',
+            'ZEMIPRO_CONTACT_DELIVERY_MODE',
+            'ZEMIPRO_SMTP_HOST',
+            'ZEMIPRO_SMTP_PORT',
+            'ZEMIPRO_SMTP_USERNAME',
+            'ZEMIPRO_SMTP_PASSWORD',
+            'ZEMIPRO_EMAIL_FROM',
         ):
             environment.pop(key, None)
         return environment
@@ -87,6 +96,31 @@ class EnvironmentSettingsTests(SimpleTestCase):
         result = self.run_check(environment)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('ALLOWED_HOSTS must contain explicit hosts', result.stderr)
+
+    def test_google_oauth_requires_both_runtime_credentials(self):
+        for missing in ('ZEMIPRO_GOOGLE_CLIENT_ID', 'ZEMIPRO_GOOGLE_CLIENT_SECRET'):
+            with self.subTest(missing=missing):
+                environment = self.secure_environment()
+                environment.update({
+                    'ZEMIPRO_GOOGLE_LOGIN_ENABLED': 'true',
+                    'ZEMIPRO_GOOGLE_CLIENT_ID': 'synthetic-client-id',
+                    'ZEMIPRO_GOOGLE_CLIENT_SECRET': 'synthetic-client-secret',
+                })
+                environment.pop(missing)
+                result = self.run_check(environment)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    'Enabled Google OAuth requires client credentials',
+                    result.stderr,
+                )
+
+    def test_smtp_requires_complete_runtime_configuration(self):
+        environment = self.secure_environment()
+        environment['ZEMIPRO_CONTACT_DELIVERY_MODE'] = 'smtp'
+        result = self.run_check(environment)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('SMTP requires valid credentials', result.stderr)
+
     def test_hsts_must_be_positive_in_secure_environments(self):
         for env_name in ('staging', 'production'):
             for seconds in ('0', '-1', 'not-a-number'):

@@ -36,10 +36,17 @@
             <button type="submit" class="btn btn--primary btn--lg">{% trans 'Войти' %}</button>
         </form>
 
+        {% if google_login_enabled %}
+        <form method="post" action="{% url 'google_login' %}" class="form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn--secondary btn--lg">{% get_current_language as google_auth_lang %}
+                {% if google_auth_lang == 'he' %}המשך עם Google{% elif google_auth_lang == 'en' %}Continue with Google{% else %}Продолжить с Google{% endif %}</button>
+        </form>
+        {% endif %}
+
         <p style="margin-top: 20px; text-align: center;">
             {% trans 'Нет аккаунта?' %} <a href="{% url 'accounts:register' %}">{% trans 'Зарегистрироваться' %}</a>
             <a href="{% url 'accounts:password_reset' %}">{% trans 'Восстановить пароль' %}</a>
-            <a href="{% url 'accounts:phone_recovery' %}">{% trans 'Восстановить по телефону' %}</a>
         </p>
     </div>
 </section>

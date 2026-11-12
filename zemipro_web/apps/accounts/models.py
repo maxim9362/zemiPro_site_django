@@ -31,6 +31,14 @@ class User(AbstractUser):
     )
     email_verified_at = models.DateTimeField(null=True, blank=True)
     phone_verified_at = models.DateTimeField(null=True, blank=True)
+    email_verification_required = models.BooleanField(
+        default=False,
+        verbose_name='Требуется подтверждение email для доступа',
+        help_text=(
+            'Включается только для новых email-регистраций. Значение по '
+            'умолчанию сохраняет доступ исторических username/password аккаунтов.'
+        ),
+    )
     preferred_language = models.CharField(
         max_length=2, choices=[('ru', 'Русский'), ('en', 'English'), ('he', 'עברית')],
         default='ru', verbose_name='Предпочитаемый язык',

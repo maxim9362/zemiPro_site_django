@@ -1,8 +1,8 @@
 """Stage 03.2: bounded, secret-free contact verification service.
 
-Verification is strictly optional for browsing; password recovery accepts ONLY
-a previously claimed and verified email. No real delivery is available by
-default. The production SMS/email provider is a pre-public-release gate.
+Verification is mandatory before a newly registered local account can access
+private features; password recovery accepts ONLY a previously claimed and
+verified email. No real delivery is available by default and SMS is unsupported.
 """
 from datetime import timedelta
 import hashlib
@@ -12,7 +12,6 @@ import secrets
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.utils import timezone
 
@@ -46,11 +45,10 @@ def normalize_israeli_phone(value):
 
 
 def normalized_destination(user, channel):
+    if channel != ContactChallenge.Channel.EMAIL:
+        raise ValueError('Email is the only verification channel')
     if channel == ContactChallenge.Channel.EMAIL:
         return (user.email or '').strip().casefold()
-    if channel == ContactChallenge.Channel.PHONE:
-        value = user.phone or ''
-        return normalize_israeli_phone(value) if value else ''
     raise ValueError('Недопустимый канал подтверждения.')
 
 
@@ -79,6 +77,8 @@ def request_contact_verification(user, channel):
     """
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied('Требуется авторизация.')
+    if channel != ContactChallenge.Channel.EMAIL:
+        return False
     stored = User.objects.select_for_update().get(pk=user.pk)
     if not stored.is_active or stored.is_blocked:
         raise PermissionDenied('Аккаунт недоступен.')
@@ -134,6 +134,8 @@ def confirm_contact_verification(user, channel, code):
     """Single-use confirmation with five guesses at most per issued code."""
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied('Требуется авторизация.')
+    if channel != ContactChallenge.Channel.EMAIL:
+        return False
     stored = User.objects.select_for_update().get(pk=user.pk)
     if not stored.is_active or stored.is_blocked:
         raise PermissionDenied('Аккаунт недоступен.')
@@ -161,126 +163,24 @@ def confirm_contact_verification(user, channel, code):
         challenge.save(update_fields=['attempts'])
         return False
 
-    # Unique fingerprint is DB-enforced; two accounts cannot claim one contact.
-    if VerifiedContact.objects.filter(fingerprint=digest).exclude(
-        user_id=stored.pk,
-    ).exists():
-        return False
-    VerifiedContact.objects.get_or_create(
+    # The unique fingerprint serializes concurrent claims. get_or_create may
+    # return the winner of another transaction, so ownership must be checked
+    # before granting verification to this account.
+    claim, _ = VerifiedContact.objects.get_or_create(
         fingerprint=digest,
         defaults={'user': stored, 'channel': channel},
     )
+    if claim.user_id != stored.pk or claim.channel != channel:
+        return False
     field = (
         'email_verified_at' if channel == ContactChallenge.Channel.EMAIL
         else 'phone_verified_at'
     )
     now = timezone.now()
     setattr(stored, field, now)
-    stored.save(update_fields=[field])
+    stored.email_verification_required = False
+    stored.save(update_fields=[field, 'email_verification_required'])
     setattr(user, field, now)
-    challenge.delete()
-    return True
-
-def _phone_recovery_digest(user_pk, destination_digest, code):
-    """Purpose-separated HMAC: verification codes can never reset a password."""
-    body = f'zemipro:phone-recovery:{user_pk}:{destination_digest}:{code}'
-    return hmac.new(
-        settings.SECRET_KEY.encode('utf-8'), body.encode('utf-8'), hashlib.sha256,
-    ).hexdigest()
-
-
-@transaction.atomic
-def request_phone_password_recovery(username, submitted_phone):
-    """Generic outcome: only an active user with a verified matching phone can receive OTP."""
-    try:
-        normalized = normalize_israeli_phone(submitted_phone)
-    except ValueError:
-        return False
-    stored = User.objects.select_for_update().filter(username=username).first()
-    if (
-        stored is None or not stored.is_active or stored.is_blocked
-        or stored.phone != normalized or stored.phone_verified_at is None
-        or not stored.has_usable_password()
-    ):
-        return False
-    digest = contact_fingerprint('phone', normalized)
-    if not VerifiedContact.objects.filter(
-        user=stored, channel='phone', fingerprint=digest,
-    ).exists():
-        return False
-    now = timezone.now()
-    existing = ContactChallenge.objects.select_for_update().filter(
-        user=stored, channel='phone',
-    ).first()
-    if existing is not None and existing.sent_at > now - timedelta(seconds=60):
-        return False
-    code = f'{secrets.randbelow(1000000):06d}'
-    outcome = ContactDeliveryEvent.Outcome.UNAVAILABLE
-    try:
-        delivered = deliver_contact_code('phone', normalized, code)
-        if delivered:
-            outcome = ContactDeliveryEvent.Outcome.SENT
-    except Exception:
-        outcome = ContactDeliveryEvent.Outcome.FAILED
-        delivered = False
-    ContactDeliveryEvent.objects.create(
-        user=stored, channel='phone', destination_digest=digest, outcome=outcome,
-    )
-    if not delivered:
-        return False
-    ContactChallenge.objects.update_or_create(
-        user=stored, channel='phone',
-        defaults={
-            'destination_digest': digest,
-            'code_digest': _phone_recovery_digest(stored.pk, digest, code),
-            'attempts': 0,
-            'expires_at': now + timedelta(minutes=10),
-            'sent_at': now,
-        },
-    )
-    return True
-
-
-@transaction.atomic
-def confirm_phone_password_recovery(username, submitted_phone, code, password):
-    """Anonymous recovery requires username + current verified phone + purpose OTP."""
-    try:
-        normalized = normalize_israeli_phone(submitted_phone)
-    except ValueError:
-        return False
-    stored = User.objects.select_for_update().filter(username=username).first()
-    if (
-        stored is None or not stored.is_active or stored.is_blocked
-        or stored.phone != normalized or stored.phone_verified_at is None
-    ):
-        return False
-    digest = contact_fingerprint('phone', normalized)
-    if not VerifiedContact.objects.filter(
-        user=stored, channel='phone', fingerprint=digest,
-    ).exists():
-        return False
-    challenge = ContactChallenge.objects.select_for_update().filter(
-        user=stored, channel='phone',
-    ).first()
-    if (
-        challenge is None or challenge.expires_at <= timezone.now()
-        or challenge.destination_digest != digest or challenge.attempts >= 5
-    ):
-        return False
-    correct = (
-        isinstance(code, str) and len(code) == 6 and code.isascii()
-        and code.isdigit()
-        and hmac.compare_digest(
-            challenge.code_digest,
-            _phone_recovery_digest(stored.pk, digest, code),
-        )
-    )
-    if not correct:
-        challenge.attempts += 1
-        challenge.save(update_fields=['attempts'])
-        return False
-    validate_password(password, user=stored)
-    stored.set_password(password)
-    stored.save(update_fields=['password'])
+    user.email_verification_required = False
     challenge.delete()
     return True

@@ -26,10 +26,11 @@ class TelegramIndependentDjangoTests(TestCase):
             'password1': 'Synthetic-Pass-9362',
             'password2': 'Synthetic-Pass-9362',
         })
-        self.assertRedirects(result, reverse('accounts:client_profile'))
+        self.assertRedirects(result, reverse('accounts:contact_verification'))
         User = get_user_model()
         user = User.objects.get(username='s037-new')
         self.assertTrue(user.check_password('Synthetic-Pass-9362'))
+        self.assertTrue(user.email_verification_required)
         self.client.post(reverse('accounts:logout'))
         login = self.client.post(reverse('accounts:login'), {
             'username': user.username, 'password': 'Synthetic-Pass-9362',

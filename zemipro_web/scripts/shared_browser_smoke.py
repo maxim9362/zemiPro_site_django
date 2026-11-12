@@ -7,12 +7,16 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import time
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
 from playwright.sync_api import Page, sync_playwright
 
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+if str(PROJECT_DIR) not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIR))
 
 BASE_URL = os.environ.get("ZEMIPRO_TEST_BASE_URL", "http://127.0.0.1:18000")
 OUT = Path(os.environ.get("ZEMIPRO_TEST_SCREENSHOT_DIR", "artifacts/shared-test-env/screenshots"))
@@ -101,18 +105,58 @@ def assert_page(page: Page, lang: str, label: str, path: str, width: int) -> Non
             )
 
 
-def register(page: Page, lang: str) -> None:
-    suffix = f"{int(time.time() * 1000)}_{lang}"
+def bootstrap_verified_user(lang: str) -> tuple[str, str]:
+    """Create only a synthetic test-DB user; never usable in other settings."""
+    import django
+
+    django.setup()
+    from django.conf import settings
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    database = settings.DATABASES['default']
+    shared_loopback = (
+        settings.ENVIRONMENT == "development"
+        and database['HOST'] in {'127.0.0.1', 'localhost'}
+        and database['NAME'] == 'zemipro_shared'
+    )
+    if settings.ENVIRONMENT != "test" and not shared_loopback:
+        raise RuntimeError("Browser fixture creation requires an isolated test database")
+    username = f"shared_browser_{lang}"
+    password = "SyntheticSharedSample!84"
+    user, _ = get_user_model().objects.get_or_create(
+        username=username,
+        defaults={"email": f"shared_{lang}@example.invalid"},
+    )
+    user.email = f"shared_{lang}@example.invalid"
+    user.email_verified_at = timezone.now()
+    user.email_verification_required = False
+    user.set_password(password)
+    user.save(update_fields=[
+        "email", "email_verified_at", "email_verification_required", "password",
+    ])
+    return username, password
+
+
+def login(page: Page, lang: str, credentials: tuple[str, str]) -> None:
+    username, password = credentials
+    # Verify the public registration contract separately from the fixture login.
     page.goto(BASE_URL + "/accounts/register/", wait_until="networkidle")
-    page.locator('input[name="username"]').fill(f"shared_browser_{suffix}")
-    page.locator('input[name="email"]').fill(f"shared_{suffix}@example.invalid")
-    page.locator('input[name="password1"]').fill("SyntheticSharedSample!84")
-    page.locator('input[name="password2"]').fill("SyntheticSharedSample!84")
-    form = page.locator("form").filter(has=page.locator('input[name="password1"]'))
+    if not page.locator('input[name="email"]').count():
+        raise AssertionError(f"{lang}: email registration field missing")
+    if page.locator('input[name="phone"]').count():
+        raise AssertionError(f"{lang}: retired phone registration field present")
+    if page.get_by_text("Google", exact=False).count():
+        raise AssertionError(f"{lang}: Google button present while OAuth is disabled")
+
+    page.goto(BASE_URL + "/accounts/login/", wait_until="networkidle")
+    page.locator('input[name="username"]').fill(username)
+    page.locator('input[name="password"]').fill(password)
+    form = page.locator("form").filter(has=page.locator('input[name="password"]'))
     with page.expect_navigation(timeout=20_000):
         form.locator('button[type="submit"]').click()
-    if "/accounts/register/" in page.url:
-        raise AssertionError(f"{lang}: registration did not authenticate")
+    if "/accounts/login/" in page.url:
+        raise AssertionError(f"{lang}: verified synthetic login failed")
 
 
 def verify_language_switch(page: Page, source: str, target: str) -> None:
@@ -130,6 +174,7 @@ def main() -> None:
     console_errors: list[str] = []
     http_errors: list[tuple[int, str]] = []
     request_failures: list[str] = []
+    credentials = {lang: bootstrap_verified_user(lang) for lang in LANGUAGES}
     with sync_playwright() as playwright:
         browser, executable = browser_launch(playwright)
         try:
@@ -155,7 +200,7 @@ def main() -> None:
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.on("response", collect_response)
                 page.on("requestfailed", lambda request: request_failures.append(request.url))
-                register(page, lang)
+                login(page, lang, credentials[lang])
                 for width in WIDTHS:
                     height = 900 if width < 1000 else 1000
                     page.set_viewport_size({"width": width, "height": height})

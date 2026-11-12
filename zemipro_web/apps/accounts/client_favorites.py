@@ -10,6 +10,7 @@ from .models import FavoriteWorker, User, WorkerProfile
 def public_worker_queryset():
     workers = WorkerProfile.objects.filter(
         user__is_active=True, user__is_blocked=False,
+        user__email_verification_required=False,
         is_published=True, city__in=get_public_cities(),
     ).exclude(display_name='').exclude(description='').exclude(
         pricing_details='',
@@ -36,7 +37,8 @@ def toggle_own_favorite(user, worker):
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied
     owner = User.objects.select_for_update().get(pk=user.pk)
-    if not owner.is_active or owner.is_blocked:
+    if (not owner.is_active or owner.is_blocked
+            or owner.email_verification_required):
         raise PermissionDenied
     if worker.user_id == owner.pk:
         raise ValueError('Нельзя сохранить собственный профиль.')

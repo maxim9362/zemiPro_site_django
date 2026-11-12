@@ -1,7 +1,13 @@
 """Stage 02.6: mobile browser smoke in isolated CI, NOT physical Android tests."""
 from pathlib import Path
+import sys
 
+import django
 from playwright.sync_api import sync_playwright
+
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+if str(PROJECT_DIR) not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIR))
 
 BASE = 'http://127.0.0.1:8765'
 WIDTHS = (320, 360, 375, 390, 768)
@@ -9,6 +15,29 @@ LANGUAGES = ('ru', 'en', 'he')
 SCREENS = ('/{lang}/categories/', '/{lang}/cities/', '/orders/create/')
 OUT = Path('artifacts/stage02-mobile-rtl')
 OUT.mkdir(parents=True, exist_ok=True)
+
+
+def bootstrap_verified_user(lang):
+    django.setup()
+    from django.conf import settings
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    if settings.ENVIRONMENT != 'test':
+        raise RuntimeError('Browser fixture creation requires isolated test settings')
+    username = f'stage02_browser_{lang}'
+    password = 'SyntheticStage02Sample!84'
+    user, _ = get_user_model().objects.get_or_create(
+        username=username,
+        defaults={'email': f'stage02_{lang}@example.invalid'},
+    )
+    user.email_verified_at = timezone.now()
+    user.email_verification_required = False
+    user.set_password(password)
+    user.save(update_fields=[
+        'email_verified_at', 'email_verification_required', 'password',
+    ])
+    return username, password
 
 
 def inspect(page, lang, path, width):
@@ -67,25 +96,25 @@ def inspect(page, lang, path, width):
 
 def main():
     cases = 0
+    credentials = {lang: bootstrap_verified_user(lang) for lang in LANGUAGES}
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(channel='chrome', headless=True)
         try:
             for lang in LANGUAGES:
+                username, password = credentials[lang]
                 context = browser.new_context(
                     locale=lang, viewport={'width': 390, 'height': 844},
                     is_mobile=True, has_touch=True, device_scale_factor=1,
                 )
                 page = context.new_page()
-                page.goto(BASE + '/accounts/register/', wait_until='networkidle')
-                page.locator('input[name="username"]').fill(f'stage02_browser_{lang}')
-                page.locator('input[name="email"]').fill(f'stage02_{lang}@example.invalid')
-                page.locator('input[name="password1"]').fill('SyntheticStage02Sample!84')
-                page.locator('input[name="password2"]').fill('SyntheticStage02Sample!84')
+                page.goto(BASE + '/accounts/login/', wait_until='networkidle')
+                page.locator('input[name="username"]').fill(username)
+                page.locator('input[name="password"]').fill(password)
                 page.locator('form').filter(
-                    has=page.locator('input[name="password1"]')
+                    has=page.locator('input[name="password"]')
                 ).locator('button[type="submit"]').click()
                 page.wait_for_url(
-                    lambda url: '/accounts/register/' not in url,
+                    lambda url: '/accounts/login/' not in url,
                     timeout=15000,
                 )
                 for width in WIDTHS:

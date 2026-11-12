@@ -11,6 +11,7 @@ import ipaddress
 from django.conf import settings
 from django.db import DatabaseError, connection
 from django.http import HttpResponse, HttpResponseForbidden
+from django.shortcuts import redirect
 from django.middleware.locale import LocaleMiddleware
 from django.utils import translation
 from django.utils.translation import gettext as _
@@ -150,10 +151,21 @@ class BlockedAccountMiddleware(MiddlewareMixin):
         }
         view_name = getattr(request.resolver_match, 'view_name', '')
         safe_public_read = request.method == 'GET' and view_name in public_catalog
+        verification_views = {
+            'accounts:contact_verification', 'accounts:request_verification',
+            'accounts:confirm_verification', 'accounts:logout',
+        }
         if (user.is_authenticated and user.is_blocked
                 and request.path_info != '/accounts/logout/'
                 and not safe_public_read):
             response = HttpResponseForbidden(_('Аккаунт недоступен.'))
             response['Cache-Control'] = 'private, no-store'
             return response
+        if (
+            user.is_authenticated
+            and user.email_verification_required
+            and view_name not in verification_views
+            and not safe_public_read
+        ):
+            return redirect('accounts:contact_verification')
         return None

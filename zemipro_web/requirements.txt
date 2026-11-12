@@ -9,3 +9,14 @@ python-dotenv==1.2.4
 gunicorn==26.2.0; platform_system != "Windows"
 packaging==26.3; platform_system != "Windows"
 tzdata==2025.2; platform_system == "Windows"
+django-allauth[socialaccount]==65.22.0
+oauthlib==4.0.1
+requests==2.34.2
+PyJWT==2.15.1
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.12
+charset-normalizer==3.5.2
+idna==3.20
+urllib3==2.8.0
+certifi==2026.10.23

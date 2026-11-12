@@ -12,7 +12,8 @@ def _active_owner(user):
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied('Требуется вход в аккаунт.')
     owner = User.objects.select_for_update().get(pk=user.pk)
-    if not owner.is_active or owner.is_blocked:
+    if (not owner.is_active or owner.is_blocked
+            or owner.email_verification_required):
         raise PermissionDenied('Аккаунт недоступен.')
     return owner
 
@@ -26,8 +27,8 @@ def save_client_settings(user, cleaned):
         raise ValueError('Город пока не обслуживается.')
     email = (cleaned.get('email') or '').strip().casefold()
     phone = cleaned.get('phone') or ''
-    if not email and not phone and (owner.email or owner.phone):
-        raise ValueError('Оставьте хотя бы один способ восстановления доступа.')
+    if not email:
+        raise ValueError('Для восстановления доступа необходим email.')
     language = cleaned.get('preferred_language')
     if language not in {'ru', 'en', 'he'}:
         raise ValueError('Недопустимый язык.')

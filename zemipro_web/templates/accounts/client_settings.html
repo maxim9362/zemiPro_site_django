@@ -20,7 +20,10 @@
             {% if field.errors %}<span class="form__error">{{ field.errors.0 }}</span>{% endif %}
         </div>
         {% endfor %}
-        <p class="form__hint">{% trans 'При смене email или телефона потребуется повторное подтверждение. Системные уведомления о заказах остаются в личном кабинете.' %}</p>
+        <p class="form__hint">{% get_current_language as privacy_lang %}
+          {% if privacy_lang == 'he' %}שינוי כתובת האימייל מחייב אימות מחדש. מספר טלפון הוא אופציונלי ואינו מאומת באמצעות SMS. הודעות על הזמנות זמינות בחשבון.
+          {% elif privacy_lang == 'en' %}Changing your email requires verification again. A phone number is optional and is not verified by SMS. Order notifications remain available in your account.
+          {% else %}После смены email потребуется повторное подтверждение. Телефон необязателен и не подтверждается по SMS. Уведомления о заказах доступны в личном кабинете.{% endif %}</p>
         <button type="submit" class="btn btn--primary">{% trans 'Сохранить настройки' %}</button>
     </form>
     <section class="dashboard__section">
