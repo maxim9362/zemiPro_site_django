@@ -105,6 +105,7 @@ def register(page: Page, lang: str) -> None:
     suffix = f"{int(time.time() * 1000)}_{lang}"
     page.goto(BASE_URL + "/accounts/register/", wait_until="networkidle")
     page.locator('input[name="username"]').fill(f"shared_browser_{suffix}")
+    page.locator('input[name="email"]').fill(f"shared_{suffix}@example.invalid")
     page.locator('input[name="password1"]').fill("SyntheticSharedSample!84")
     page.locator('input[name="password2"]').fill("SyntheticSharedSample!84")
     form = page.locator("form").filter(has=page.locator('input[name="password1"]'))
