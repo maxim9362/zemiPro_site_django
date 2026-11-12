@@ -134,3 +134,10 @@ persistent volumes in `stop` mode.
   Do not deploy to the current VPS without explicit owner permission.
 - Historical credentials must be revoked by the owner before production;
   deleting their files from Git HEAD does not revoke credentials.
+
+## First public pilot: Ashdod only (Stage 02, 2026-11-12)
+
+- Default `core/config/base.py` sets `ZEMIPRO_PILOT_CITY_SLUG='ashdod'` for development/staging/production. It is deliberately not overridable via a production `.env`. Technical PostgreSQL seed still has 25 cities to preserve ID/FK and future expansion; only Ashdod is selectable for current public forms, pages and new service interactions.
+- Synthetic `DJANGO_ENV=test` retains generalized multi-city tests. Focused `test_stage02_ashdod_pilot` enables the real pilot setting explicitly; CI Chromium uses test-only `ZEMIPRO_TEST_ASHDOD_ONLY=1`. The test-only switch does not change production defaults.
+- Latest automatic code proof: [Django CI #43170333703](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43170333703) (11/11 targeted, 162/162 full, Chrome 45/45); [Docker smoke #43170341760](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43170341760) SUCCESS. Native Hebrew/editorial, real devices, public HTTPS and other release gates remain open; no deployment permitted.
+
