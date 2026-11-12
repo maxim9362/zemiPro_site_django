@@ -12,6 +12,12 @@ class OrderLegacyStatusMigrationTests(TransactionTestCase):
     def test_legacy_status_and_original_order_fields_survive_migration(self):
         previous = ('marketplace', '0007_protect_worker_history')
         latest = ('marketplace', '0008_order_lifecycle')
+        # Historical assertions intentionally stop at 0008; the suite must
+        # restore the current *leaf*, including later wizard/digest columns.
+        current_leaf = next(
+            node for node in MigrationExecutor(connection).loader.graph.leaf_nodes()
+            if node[0] == 'marketplace'
+        )
         MigrationExecutor(connection).migrate([previous])
         state = MigrationExecutor(connection).loader.project_state([previous]).apps
         Category = state.get_model('marketplace', 'Category')
@@ -60,6 +66,6 @@ class OrderLegacyStatusMigrationTests(TransactionTestCase):
                 MigrationExecutor(connection).migrate([previous])
             self.assertEqual(NewOrder.objects.get(pk=old.pk).status, 'published')
         finally:
-            # The attempted reverse is PostgreSQL-transactional. Restore the
-            # latest schema so the rest of the Django suite can safely execute.
-            MigrationExecutor(connection).migrate([latest])
+            # The attempted reverse is PostgreSQL-transactional. Restore
+            # the real migration graph leaf, not merely historical 0008.
+            MigrationExecutor(connection).migrate([current_leaf])
