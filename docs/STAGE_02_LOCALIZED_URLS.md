@@ -101,3 +101,10 @@ legacy unprefixed 404 redirect was addressed in
 
 **Gate:** repeat targeted 02.4 tests, 02.3 tests, full Django suite and
 Docker smoke on the corrected exact HEAD; no release before success.
+
+## Verified CI result (2026-11-12)
+
+- Source code SHA `8d7427d4641c82283861ad5ea9fdc0fc1952e3b5`.
+- [Django CI #43155367524](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155367524): **SUCCESS**, targeted 02.4 URL suite `9/9 PASS`, 02.3 i18n `10/10 PASS`, complete Django suite `125/125 PASS`, Ruff and migration consistency PASS, service-layer coverage 94.0%.
+- [Staging smoke #43155367578](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155367578): **SUCCESS**, temporary isolated Docker runner.
+- `02.4 CODE_DONE / CI_VERIFIED`. This is technical acceptance for additive URLs **only**, not authorization to index, migrate legacy PSEO, or release publicly. Mobile RTL and editorial Hebrew remain open with 02.3/02.6.

@@ -453,3 +453,12 @@
 - **Status**: `02.4 IMPLEMENTED / CI_PENDING / MOBILE_VISUAL_PENDING`. Real domain/Cloudflare unchanged. Next stage after QA: 02.5.
 - **Legacy 404 safeguard:** `LegacySafeLocaleMiddleware` prevents Django's automatic unprefixed-404 to prefixed-path redirect, preserving unknown legacy/PSEO paths. Regression checks verify old unknown category/city URLs still return 404 even for Hebrew Accept-Language.
 - **CI findings (initial SHA 3d96a536):** Stage 02.3 localized tests **10/10 PASS**; Stage 02.4 targeted set **FAILED** (12 errors from test-only `resolve()` active-language mismatch, 1 redirect failure from `set_language` source locale, 1 legacy-404 failure from stock locale middleware); initial Docker staging smoke **SUCCESS**. Fixed within same branch: source-language-aware wrapper around Django `set_language`, 404-safe locale subclass, and route test using `translation.override(language)`. Await corrected HEAD CI; do not claim 02.4 PASS from failed earlier run.
+
+## 2026-11-12 — Stage 02.4 fully verified in isolated GitHub CI
+
+- **Verified code SHA:** `8d7427d4641c82283861ad5ea9fdc0fc1952e3b5`, Draft PR #8.
+- [Django CI #43155367524](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155367524) **SUCCESS**: 02.3 `10/10 PASS`, 02.4 `9/9 PASS`, full Django `125/125 PASS`, Ruff PASS, `makemigrations --check` PASS, PostgreSQL migrations PASS, catalog/geography seed round-trips PASS, targeted service coverage `94.0%`.
+- [Ephemeral Docker staging smoke #43155367578](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155367578) **SUCCESS**, synthetic infrastructure only.
+- 02.4 fixes: restore original unprefixed 404, ensure `resolve()` tests run under selected language, wrap Django's `set_language` with validated source-language activation for no-cookie visits to `/he/...`.
+- **02.4:** `CODE_DONE / CI_VERIFIED / INDEXING_DISABLED_BY_DEFAULT`. **02.3:** code CI-verified, still `MOBILE_VISUAL_PENDING / HEBREW_EDITORIAL_PENDING`. No PSEO redirects, sitemap/robots, production-domain changes, deployment, merge or user data migration.
+- **Next:** 02.5 configurable service questions in same branch/PR, after recording this verification. Full 02 gate remains pending 02.5/02.6 and outstanding reviews.
