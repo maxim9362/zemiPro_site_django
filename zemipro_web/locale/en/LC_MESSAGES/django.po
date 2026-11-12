@@ -867,3 +867,27 @@ msgstr "ZemiPro — password reset"
 
 msgid "Имя пользователя, email или телефон"
 msgstr "Username, email or phone number"
+
+msgid "Имя пользователя"
+msgstr "Username"
+
+msgid "Повторите пароль"
+msgstr "Confirm password"
+
+msgid "Пароли не совпадают."
+msgstr "Passwords do not match."
+
+msgid "Если телефон подтверждён и аккаунт доступен, код будет отправлен."
+msgstr "If the account has a verified phone, a code will be sent."
+
+msgid "Восстановить по телефону"
+msgstr "Reset using phone"
+
+msgid "Укажите имя пользователя и ранее подтверждённый израильский телефон."
+msgstr "Enter your username and previously verified Israeli phone number."
+
+msgid "Ввод кода для восстановления"
+msgstr "Enter recovery code"
+
+msgid "Введите имя пользователя, телефон, полученный код и новый пароль."
+msgstr "Enter username, phone number, received code and a new password."

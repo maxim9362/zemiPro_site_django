@@ -338,6 +338,92 @@ class AccountSecurityTests(TestCase):
             405,
         )
 
+    def test_phone_only_account_can_reset_password_with_verified_sms_mock(self):
+        self.register(email='')
+        user = get_user_model().objects.get(username='synthetic-registrant')
+        url = reverse('accounts:phone_recovery')
+        credentials = {'username': user.username, 'phone': '050-123-4567'}
+
+        # An unverified input never becomes a recovery identity.
+        with patch('apps.accounts.verification.deliver_contact_code',
+                   return_value=True) as adapter:
+            before = self.client.post(url, credentials)
+        self.assertRedirects(before, reverse('accounts:phone_recovery_confirm'))
+        adapter.assert_not_called()
+        self.assertFalse(ContactChallenge.objects.exists())
+
+        with patch('apps.accounts.verification.deliver_contact_code',
+                   return_value=True) as adapter:
+            self.assertTrue(request_contact_verification(user, 'phone'))
+        verify_code = adapter.call_args.args[2]
+        self.assertTrue(confirm_contact_verification(user, 'phone', verify_code))
+        self.client.post(reverse('accounts:logout'))
+
+        with patch('apps.accounts.verification.deliver_contact_code',
+                   return_value=True) as adapter:
+            requested = self.client.post(url, credentials)
+        self.assertRedirects(requested, reverse('accounts:phone_recovery_confirm'))
+        code = adapter.call_args.args[2]
+        self.assertEqual(adapter.call_args.args[:2], ('phone', '+972501234567'))
+        self.assertTrue(re.fullmatch(r'\d{6}', code))
+
+        confirm = reverse('accounts:phone_recovery_confirm')
+        denied = self.client.post(confirm, {
+            **credentials, 'code': '000000' if code != '000000' else '000001',
+            'new_password1': 'Updated-Strong-Phone-9362!',
+            'new_password2': 'Updated-Strong-Phone-9362!',
+        })
+        self.assertEqual(denied.status_code, 200)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('Synthetic-Password-9362!'))
+
+        weak = self.client.post(confirm, {
+            **credentials, 'code': code,
+            'new_password1': '12345', 'new_password2': '12345',
+        })
+        self.assertEqual(weak.status_code, 200)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('Synthetic-Password-9362!'))
+
+        recovered = self.client.post(confirm, {
+            **credentials, 'code': code,
+            'new_password1': 'Updated-Strong-Phone-9362!',
+            'new_password2': 'Updated-Strong-Phone-9362!',
+        })
+        self.assertRedirects(recovered, reverse('accounts:login'))
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('Updated-Strong-Phone-9362!'))
+        self.assertFalse(ContactChallenge.objects.filter(user=user).exists())
+        self.assertFalse(self.client.login(username=user.username,
+                                           password='Synthetic-Password-9362!'))
+        self.assertTrue(self.client.login(username=user.username,
+                                          password='Updated-Strong-Phone-9362!'))
+        self.assertEqual(self.client.post(confirm, {
+            **credentials, 'code': code,
+            'new_password1': 'Other-Strong-Phone-9362!',
+            'new_password2': 'Other-Strong-Phone-9362!',
+        }).status_code, 200)
+
+    def test_phone_recovery_has_generic_unknown_user_response_and_csrf(self):
+        url = reverse('accounts:phone_recovery')
+        with patch('apps.accounts.verification.deliver_contact_code',
+                   return_value=True) as adapter:
+            response = self.client.post(url, {
+                'username': 'unknown-synthetic-account', 'phone': '0501234567',
+            })
+        self.assertRedirects(response, reverse('accounts:phone_recovery_confirm'))
+        adapter.assert_not_called()
+        self.assertFalse(ContactDeliveryEvent.objects.exists())
+        guarded = Client(enforce_csrf_checks=True)
+        self.assertEqual(guarded.post(url, {
+            'username': 'unknown', 'phone': '0501234567',
+        }).status_code, 403)
+        self.assertEqual(guarded.post(reverse('accounts:phone_recovery_confirm'), {
+            'username': 'unknown', 'phone': '0501234567',
+            'code': '123456', 'new_password1': 'Synthetic-Strong-9362!',
+            'new_password2': 'Synthetic-Strong-9362!',
+        }).status_code, 403)
+
     def test_credential_reset_throttle_is_per_ip_and_opaque(self):
         url = reverse('accounts:password_reset')
         for _ in range(5):

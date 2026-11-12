@@ -2,9 +2,10 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest
+from django.core.exceptions import ValidationError
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.shortcuts import render, redirect
 from django.utils.translation import gettext as _
 
@@ -12,8 +13,12 @@ from .forms import (
     ClientProfileForm, RegistrationForm, WorkerProfileForm,
     RequestContactVerificationForm, ConfirmContactVerificationForm,
     SafeAuthenticationForm, VerifiedPasswordResetForm,
+    PhoneRecoveryRequestForm, PhoneRecoveryConfirmForm,
 )
-from .verification import request_contact_verification, confirm_contact_verification
+from .verification import (
+    request_contact_verification, confirm_contact_verification,
+    request_phone_password_recovery, confirm_phone_password_recovery,
+)
 from .services import (
     create_or_update_client_profile, get_client_profile,
     create_or_update_worker_profile, get_worker_profile, select_active_role,
@@ -153,3 +158,38 @@ def confirm_verification_view(request):
     else:
         messages.error(request, _('Неверный или просроченный код.'))
     return redirect('accounts:contact_verification')
+
+
+@require_http_methods(['GET', 'POST'])
+def phone_recovery_view(request):
+    """Generic response prevents discovery of a username or phone claim."""
+    form = PhoneRecoveryRequestForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        request_phone_password_recovery(
+            form.cleaned_data['username'], form.cleaned_data['phone'],
+        )
+        messages.info(
+            request,
+            _('Если телефон подтверждён и аккаунт доступен, код будет отправлен.'),
+        )
+        return redirect('accounts:phone_recovery_confirm')
+    return render(request, 'accounts/phone_recovery.html', {'form': form})
+
+
+@require_http_methods(['GET', 'POST'])
+def phone_recovery_confirm_view(request):
+    form = PhoneRecoveryConfirmForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            confirmed = confirm_phone_password_recovery(
+                form.cleaned_data['username'], form.cleaned_data['phone'],
+                form.cleaned_data['code'], form.cleaned_data['new_password1'],
+            )
+        except ValidationError as exc:
+            form.add_error('new_password1', exc)
+        else:
+            if confirmed:
+                messages.success(request, _('Пароль обновлён.'))
+                return redirect('accounts:login')
+            messages.error(request, _('Неверный или просроченный код.'))
+    return render(request, 'accounts/phone_recovery_confirm.html', {'form': form})

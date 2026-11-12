@@ -596,3 +596,10 @@
 - Added tests: verified email login in mixed case, unverified duplicate with a different password cannot enter a verified account, local/international Israeli phone login requires confirmation first; existing username login preserved. New login field translated into EN/HE, compiled catalogs updated.
 - This is a strict verified-contact alias, not magic-link authentication; password is always required. Pending actual SMS/email delivery provider remains a pre-public Ashdod release gate. No independent identity-provider or new backend.
 
+### Stage 03.2 — verified phone-only password recovery (implementation)
+
+- The 03.2 requirements also include safe recovery for accounts registered **only with a +972 phone**: logged-out user submits username + already verified phone; response is generic regardless of account existence. If eligible, an OTP is dispatched through the same **disabled-by-default** adapter and logged only as opaque HMAC digest/outcome.
+- The existing time-limited `ContactChallenge` is reused with a **purpose-separated HMAC**: a phone-contact verification code can never be used as a password reset code. Anonymous confirmation requires username + matching current verified phone claim + valid unused six-digit OTP (10-minute TTL, five guesses max), then validates the new password using Django password validators, updates stored hash and consumes the challenge. Older logged-in sessions are invalidated by Django's session auth hash.
+- Added CSRF-protected public GET/POST pages, IP-based PostgreSQL throttle on request and confirmation, tests for unverified/missing account, weak password, invalid/replayed OTP, successful phone-only reset and no accidental real SMS.
+- Real SMS/email delivery, real-world receipt tests and provider credentials remain **NOT_CONFIGURED / REQUIRED_BEFORE_PUBLIC_ASHDOD_LAUNCH**. No production data/provider interaction or separate backend. CI verification on this additional code pending.
+

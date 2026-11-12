@@ -12,6 +12,7 @@ import secrets
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.utils import timezone
 
@@ -177,5 +178,109 @@ def confirm_contact_verification(user, channel, code):
     setattr(stored, field, now)
     stored.save(update_fields=[field])
     setattr(user, field, now)
+    challenge.delete()
+    return True
+
+def _phone_recovery_digest(user_pk, destination_digest, code):
+    """Purpose-separated HMAC: verification codes can never reset a password."""
+    body = f'zemipro:phone-recovery:{user_pk}:{destination_digest}:{code}'
+    return hmac.new(
+        settings.SECRET_KEY.encode('utf-8'), body.encode('utf-8'), hashlib.sha256,
+    ).hexdigest()
+
+
+@transaction.atomic
+def request_phone_password_recovery(username, submitted_phone):
+    """Generic outcome: only an active user with a verified matching phone can receive OTP."""
+    try:
+        normalized = normalize_israeli_phone(submitted_phone)
+    except ValueError:
+        return False
+    stored = User.objects.select_for_update().filter(username=username).first()
+    if (
+        stored is None or not stored.is_active or stored.is_blocked
+        or stored.phone != normalized or stored.phone_verified_at is None
+        or not stored.has_usable_password()
+    ):
+        return False
+    digest = contact_fingerprint('phone', normalized)
+    if not VerifiedContact.objects.filter(
+        user=stored, channel='phone', fingerprint=digest,
+    ).exists():
+        return False
+    now = timezone.now()
+    existing = ContactChallenge.objects.select_for_update().filter(
+        user=stored, channel='phone',
+    ).first()
+    if existing is not None and existing.sent_at > now - timedelta(seconds=60):
+        return False
+    code = f'{secrets.randbelow(1000000):06d}'
+    outcome = ContactDeliveryEvent.Outcome.UNAVAILABLE
+    try:
+        delivered = deliver_contact_code('phone', normalized, code)
+        if delivered:
+            outcome = ContactDeliveryEvent.Outcome.SENT
+    except Exception:
+        outcome = ContactDeliveryEvent.Outcome.FAILED
+        delivered = False
+    ContactDeliveryEvent.objects.create(
+        user=stored, channel='phone', destination_digest=digest, outcome=outcome,
+    )
+    if not delivered:
+        return False
+    ContactChallenge.objects.update_or_create(
+        user=stored, channel='phone',
+        defaults={
+            'destination_digest': digest,
+            'code_digest': _phone_recovery_digest(stored.pk, digest, code),
+            'attempts': 0,
+            'expires_at': now + timedelta(minutes=10),
+            'sent_at': now,
+        },
+    )
+    return True
+
+
+@transaction.atomic
+def confirm_phone_password_recovery(username, submitted_phone, code, password):
+    """Anonymous recovery requires username + current verified phone + purpose OTP."""
+    try:
+        normalized = normalize_israeli_phone(submitted_phone)
+    except ValueError:
+        return False
+    stored = User.objects.select_for_update().filter(username=username).first()
+    if (
+        stored is None or not stored.is_active or stored.is_blocked
+        or stored.phone != normalized or stored.phone_verified_at is None
+    ):
+        return False
+    digest = contact_fingerprint('phone', normalized)
+    if not VerifiedContact.objects.filter(
+        user=stored, channel='phone', fingerprint=digest,
+    ).exists():
+        return False
+    challenge = ContactChallenge.objects.select_for_update().filter(
+        user=stored, channel='phone',
+    ).first()
+    if (
+        challenge is None or challenge.expires_at <= timezone.now()
+        or challenge.destination_digest != digest or challenge.attempts >= 5
+    ):
+        return False
+    correct = (
+        isinstance(code, str) and len(code) == 6 and code.isascii()
+        and code.isdigit()
+        and hmac.compare_digest(
+            challenge.code_digest,
+            _phone_recovery_digest(stored.pk, digest, code),
+        )
+    )
+    if not correct:
+        challenge.attempts += 1
+        challenge.save(update_fields=['attempts'])
+        return False
+    validate_password(password, user=stored)
+    stored.set_password(password)
+    stored.save(update_fields=['password'])
     challenge.delete()
     return True

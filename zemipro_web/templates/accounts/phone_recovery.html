@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Восстановить по телефону' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="order-form"><div class="container">
+<h1>{% trans 'Восстановить по телефону' %}</h1>
+<p>{% trans 'Укажите имя пользователя и ранее подтверждённый израильский телефон.' %}</p>
+<form method="post" class="form">{% csrf_token %}{{ form.as_p }}
+<button type="submit" class="btn btn--primary">{% trans 'Отправить код' %}</button></form>
+</div></section>
+{% endblock %}

@@ -16,6 +16,9 @@ urlpatterns = [
     path('verification/request/', views.request_verification_view, name='request_verification'),
     path('verification/confirm/', views.confirm_verification_view, name='confirm_verification'),
     path('password-reset/', views.VerifiedPasswordResetView.as_view(), name='password_reset'),
+    path('phone-recovery/', views.phone_recovery_view, name='phone_recovery'),
+    path('phone-recovery/confirm/', views.phone_recovery_confirm_view,
+         name='phone_recovery_confirm'),
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(
         template_name='accounts/password_reset_done.html',
     ), name='password_reset_done'),

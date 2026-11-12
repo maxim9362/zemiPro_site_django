@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Ввод кода для восстановления' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="order-form"><div class="container">
+<h1>{% trans 'Ввод кода для восстановления' %}</h1>
+{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+<p>{% trans 'Введите имя пользователя, телефон, полученный код и новый пароль.' %}</p>
+<form method="post" class="form">{% csrf_token %}{{ form.as_p }}
+<button type="submit" class="btn btn--primary">{% trans 'Сохранить пароль' %}</button></form>
+</div></section>
+{% endblock %}

@@ -282,3 +282,38 @@ class RatingCreateForm(forms.ModelForm):
             'rating': _('Оценка (от 1 до 5)'),
             'review_text': _('Текст отзыва'),
         }
+
+class PhoneRecoveryRequestForm(forms.Form):
+    """Phone-only users may recover with their proven +972 phone and username."""
+
+    username = forms.CharField(max_length=150, label=_('Имя пользователя'))
+    phone = forms.CharField(max_length=20, label=_('Телефон'))
+
+    def clean_phone(self):
+        try:
+            return normalize_israeli_phone(self.cleaned_data['phone'])
+        except ValueError as exc:
+            raise ValidationError(_('Некорректный израильский номер телефона.')) from exc
+
+
+class PhoneRecoveryConfirmForm(PhoneRecoveryRequestForm):
+    code = forms.CharField(
+        min_length=6, max_length=6, label=_('Код подтверждения'),
+        widget=forms.TextInput(attrs={'autocomplete': 'one-time-code',
+                                      'inputmode': 'numeric', 'pattern': '[0-9]{6}'}),
+    )
+    new_password1 = forms.CharField(
+        label=_('Новый пароль'), widget=forms.PasswordInput,
+    )
+    new_password2 = forms.CharField(
+        label=_('Повторите пароль'), widget=forms.PasswordInput,
+    )
+
+    def clean(self):
+        data = super().clean()
+        if data.get('new_password1') != data.get('new_password2'):
+            raise ValidationError(_('Пароли не совпадают.'))
+        code = data.get('code', '')
+        if not code.isascii() or not code.isdigit():
+            self.add_error('code', _('Введите шестизначный код.'))
+        return data

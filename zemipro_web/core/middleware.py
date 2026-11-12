@@ -90,6 +90,8 @@ class SensitivePostThrottleMiddleware(MiddlewareMixin):
         '/accounts/verification/request/': (5, 900),
         '/accounts/verification/confirm/': (12, 900),
         '/accounts/password-reset/': (5, 900),
+        '/accounts/phone-recovery/': (5, 900),
+        '/accounts/phone-recovery/confirm/': (12, 900),
     }
 
     def process_view(self, request, view_func, view_args, view_kwargs):
