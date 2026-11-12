@@ -23,3 +23,7 @@
 ## Не меняется
 
 Не меняются безопасность, приватность заказов, RU/HE/EN/RTL, отсутствие платежей на старте, целевые клиентские сценарии, production/Cloudflare/DNS. Удаление legacy кода и секретов требует отдельной подтверждённой операции.
+
+### Implementation note — Stage 03.7 (2026-11-12)
+
+In `stage-03-accounts-profiles`, the unused `User.telegram_id` ORM/Admin exposure is removed via the new, transactional, fail-closed `accounts.0010_remove_legacy_telegram_id` migration. It refuses to drop the column if any legacy IDs remain; it does not silently erase or transfer identifiers. The historic first migration remains intact. This does **not** shut down external bots, revoke credentials, operate on production or delete any former bot database. Those require separate owner-approved security work. See `docs/STAGE_03_NO_TELEGRAM.md`.
