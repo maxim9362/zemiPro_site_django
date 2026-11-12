@@ -10,6 +10,7 @@ from django.db import DatabaseError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
+from django.utils.translation import override
 
 from apps.accounts.admin import PrivacyRequestAdmin, UserAdmin
 from apps.accounts.models import ClientProfile, PrivacyRequest, WorkerProfile
@@ -196,6 +197,21 @@ class ModerationAndPermissionTests(TestCase):
                     action=ModerationEvent.Action.DISMISS,
                 )
         self.assertEqual(ModerationEvent.objects.count(), 3)
+
+    def test_blocked_response_follows_active_russian_english_hebrew(self):
+        self.client.force_login(self.owner)
+        get_user_model().objects.filter(pk=self.owner.pk).update(is_blocked=True)
+        for code, label in (
+            ('ru', 'Аккаунт недоступен.'),
+            ('en', 'This account is unavailable.'),
+            ('he', 'החשבון אינו זמין.'),
+        ):
+            with self.subTest(code=code), override(code):
+                response = self.client.get(
+                    reverse('accounts:client_settings'),
+                    HTTP_ACCEPT_LANGUAGE=code,
+                )
+                self.assertContains(response, label, status_code=403)
 
     def test_stale_staff_object_cannot_bypass_revoked_database_permission(self):
         actor = self.grant('moderate_accounts')
