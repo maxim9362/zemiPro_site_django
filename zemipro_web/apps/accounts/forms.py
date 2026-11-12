@@ -16,42 +16,21 @@ from .verification import contact_fingerprint, normalize_israeli_phone
 
 
 class RegistrationForm(UserCreationForm):
-    """Username/password remain primary; neither unverified contact is login."""
+    """Email/password signup; phone is not a login or recovery factor."""
 
     email = forms.EmailField(
-        label=_('Email'), required=False, max_length=254,
+        label=_('Email'), required=True, max_length=254,
     )
-    phone = forms.CharField(
-        label=_('Телефон'), required=False, max_length=20,
-        help_text=_('Номер телефона Израиля с кодом +972'),
-    )
-
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'email', 'phone')
+        fields = ('username', 'email')
 
     def clean_email(self):
         return self.cleaned_data.get('email', '').strip().casefold()
 
-    def clean_phone(self):
-        value = self.cleaned_data.get('phone', '').strip()
-        if not value:
-            return ''
-        try:
-            return normalize_israeli_phone(value)
-        except ValueError as exc:
-            raise ValidationError(_('Некорректный израильский номер телефона.')) from exc
-
-    def clean(self):
-        cleaned = super().clean()
-        if not cleaned.get('email') and not cleaned.get('phone'):
-            raise ValidationError(_('Укажите email или телефон для подтверждения.'))
-        return cleaned
-
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
-        user.phone = self.cleaned_data['phone'] or None
         if commit:
             user.save()
         return user
@@ -64,17 +43,10 @@ def resolve_login_identifier(value):
     falls back to an ordinary username for backwards compatibility.
     """
     value = value.strip()
-    channel = None
-    candidate = ''
-    if '@' in value:
-        channel = 'email'
-        candidate = value.casefold()
-    else:
-        try:
-            candidate = normalize_israeli_phone(value)
-        except ValueError:
-            return value
-        channel = 'phone'
+    if '@' not in value:
+        return value  # No phone aliases, including previously verified phone numbers.
+    channel = 'email'
+    candidate = value.casefold()
     claim = VerifiedContact.objects.select_related('user').filter(
         channel=channel, fingerprint=contact_fingerprint(channel, candidate),
     ).first()
@@ -93,10 +65,10 @@ def resolve_login_identifier(value):
 
 
 class SafeAuthenticationForm(AuthenticationForm):
-    """Username, verified email or verified +972 phone; never unverified aliases."""
+    """Username or verified email only; no phone login."""
 
     username = forms.CharField(
-        max_length=254, label=_('Имя пользователя, email или телефон'),
+        max_length=254, label=_('Имя пользователя или email'),
     )
 
     def clean(self):
@@ -149,7 +121,7 @@ class VerifiedPasswordResetForm(PasswordResetForm):
 
 class RequestContactVerificationForm(forms.Form):
     channel = forms.ChoiceField(
-        choices=(('email', _('Email')), ('phone', _('Телефон'))),
+        choices=(('email', _('Email')),),
         label=_('Способ подтверждения'),
     )
 
@@ -313,41 +285,6 @@ class RatingCreateForm(forms.ModelForm):
             'review_text': _('Текст отзыва'),
         }
 
-class PhoneRecoveryRequestForm(forms.Form):
-    """Phone-only users may recover with their proven +972 phone and username."""
-
-    username = forms.CharField(max_length=150, label=_('Имя пользователя'))
-    phone = forms.CharField(max_length=20, label=_('Телефон'))
-
-    def clean_phone(self):
-        try:
-            return normalize_israeli_phone(self.cleaned_data['phone'])
-        except ValueError as exc:
-            raise ValidationError(_('Некорректный израильский номер телефона.')) from exc
-
-
-class PhoneRecoveryConfirmForm(PhoneRecoveryRequestForm):
-    code = forms.CharField(
-        min_length=6, max_length=6, label=_('Код подтверждения'),
-        widget=forms.TextInput(attrs={'autocomplete': 'one-time-code',
-                                      'inputmode': 'numeric', 'pattern': '[0-9]{6}'}),
-    )
-    new_password1 = forms.CharField(
-        label=_('Новый пароль'), widget=forms.PasswordInput,
-    )
-    new_password2 = forms.CharField(
-        label=_('Повторите пароль'), widget=forms.PasswordInput,
-    )
-
-    def clean(self):
-        data = super().clean()
-        if data.get('new_password1') != data.get('new_password2'):
-            raise ValidationError(_('Пароли не совпадают.'))
-        code = data.get('code', '')
-        if not code.isascii() or not code.isdigit():
-            self.add_error('code', _('Введите шестизначный код.'))
-        return data
-
 class ClientSettingsForm(forms.Form):
     """Edit only own User + ClientProfile data; no role/permission fields."""
 
@@ -358,7 +295,7 @@ class ClientSettingsForm(forms.Form):
         max_length=150, required=False, label=_('Фамилия'),
     )
     email = forms.EmailField(
-        max_length=254, required=False, label=_('Email'),
+        max_length=254, required=True, label=_('Email'),
     )
     phone = forms.CharField(
         max_length=20, required=False, label=_('Телефон'),
@@ -412,9 +349,7 @@ class ClientSettingsForm(forms.Form):
     def clean(self):
         result = super().clean()
         if (
-            'email' in result and 'phone' in result
-            and not result.get('email') and not result.get('phone')
-            and (self.owner.email or self.owner.phone)
+            'email' in result and not result.get('email')
         ):
             raise ValidationError(
                 _('Оставьте хотя бы один способ восстановления доступа.')

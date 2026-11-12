@@ -39,6 +39,13 @@
             <button type="submit" class="btn btn--primary btn--lg">{% trans 'Зарегистрироваться' %}</button>
         </form>
 
+        {% if google_login_enabled %}
+        <form method="post" action="{% url 'google_login' %}" class="form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn--secondary btn--lg">{% trans 'Продолжить с Google' %}</button>
+        </form>
+        {% endif %}
+
         <p style="margin-top: 20px; text-align: center;">
             {% trans 'Уже есть аккаунт?' %} <a href="{% url 'accounts:login' %}">{% trans 'Войти' %}</a>
         </p>

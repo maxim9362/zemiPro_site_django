@@ -16,12 +16,10 @@ from .forms import (
     ClientProfileForm, RegistrationForm, WorkerProfileForm,
     RequestContactVerificationForm, ConfirmContactVerificationForm,
     SafeAuthenticationForm, VerifiedPasswordResetForm,
-    PhoneRecoveryRequestForm, PhoneRecoveryConfirmForm,
     ClientSettingsForm, PortfolioUploadForm, PortfolioEditForm,
 )
 from .verification import (
     request_contact_verification, confirm_contact_verification,
-    request_phone_password_recovery, confirm_phone_password_recovery,
 )
 from .models import PrivacyRequest, WorkerPortfolioPhoto
 from .client_settings import save_client_settings, request_own_privacy_action
@@ -47,7 +45,10 @@ def register_view(request):
             return redirect('accounts:client_profile')
     else:
         form = RegistrationForm()
-    return render(request, 'accounts/register.html', {'form': form})
+    return render(request, 'accounts/register.html', {
+        'form': form,
+        'google_login_enabled': settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED,
+    })
 
 
 @login_required
@@ -133,6 +134,11 @@ class SafeLoginView(auth_views.LoginView):
     template_name = 'accounts/login.html'
     authentication_form = SafeAuthenticationForm
 
+    def get_context_data(self, **kwargs):
+        data = super().get_context_data(**kwargs)
+        data['google_login_enabled'] = settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED
+        return data
+
 
 class VerifiedPasswordResetView(auth_views.PasswordResetView):
     template_name = 'accounts/password_reset.html'
@@ -183,41 +189,6 @@ def confirm_verification_view(request):
     else:
         messages.error(request, _('Неверный или просроченный код.'))
     return redirect('accounts:contact_verification')
-
-
-@require_http_methods(['GET', 'POST'])
-def phone_recovery_view(request):
-    """Generic response prevents discovery of a username or phone claim."""
-    form = PhoneRecoveryRequestForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        request_phone_password_recovery(
-            form.cleaned_data['username'], form.cleaned_data['phone'],
-        )
-        messages.info(
-            request,
-            _('Если телефон подтверждён и аккаунт доступен, код будет отправлен.'),
-        )
-        return redirect('accounts:phone_recovery_confirm')
-    return render(request, 'accounts/phone_recovery.html', {'form': form})
-
-
-@require_http_methods(['GET', 'POST'])
-def phone_recovery_confirm_view(request):
-    form = PhoneRecoveryConfirmForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        try:
-            confirmed = confirm_phone_password_recovery(
-                form.cleaned_data['username'], form.cleaned_data['phone'],
-                form.cleaned_data['code'], form.cleaned_data['new_password1'],
-            )
-        except ValidationError as exc:
-            form.add_error('new_password1', exc)
-        else:
-            if confirmed:
-                messages.success(request, _('Пароль обновлён.'))
-                return redirect('accounts:login')
-            messages.error(request, _('Неверный или просроченный код.'))
-    return render(request, 'accounts/phone_recovery_confirm.html', {'form': form})
 
 
 @login_required

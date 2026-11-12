@@ -26,8 +26,8 @@ def save_client_settings(user, cleaned):
         raise ValueError('Город пока не обслуживается.')
     email = (cleaned.get('email') or '').strip().casefold()
     phone = cleaned.get('phone') or ''
-    if not email and not phone and (owner.email or owner.phone):
-        raise ValueError('Оставьте хотя бы один способ восстановления доступа.')
+    if not email:
+        raise ValueError('Для восстановления доступа необходим email.')
     language = cleaned.get('preferred_language')
     if language not in {'ru', 'en', 'he'}:
         raise ValueError('Недопустимый язык.')
