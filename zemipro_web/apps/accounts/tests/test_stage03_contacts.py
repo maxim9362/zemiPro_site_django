@@ -4,23 +4,19 @@ from urllib.parse import urlparse
 from unittest.mock import patch
 import re
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
 
 from apps.accounts.models import (
     ContactChallenge, ContactDeliveryEvent, VerifiedContact,
 )
 from apps.accounts.verification import (
-    confirm_contact_verification, contact_fingerprint, normalize_israeli_phone,
+    confirm_contact_verification, normalize_israeli_phone,
     request_contact_verification,
 )
-from apps.accounts.services import select_active_role
 
 
 class AccountSecurityTests(TestCase):
