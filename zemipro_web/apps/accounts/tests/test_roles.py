@@ -2,6 +2,7 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils.translation import override
 
 from apps.accounts.models import ClientProfile, WorkerProfile
 from apps.accounts.services import (
@@ -95,6 +96,28 @@ class MultiRoleTests(TestCase):
         self.assertRedirects(response, reverse('marketplace:worker_dashboard'))
         self.assertEqual(get_user_model().objects.count(), 1)
         self.assertEqual(WorkerProfile.objects.filter(user=self.user).count(), 1)
+
+    def test_switch_labels_use_existing_english_and_hebrew_translations(self):
+        self.client.force_login(self.user)
+        for language, worker_label, client_label in (
+            ('en', 'Professional dashboard', 'Customer dashboard'),
+            ('he', 'אזור אישי לאיש מקצוע', 'אזור אישי ללקוח'),
+        ):
+            with self.subTest(language=language), override(language):
+                page = self.client.get(reverse('marketplace:home'),
+                                       HTTP_ACCEPT_LANGUAGE=language)
+                self.assertContains(page, f'aria-label="{worker_label}"')
+                self.assertContains(page, f'⇄ {worker_label}')
+        self.client.post(self.url, {'role': 'worker'})
+        for language, worker_label, client_label in (
+            ('en', 'Professional dashboard', 'Customer dashboard'),
+            ('he', 'אזור אישי לאיש מקצוע', 'אזור אישי ללקוח'),
+        ):
+            with self.subTest(language=language), override(language):
+                page = self.client.get(reverse('marketplace:home'),
+                                       HTTP_ACCEPT_LANGUAGE=language)
+                self.assertContains(page, f'aria-label="{client_label}"')
+                self.assertContains(page, f'⇄ {client_label}')
 
     def test_ashdod_gate_and_foreign_profile_not_modified(self):
         other = get_user_model().objects.create_user(username='other-synthetic')

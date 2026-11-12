@@ -573,3 +573,11 @@
 - **Совместимость:** оба существующих `ClientProfile`/`WorkerProfile` связаны с одним User и сохраняются при смене кабинета; прежние `Order.client`, `Response.worker` и связи профилей не меняются. Сервисы редактирования профилей больше не перезаписывают legacy `User.role`. Миграция `accounts.0005_user_active_role` переносит legacy `worker` в выбранный кабинет, сохраняет остальные данные; уникальность профилей обеспечена существующими OneToOne constraints.
 - **Тесты и CI:** код SHA `7559f67d57e5c50fea5b91703735fc5e4330e00e`, [GitHub Actions #43178512100](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43178512100) **SUCCESS**: 6 новых тестов 03.1, весь Django **169/169**, Chromium **45/45**, Ashdod-only **12/12**, синтетическая PostgreSQL migration `0005` и проверки `makemigrations --check`, Ruff, configuration/seed PASS. 94.7% — только coverage `marketplace.services`, а не всего Django. Проверка миграции на фактических старых данных остаётся до production отдельным migration/dry-run gate.
 - **Границы:** Ashdod-only, RU/EN/HE, RTL, приватность заказов, 00–02 release gates сохранены. Production/Cloudflare/VPS/DNS/секреты/реальные данные `NOT_TOUCHED`. Stage 03 `IN_PROGRESS`, Stage 02 не `DONE`.
+
+## 2026-11-12 — Stage 03.1 multilingual switch-label correction
+
+- Scope: Stage 03 role-switch UI only. Existing switch button labels were new msgids absent from compiled English/Hebrew catalogues. Changed the two captions to already-translated `Кабинет клиента` / `Кабинет мастера`, plus a reversible switch icon and accessible `aria-label`, avoiding uncompiled translation changes.
+- Added a focused Django test verifying the actual switch control's English/Hebrew labels before and after changing cabinet. No changes to accounts/services/migrations, no data/permission changes.
+- Verification: **PENDING** fresh stage-03 branch CI after this small change. Previous Stage 03.1 CI at `7559f67d`: 169/169 Django, 45/45 Chromium, Ruff/seed/migrations PASS; no claim that this new diff is already verified.
+- Stage 03.1 remains `CODE_IMPLEMENTED / CI_RECHECK_PENDING` until workflow results are checked; Stage 03 overall still `IN_PROGRESS`. PR #8 and the pre-public Ashdod release gates remain unchanged.
+
