@@ -1,13 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseBadRequest
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect
 from django.utils.translation import gettext as _
 
 from .forms import ClientProfileForm, RegistrationForm, WorkerProfileForm
 from .services import (
     create_or_update_client_profile, get_client_profile,
-    create_or_update_worker_profile, get_worker_profile,
+    create_or_update_worker_profile, get_worker_profile, select_active_role,
 )
 
 
@@ -70,3 +72,22 @@ def worker_profile_view(request):
         form = WorkerProfileForm(initial=initial)
 
     return render(request, 'accounts/worker_profile.html', {'form': form, 'profile': profile})
+
+
+@login_required
+@require_POST
+def switch_role_view(request):
+    """Switch active cabinet via an authenticated, CSRF-protected POST."""
+    role = request.POST.get('role')
+    try:
+        select_active_role(request.user, role)
+    except ValueError:
+        return HttpResponseBadRequest(_('Недопустимая роль.'))
+
+    if role == request.user.ActiveRole.WORKER:
+        if get_worker_profile(request.user) is None:
+            return redirect('accounts:worker_profile')
+        return redirect('marketplace:worker_dashboard')
+    if get_client_profile(request.user) is None:
+        return redirect('accounts:client_profile')
+    return redirect('marketplace:client_dashboard')

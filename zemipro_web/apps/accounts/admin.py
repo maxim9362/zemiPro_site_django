@@ -6,12 +6,12 @@ from .models import User, ClientProfile, WorkerProfile
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'role', 'phone', 'telegram_id', 'is_blocked', 'is_active')
-    list_filter = ('role', 'is_blocked', 'is_active', 'is_staff')
+    list_display = ('username', 'email', 'role', 'active_role', 'phone', 'telegram_id', 'is_blocked', 'is_active')
+    list_filter = ('role', 'active_role', 'is_blocked', 'is_active', 'is_staff')
     search_fields = ('username', 'email', 'phone', 'telegram_id')
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Дополнительно', {
-            'fields': ('telegram_id', 'role', 'phone', 'is_blocked'),
+            'fields': ('telegram_id', 'role', 'active_role', 'phone', 'is_blocked'),
         }),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (

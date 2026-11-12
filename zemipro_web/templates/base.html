@@ -23,6 +23,16 @@
                 {% if user.is_authenticated %}
                 <a href="{% url 'marketplace:client_dashboard' %}">{% trans 'Кабинет клиента' %}</a>
                 <a href="{% url 'marketplace:worker_dashboard' %}">{% trans 'Кабинет мастера' %}</a>
+                <form method="post" action="{% url 'accounts:switch_role' %}" class="nav__switch-role">
+                    {% csrf_token %}
+                    {% if user.active_role == 'worker' %}
+                    <input type="hidden" name="role" value="client">
+                    <button type="submit">{% trans 'Перейти в кабинет заказчика' %}</button>
+                    {% else %}
+                    <input type="hidden" name="role" value="worker">
+                    <button type="submit">{% trans 'Перейти в кабинет мастера' %}</button>
+                    {% endif %}
+                </form>
                 <a href="{% url 'notifications:notification_list' %}" class="nav__notif">
                     {% trans 'Уведомления' %}
                     {% if unread_notifications_count %}

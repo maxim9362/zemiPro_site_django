@@ -1,3 +1,6 @@
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
+
 from apps.locations.services import city_is_public
 
 from .models import User, ClientProfile, WorkerProfile
@@ -25,6 +28,7 @@ def create_client_profile(user, city=None, contact=''):
     return profile
 
 
+@transaction.atomic
 def create_or_update_client_profile(user, form_data):
     """Создать или обновить профиль клиента."""
     _validate_public_profile_cities(form_data)
@@ -33,10 +37,7 @@ def create_or_update_client_profile(user, form_data):
     profile.contact = form_data.get('contact', profile.contact)
     profile.save()
 
-    if created or user.role != User.Role.CLIENT:
-        user.role = User.Role.CLIENT
-        user.save(update_fields=['role'])
-
+    select_active_role(user, User.ActiveRole.CLIENT)
     return profile
 
 
@@ -48,6 +49,7 @@ def get_client_profile(user):
         return None
 
 
+@transaction.atomic
 def create_or_update_worker_profile(user, form_data):
     """Создать или обновить профиль мастера. Возвращает профиль."""
     _validate_public_profile_cities(form_data)
@@ -69,10 +71,7 @@ def create_or_update_worker_profile(user, form_data):
         profile.offers_remote = bool(form_data['offers_remote'])
         profile.save(update_fields=['offers_remote', 'updated_at'])
 
-    if created or user.role != User.Role.WORKER:
-        user.role = User.Role.WORKER
-        user.save(update_fields=['role'])
-
+    select_active_role(user, User.ActiveRole.WORKER)
     return profile
 
 
@@ -82,3 +81,24 @@ def get_worker_profile(user):
         return user.worker_profile
     except WorkerProfile.DoesNotExist:
         return None
+
+
+@transaction.atomic
+def select_active_role(user, role):
+    """Select a dashboard, not a privilege. No profile or historical order is deleted.
+
+    In particular, switching to worker does NOT create a blank, publicly
+    discoverable WorkerProfile. Completion of the worker form is required.
+    """
+    if role not in User.ActiveRole.values:
+        raise ValueError('Недопустимая роль.')
+    if not user.is_authenticated or user.pk is None:
+        raise PermissionDenied('Требуется вход в аккаунт.')
+    stored = User.objects.select_for_update().get(pk=user.pk)
+    if not stored.is_active or stored.is_blocked:
+        raise PermissionDenied('Аккаунт недоступен.')
+    if stored.active_role != role:
+        stored.active_role = role
+        stored.save(update_fields=['active_role'])
+    user.active_role = stored.active_role
+    return stored.active_role

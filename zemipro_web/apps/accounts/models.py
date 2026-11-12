@@ -3,12 +3,16 @@ from django.db import models
 
 
 class User(AbstractUser):
-    """Кастомная модель пользователя с поддержкой ролей и Telegram."""
+    """One identity; legacy role retained for compatibility, not authorization."""
 
     class Role(models.TextChoices):
         CLIENT = 'client', 'Заказчик'
         WORKER = 'worker', 'Исполнитель'
         ADMIN = 'admin', 'Администратор'
+
+    class ActiveRole(models.TextChoices):
+        CLIENT = 'client', 'Заказчик'
+        WORKER = 'worker', 'Исполнитель'
 
     telegram_id = models.BigIntegerField(
         unique=True, null=True, blank=True,
@@ -17,6 +21,11 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=10, choices=Role.choices, default=Role.CLIENT,
         verbose_name='Роль'
+    )
+    active_role = models.CharField(
+        max_length=10, choices=ActiveRole.choices, default=ActiveRole.CLIENT,
+        verbose_name='Выбранный кабинет',
+        help_text='Только выбор интерфейса; права определяются профилями и доступом к объекту.',
     )
     phone = models.CharField(
         max_length=20, blank=True, null=True,
@@ -39,11 +48,13 @@ class User(AbstractUser):
 
     @property
     def is_client(self):
-        return self.role == self.Role.CLIENT
+        # Client access still requires authentication and order ownership.
+        return self.active_role == self.ActiveRole.CLIENT or hasattr(self, 'client_profile')
 
     @property
     def is_worker(self):
-        return self.role == self.Role.WORKER
+        # A selected worker dashboard alone never grants worker permissions.
+        return hasattr(self, 'worker_profile')
 
 
 class ClientProfile(models.Model):

@@ -565,3 +565,11 @@
 - **Different deadlines preserved:** Stage 00.4 and verified legacy SEO URL inventory **before Stage 08**; complete official CBS catalogue **before nationwide rollout** (not before first Ashdod public pilot).
 - **Status now:** Stage 00 `CORE_VERIFIED / FOLLOW_UP_REQUIRED`, Stage 01 `LOCAL_VERIFIED / EXTERNAL_RELEASE_GATES_OPEN`, Stage 02 `TECHNICAL_IMPLEMENTATION_COMPLETE / CI_VERIFIED / RELEASE_GATES_DEFERRED_BY_OWNER / TARGETED_CODEX_REVIEW_PENDING / PR_DRAFT`, **not DONE**, **not MERGED**, **not DEPLOYED**. No permission to start Stage 03 implied by release-gate decision.
 
+
+## 2026-11-12 — Stage 03.1: один пользователь / два кабинета (начало)
+
+- **Зависимость:** Stage 02 HEAD `36cfb9965d7cffe7a09cb68b252b0d8ba9761acc`; PR #8 остаётся Draft/NOT_MERGED. Разработка ведётся в `stage-03-accounts-profiles`; отдельный итоговый Draft PR готовится только после 03.7, с базой Stage 02 до её разрешённого merge.
+- **Реализация:** в существующей `accounts.User` добавлен `active_role` как предпочтение кабинета (не разрешение); legacy `role` и его `admin` оставлены без изменения. Смена кабинета идёт через `POST /accounts/switch-role/`, требует Django session/CSRF и отклоняет чуждые значения, заблокированные и неактивные аккаунты. Новые пустые профили публично не создаются при переключении.
+- **Совместимость:** оба существующих `ClientProfile`/`WorkerProfile` связаны с одним User и сохраняются при смене кабинета; прежние `Order.client`, `Response.worker` и связи профилей не меняются. Сервисы редактирования профилей больше не перезаписывают legacy `User.role`. Миграция `accounts.0005_user_active_role` переносит legacy `worker` в выбранный кабинет, сохраняет остальные данные; уникальность профилей обеспечена существующими OneToOne constraints.
+- **Тесты:** новые изолированные негативные/позитивные проверки смены роли, отсутствия повышения до admin, сохранности связей и миграции. `STATIC_REVIEW: PREPARED`; `DJANGO CI / PostgreSQL: PENDING` до результата GitHub Actions; не указывать PASS до запуска.
+- **Границы:** Ashdod-only, RU/EN/HE, RTL, приватность заказов, 00–02 release gates сохранены. Production/Cloudflare/VPS/DNS/секреты/реальные данные `NOT_TOUCHED`. Stage 03 `IN_PROGRESS`, Stage 02 не `DONE`.
