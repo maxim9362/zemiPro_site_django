@@ -1,5 +1,6 @@
 """Bounded, localized server-side forms for stage 04.2 order wizard."""
 from datetime import date
+import re
 
 from django import forms
 from django.db.models import Q
@@ -98,6 +99,17 @@ class PlaceStepForm(forms.Form):
             choices = [('onsite', t['onsite']), ('online', t['online'])]
         self.fields['mode'].choices = choices
 
+    def clean_area(self):
+        area = self.cleaned_data.get('area', '').strip()
+        # Approximate area must not become a street address or contact field.
+        if re.search(
+            r'\d|@|\b(?:street|apartment|apt|house|road)\b|'
+            r'רחוב|דירה|כתובת|улица|квартира|дом',
+            area, re.IGNORECASE,
+        ):
+            raise forms.ValidationError(wizard_copy()['area_private'])
+        return area
+
 
 class ScheduleStepForm(forms.Form):
     preferred_date = forms.DateField(
@@ -147,6 +159,10 @@ class BudgetStepForm(forms.Form):
             self.add_error('amount_min', wizard_copy()['amount_min'])
         if kind == 'range' and (upper is None or (lower is not None and upper < lower)):
             self.add_error('amount_max', wizard_copy()['amount_max'])
+        if kind == 'fixed' and upper is not None:
+            self.add_error('amount_max', wizard_copy()['amount_max'])
+        if kind == 'negotiable' and (lower is not None or upper is not None):
+            self.add_error('amount_min', wizard_copy()['price_type'])
         return d
 
 

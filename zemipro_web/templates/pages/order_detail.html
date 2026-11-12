@@ -58,6 +58,15 @@
                 <div class="order-card__field">
                     <strong>{% trans 'Бюджет:' %}</strong> {% trans order.price %}
                 </div>
+                {% if structured_info %}
+                {% for label, value in structured_info %}
+                    {% if value %}
+                    <div class="order-card__field">
+                        <strong>{{ label }}:</strong> <bdi dir="auto">{{ value }}</bdi>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                {% endif %}
 
                 {% if can_view_private_details and private_question_answers %}
                 <div class="order-card__field">
@@ -80,6 +89,28 @@
                 {% if can_view_private_details %}
                 <div class="order-card__field">
                     <strong>{% trans 'Контакт клиента:' %}</strong> <bdi dir="ltr">{{ order.customer_phone }}</bdi>
+                </div>
+                {% endif %}
+                {% if order_photos %}
+                <div class="order-card__field">
+                    <strong>{% trans 'Фотографии заявки' %}</strong>
+                    <ul class="zw-photo-list" style="display:flex;flex-wrap:wrap;gap:12px;list-style:none;padding:0;">
+                        {% for photo in order_photos %}
+                        <li style="max-width:130px;">
+                            <a href="{% url 'marketplace:order_attachment_image' pk=photo.pk %}">
+                                <img width="120" height="90" style="object-fit:cover;max-width:100%;"
+                                     src="{% url 'marketplace:order_attachment_image' pk=photo.pk %}"
+                                     alt="{% trans 'Фотография заявки' %}" loading="lazy">
+                            </a>
+                            {% if photo_is_owner %}
+                            <form method="post" action="{% url 'marketplace:order_attachment_delete' pk=photo.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--secondary">{% trans 'Удалить фотографию' %}</button>
+                            </form>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
                 {% endif %}
             </div>

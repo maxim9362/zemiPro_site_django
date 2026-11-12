@@ -18,6 +18,10 @@
 .zw-muted{color:var(--color-text-light,#5d6776);font-size:.93rem}
 .zw-table{width:100%;border-collapse:collapse;table-layout:fixed}
 .zw-table td,.zw-table th{overflow-wrap:anywhere;padding:10px;border-bottom:1px solid var(--color-border,#e4e8f0);text-align:start;vertical-align:top}
+.zw-photo-list{list-style:none;display:flex;gap:12px;flex-wrap:wrap;padding:0;margin:12px 0}
+.zw-photo-list li{max-width:132px}
+.zw-photo-list img{max-width:120px;max-height:112px;object-fit:cover;border:1px solid #bac6db;border-radius:8px}
+.zw-photo-list button{font:inherit;background:none;border:1px solid #d9a2a2;padding:5px;border-radius:6px;cursor:pointer}
 .zw-drafts{margin-top:22px}
 .zw-drafts a{display:inline-block;padding:8px 0}
 @media(max-width:480px){.zw-shell{padding:12px}.zw-panel{padding:15px}.zw-steps{gap:5px}.zw-steps li{font-size:.77rem;padding:5px 7px}.zw-actions>*{width:100%;text-align:center}}
@@ -41,7 +45,7 @@
         {% if messages %}
             {% for message in messages %}<p class="zw-error">{{ message }}</p>{% endfor %}
         {% endif %}
-        <form method="post" action="{% if is_new_wizard %}{% url 'marketplace:order_wizard_start' %}{% else %}{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ step }}{% endif %}">
+        <form method="post" {% if step == 6 %}enctype="multipart/form-data"{% endif %} action="{% if is_new_wizard %}{% url 'marketplace:order_wizard_start' %}{% else %}{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ step }}{% endif %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="{% if is_new_wizard %}start{% elif step == 8 %}publish{% else %}next{% endif %}">
             {% if is_new_wizard %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
@@ -80,7 +84,30 @@
                     </div>
                 {% endfor %}
             {% endif %}
-            {% if step == 6 %}<p class="zw-muted">{{ copy.photos }}</p>{% endif %}
+            {% if step == 6 %}
+                <p class="zw-muted">{{ copy.photos }}</p>
+                <div class="zw-field">
+                    <label for="zw-photos">{{ copy.photo_input }}</label>
+                    <input id="zw-photos" type="file" name="photos" multiple
+                           accept="image/jpeg,image/png,image/webp">
+                </div>
+                <div class="zw-field">
+                    <label for="zw-visibility">{{ copy.photo_access }}</label>
+                    <select id="zw-visibility" name="photo_visibility">
+                        <option value="private">{{ copy.photo_private }}</option>
+                        <option value="assignee">{{ copy.photo_assignee }}</option>
+                        <option value="public">{{ copy.photo_public }}</option>
+                    </select>
+                </div>
+                <div class="zw-field">
+                    <label for="zw-public-consent">
+                        <input id="zw-public-consent" type="checkbox"
+                               name="public_photo_consent" value="on">
+                        {{ copy.photo_consent }}
+                    </label>
+                </div>
+                <p class="zw-muted">{{ copy.photo_notice }}</p>
+            {% endif %}
             {% if step == 7 %}<p class="zw-muted">{{ copy.privacy }}</p>{% endif %}
             <div class="zw-actions">
                 {% if order and step > 1 %}
@@ -91,6 +118,25 @@
                 </button>
             </div>
         </form>
+        {% if saved_photos %}
+        <section aria-label="{{ copy.photos_saved }}">
+            <h3>{{ copy.photos_saved }}</h3>
+            <ul class="zw-photo-list">
+                {% for photo in saved_photos %}
+                <li>
+                    <a href="{% url 'marketplace:order_attachment_image' pk=photo.pk %}">
+                        <img src="{% url 'marketplace:order_attachment_image' pk=photo.pk %}"
+                             alt="{{ copy.photo_input }} {{ forloop.counter }}" loading="lazy">
+                    </a>
+                    <form method="post" action="{% url 'marketplace:order_attachment_delete' pk=photo.pk %}">
+                        {% csrf_token %}
+                        <button type="submit">{{ copy.delete_photo }}</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
     </section>
     {% if drafts %}
     <section class="zw-drafts zw-panel">

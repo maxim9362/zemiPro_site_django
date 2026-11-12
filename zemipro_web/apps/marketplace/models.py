@@ -230,6 +230,41 @@ class Order(models.Model):
         max_length=64, blank=True, default='', db_index=True, editable=False,
         verbose_name='Защищённый отпечаток подачи заявки',
     )
+    class PriceKind(models.TextChoices):
+        LEGACY = 'legacy', 'Историческая цена'
+        FIXED = 'fixed', 'Фиксированная'
+        RANGE = 'range', 'Диапазон'
+        NEGOTIABLE = 'negotiable', 'Договорная'
+
+    class WorkMode(models.TextChoices):
+        LEGACY = 'legacy', 'Не указан'
+        ONSITE = 'onsite', 'На месте'
+        ONLINE = 'online', 'Онлайн'
+
+    class Urgency(models.TextChoices):
+        LEGACY = 'legacy', 'Не указана'
+        NORMAL = 'normal', 'Обычная'
+        SOON = 'soon', 'В ближайшие дни'
+        URGENT = 'urgent', 'Срочно'
+
+    price_kind = models.CharField(
+        max_length=12, choices=PriceKind.choices, default=PriceKind.LEGACY,
+    )
+    amount_min_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, blank=True, null=True,
+    )
+    amount_max_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, blank=True, null=True,
+    )
+    preferred_date = models.DateField(blank=True, null=True)
+    urgency = models.CharField(
+        max_length=8, choices=Urgency.choices, default=Urgency.LEGACY,
+    )
+    work_mode = models.CharField(
+        max_length=8, choices=WorkMode.choices, default=WorkMode.LEGACY,
+    )
+    approximate_area = models.CharField(max_length=80, blank=True, default='')
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлена')
 
@@ -255,6 +290,53 @@ class Order(models.Model):
 
     def __str__(self):
         return f'Заказ #{self.pk} — {self.category.name_ru} ({self.get_status_display()})'
+
+
+
+class OrderAttachment(models.Model):
+    """Server-gated, metadata-free JPEG; source image never stored publicly."""
+
+    class Visibility(models.TextChoices):
+        PRIVATE = 'private', 'Только заказчик'
+        ASSIGNEE = 'assignee', 'Выбранный исполнитель'
+        PUBLIC = 'public', 'Публично (по согласию)'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='attachments',
+    )
+    uploaded_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT,
+        related_name='order_photo_uploads',
+    )
+    file_key = models.CharField(max_length=120, unique=True, editable=False)
+    visibility = models.CharField(
+        max_length=9, choices=Visibility.choices, default=Visibility.PRIVATE,
+    )
+    content_sha256 = models.CharField(max_length=64, editable=False)
+    byte_size = models.PositiveIntegerField()
+    public_consent_at = models.DateTimeField(null=True, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_attachment'
+        ordering = ('created_at', 'pk')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'content_sha256', 'visibility'],
+                name='order_photo_unique_content_scope',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(visibility__in=['private', 'assignee', 'public'])
+                    & (models.Q(visibility='public', public_consent_at__isnull=False)
+                       | ~models.Q(visibility='public'))
+                ),
+                name='order_photo_visibility_allowed',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Фото #{self.pk} заказа #{self.order_id}'
 
 
 class OrderStatusEvent(models.Model):

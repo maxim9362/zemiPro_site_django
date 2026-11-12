@@ -41,3 +41,9 @@ Persisted payload is private `Order.wizard_data = {'steps': {'1': {...}, ... '7'
 ## Stage 04.3 ownership correction
 
 Current Stage 04.2 wizard is the preferred entrypoint. The pre-existing `/orders/create/` GET/POST remains backward-compatible but now funnels writes into owner-validated `create_order`. For old forms phone/address are optional, and selected workers do not see private contacts, address, description or questionnaire answers automatically. A service call accepting, cancelling or completing an order requires explicit authenticated `actor`. See `docs/STAGE_04_ORDER_OWNERSHIP.md`.
+
+## Stage 04.4 migration and media contract
+
+The wizard persists canonical ILS price type (fixed/range/negotiable), range bounds, preferred date, urgency, onsite/online and approximate area into fields on `Order` at the atomic publication step. Legacy raw `price` remains preserved as a display/backward-compatibility field. Area rejects likely exact address/phone patterns. The public safe summary never includes precise address, email, phone, raw description or answer snapshots.
+
+Step 6 accepts at most 5 JPEG/PNG/WebP images, 5 MiB each, via multipart upload. The server decodes, rotates, rescales and strips metadata into JPEG, storing only random names under the pre-existing `ZEMIPRO_PRIVATE_MEDIA_ROOT` outside URL-served media/static. `OrderAttachment.visibility` defaults to private; authorized selected worker or public access must be deliberately chosen, with a separate checkbox for public consent. No raw file URLs. Files can be revoked by the owner; photo download always rechecks authorization. See `docs/STAGE_04_ORDER_DETAILS.md` for policy and deployment prerequisites.

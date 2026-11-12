@@ -1,10 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.core.exceptions import PermissionDenied
 from django.db.models import Avg, Count, F, Prefetch, Q
-from django.http import Http404, JsonResponse, HttpResponsePermanentRedirect
+from django.http import FileResponse, Http404, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
+from django.views.decorators.http import require_GET, require_POST
 from django.utils.translation import gettext as _
 
 from apps.accounts.forms import RatingCreateForm
@@ -41,6 +43,12 @@ from .wizard_services import (
     wizard_max_step, wizard_summary,
 )
 from .wizard_ui import wizard_copy
+from .attachment_services import (
+    OrderPhotoError, can_read_order_photo, delete_order_photo,
+    order_attachment_key, visible_order_photos,
+)
+from apps.accounts.portfolio import private_portfolio_storage
+from .models import OrderAttachment
 
 ITEMS_PER_PAGE = 10
 
@@ -451,6 +459,8 @@ def _wizard_render(request, *, step, form, order=None, token='', drafts=None):
         'wizard_title': t['step' + str(step)],
         'is_new_wizard': order is None,
         'summary_rows': wizard_summary(order) if order and step == 8 else [],
+        'saved_photos': list(visible_order_photos(order, request.user))
+        if order and step in (6, 8) else [],
         'questionnaire_questions': (
             form.questionnaire_questions if step == 2 else []
         ),
@@ -558,6 +568,15 @@ def order_wizard_edit_view(request, pk):
                 saved = save_order_wizard_step(
                     order_id=order.pk, actor=request.user,
                     step=step, form=form,
+                    uploads=request.FILES.getlist('photos') if step == 6 else (),
+                    photo_visibility=(
+                        request.POST.get('photo_visibility', 'private')
+                        if step == 6 else 'private'
+                    ),
+                    public_consent=(
+                        request.POST.get('public_photo_consent') == 'on'
+                        if step == 6 else False
+                    ),
                 )
                 next_step = min(step + 1, wizard_max_step(saved))
                 return redirect(
@@ -570,6 +589,49 @@ def order_wizard_edit_view(request, pk):
     else:
         form = _wizard_form_for_step(order, step)
     return _wizard_render(request, step=step, form=form, order=order)
+
+
+
+@require_GET
+@never_cache
+def order_attachment_image_view(request, pk):
+    """Stream a normalized JPEG only to explicitly entitled viewers."""
+    photo = get_object_or_404(
+        OrderAttachment.objects.select_related('order'), pk=pk,
+    )
+    if not can_read_order_photo(photo, request.user):
+        raise Http404
+    try:
+        key = order_attachment_key(photo)
+        source = private_portfolio_storage().open(key, 'rb')
+    except (OrderPhotoError, OSError, FileNotFoundError):
+        raise Http404 from None
+    response = FileResponse(
+        source, content_type='image/jpeg', as_attachment=False,
+        filename='order-photo.jpg',
+    )
+    response['Cache-Control'] = 'private, no-store, max-age=0'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Content-Security-Policy'] = "default-src 'none'; sandbox"
+    response['X-Robots-Tag'] = 'noindex, nofollow, noarchive'
+    return response
+
+
+@login_required
+@require_POST
+@never_cache
+def order_attachment_delete_view(request, pk):
+    """Revoke previously granted image access without waiting for stage 04.5."""
+    try:
+        order = delete_order_photo(photo_id=pk, actor=request.user)
+    except (OrderPhotoError, PermissionDenied):
+        raise Http404 from None
+    if order.status == Order.Status.DRAFT:
+        return redirect(
+            reverse('marketplace:order_wizard_edit', args=[order.pk]) + '?step=6'
+        )
+    return redirect('marketplace:order_detail', pk=order.pk)
+
 
 
 
@@ -623,6 +685,14 @@ def order_detail_view(request, pk):
         'responses': responses,
         'existing_rating': existing_rating,
         'can_view_private_details': can_read_private,
+        'order_photos': list(visible_order_photos(order, request.user)),
+        'structured_info': [
+            (wizard_copy()['area'], order.approximate_area),
+            (wizard_copy()['mode'], wizard_copy().get(order.work_mode, '')),
+            (wizard_copy()['date'], order.preferred_date),
+            (wizard_copy()['urgency'], wizard_copy().get(order.urgency, '')),
+        ] if order.price_kind != Order.PriceKind.LEGACY else [],
+        'photo_is_owner': is_owner,
     })
 
 

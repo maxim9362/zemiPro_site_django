@@ -127,7 +127,8 @@ def start_order_wizard(*, actor, form, token):
         return order
 
 
-def save_order_wizard_step(*, order_id, actor, step, form):
+def save_order_wizard_step(*, order_id, actor, step, form, uploads=(),
+                           photo_visibility='private', public_consent=False):
     """Persist one validated step; changing service invalidates later answers."""
     if step < 1 or step > 7:
         raise ValueError('Invalid step.')
@@ -135,6 +136,11 @@ def save_order_wizard_step(*, order_id, actor, step, form):
     if not form.is_valid():
         raise ValueError('Invalid form.')
     values = _step_data(form, step)
+    # Normalization is expensive: do it before acquiring PostgreSQL locks.
+    clean_images = []
+    if step == 6 and uploads:
+        from .attachment_services import validate_order_photo_batch
+        clean_images = validate_order_photo_batch(uploads)
     with transaction.atomic():
         order = get_owner_wizard(order_id, actor, for_update=True)
         if order is None or order.status != Order.Status.DRAFT:
@@ -166,6 +172,12 @@ def save_order_wizard_step(*, order_id, actor, step, form):
         existing[str(step)] = values
         order.wizard_data = {'steps': existing}
         order.save(update_fields=['wizard_data', 'updated_at'])
+        if step == 6 and clean_images:
+            from .attachment_services import store_photos_on_locked_order
+            store_photos_on_locked_order(
+                order, actor=actor, cleaned=clean_images,
+                visibility=photo_visibility, public_consent=public_consent,
+            )
         return order
 
 
@@ -277,14 +289,32 @@ def publish_order_wizard(*, order_id, actor):
         order.category_id = chosen['category_id']
         order.subcategory_id = service.pk
         order.city = city
-        order.price = _budget_label(steps['5'])
+        price_data = steps['5']
+        order.price = _budget_label(price_data)
+        order.price_kind = price_data['price_type']
+        order.amount_min_ils = (
+            Decimal(price_data['amount_min'])
+            if order.price_kind in ('fixed', 'range') else None
+        )
+        order.amount_max_ils = (
+            Decimal(price_data['amount_max'])
+            if order.price_kind == 'range' else None
+        )
+        order.preferred_date = (
+            date.fromisoformat(preferred) if preferred else None
+        )
+        order.urgency = steps['4']['urgency']
+        order.work_mode = place['mode']
+        order.approximate_area = place['area']
         order.description = steps['6']['description']
         order.customer_name = steps['7']['display_name']
         # Private phone/address are shared voluntarily in Stage 07 chat only.
         order.customer_phone = ''
         order.address = ''
         order.save(update_fields=[
-            'category', 'subcategory', 'city', 'price', 'description',
+            'category', 'subcategory', 'city', 'price', 'price_kind',
+            'amount_min_ils', 'amount_max_ils', 'preferred_date', 'urgency',
+            'work_mode', 'approximate_area', 'description',
             'customer_name', 'customer_phone', 'address', 'updated_at',
         ])
         if version:

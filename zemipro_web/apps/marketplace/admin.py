@@ -6,6 +6,7 @@ from apps.accounts.models import User
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating,
     ServiceQuestionnaire, QuestionnaireVersion, OrderQuestionnaireAnswer,
+    OrderAttachment,
 )
 from .questionnaire_services import publish_questionnaire
 
@@ -171,6 +172,30 @@ class OrderQuestionnaireAnswerAdmin(admin.ModelAdmin):
     raw_id_fields = ('order',)
     readonly_fields = (
         'order', 'version', 'schema_snapshot', 'answers', 'created_at',
+    )
+
+    def has_view_permission(self, request, obj=None):
+        return _can_review_private_order_admin(request)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(OrderAttachment)
+class OrderAttachmentAdmin(admin.ModelAdmin):
+    """Metadata-only, privileged review; actual files use server-gated routes."""
+
+    list_display = ('id', 'order', 'visibility', 'byte_size', 'created_at')
+    list_filter = ('visibility', 'created_at')
+    readonly_fields = (
+        'order', 'uploaded_by', 'file_key', 'visibility',
+        'content_sha256', 'byte_size', 'public_consent_at', 'created_at',
     )
 
     def has_view_permission(self, request, obj=None):
