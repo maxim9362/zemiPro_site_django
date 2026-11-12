@@ -1,6 +1,6 @@
 # Stage 03.6 — permission boundaries, moderation audit, account block policy
 
-**Stage status:** 03.6 `CODE_IMPLEMENTED / CI_VERIFIED` for 7625d5e3; [GitHub Actions #43200451184](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43200451184) **SUCCESS** (234/234 Django, 45/45 Chrome, 12/12 Ashdod-only). Later i18n refinement and its CI are separate. Whole Stage 03: `IN_PROGRESS`. Stage 02 PR #8 remains Draft/NOT_MERGED; no production migration/deployment.
+**Stage status:** 03.6 `CODE_IMPLEMENTED / CI_VERIFIED` for `a8a5e5f5`; [GitHub Actions #43200727582](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43200727582) **SUCCESS** (235/235 Django, 45/45 Chrome, 12/12 Ashdod-only), including blocked-session RU/EN/HE. Whole Stage 03: `IN_PROGRESS`. Stage 02 PR #8 remains Draft/NOT_MERGED; no production migration/deployment.
 
 ## Authorization and attack surface
 
@@ -18,6 +18,6 @@
 ## Verification and deferred release work
 
 - New synthetic negative tests exercise already-authenticated blocked sessions, public GET versus private routes, service-side blocks, fake user IDs, role escalation attempts, moderator permission granularity and revoked cached permissions, refusal to block admins, private history and cascade protection, one-way complaint handling, non-destructive privacy requests, Django Admin action filtering and PostgreSQL audit immutability.
-- On exact SHA 7625d5e3: full **234/234 Django**, **45/45 Chrome**, **12/12 Ashdod-only**, migrations, Ruff, production config and seed PASS; targeted `marketplace.services` coverage **90.4% only**, not total test coverage. A later separate RU/EN/HE blocked-message regression is pending final GitHub CI and must not be misrepresented as already passed.
+- On exact SHA a8a5e5f5: full **235/235 Django**, **45/45 Chrome**, **12/12 Ashdod-only**, migrations, Ruff, production config and seed PASS; targeted `marketplace.services` coverage **90.4% only**, not total test coverage. The blocked-message RU/EN/HE regression is verified in GitHub CI #43200727582; human Hebrew editorial and physical-device checks remain mandatory.
 - Pre-public Ashdod gates still OPEN: manual legal workflow for access/export/delete/retention, controlled moderator provisioning and incident-handling procedure, historical-schema dry-run and backup/restore, staff/owner acceptance, native Hebrew and real physical phones, safe file storage, contact delivery, independent Codex review after Stage 03.7, separate Stage 02 PR #8 focused review and owner merge GO. No real production or user data touched.
 
