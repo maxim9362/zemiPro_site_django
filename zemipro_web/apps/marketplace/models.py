@@ -226,6 +226,10 @@ class Order(models.Model):
         null=True, blank=True, unique=True, editable=False,
         verbose_name='Ключ защиты от повторного создания черновика',
     )
+    submission_digest = models.CharField(
+        max_length=64, blank=True, default='', db_index=True, editable=False,
+        verbose_name='Защищённый отпечаток подачи заявки',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлена')
 

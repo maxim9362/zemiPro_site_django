@@ -109,7 +109,7 @@ class OrderLifecycleTests(TestCase):
         with self.assertRaises(ValueError):
             transition_order_status(order, Order.Status.ASSIGNED, actor=self.owner)
         response = Response.objects.create(order=order, worker=self.worker)
-        accept_response(response)
+        accept_response(response, actor=self.owner)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.IN_PROGRESS)
         self.assertEqual(order.worker_id, self.worker.pk)
@@ -117,7 +117,7 @@ class OrderLifecycleTests(TestCase):
             'previous_status', 'new_status',
         )), [('published', 'assigned'), ('assigned', 'in_progress')])
         with self.assertRaises(ValueError):
-            accept_response(response)
+            accept_response(response, actor=self.owner)
         self.assertEqual(order.status_events.count(), 2)
 
     def test_create_and_repeat_cancel_no_duplicate_event(self):
@@ -125,8 +125,8 @@ class OrderLifecycleTests(TestCase):
             self.owner, self.category, self.city,
             'Synthetic private location', 'Synthetic service request',
         )
-        cancel_order(order)
-        cancel_order(order)
+        cancel_order(order, actor=self.owner)
+        cancel_order(order, actor=self.owner)
         self.assertEqual(list(order.status_events.order_by('pk').values_list(
             'previous_status', 'new_status',
         )), [('', 'published'), ('published', 'cancelled')])

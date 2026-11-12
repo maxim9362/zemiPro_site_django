@@ -37,3 +37,7 @@ Persisted payload is private `Order.wizard_data = {'steps': {'1': {...}, ... '7'
 - [Django CI #43278024400](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43278024400) SUCCESS on code `77a7e2b082e0055599063a3d14a0adced0d28914`: 279/279 Django, 13/13 Ashdod-only, clean PostgreSQL 17 migrations, compile/Ruff/model check, 45/45 headless Chrome checks for **pre-existing** mobile catalog/login workflows.
 - Stage 04.2 tests assert wizard responses and language-dependent HTML/RTL for 3 × 3 category-language combinations. **A dedicated interactive Chrome run on the new wizard route** (mobile keyboard/navigation, steps 1–8, JS-dependent service options, conditional questions) remains required before full Stage 04 acceptance.
 - Photos, formal location/price/date columns and protected attachment delivery remain Stage 04.4 scope; do not publicly advertise these as available. The current page tells customers photo uploads are not yet available, without displaying internal stage numbers.
+
+## Stage 04.3 ownership correction
+
+Current Stage 04.2 wizard is the preferred entrypoint. The pre-existing `/orders/create/` GET/POST remains backward-compatible but now funnels writes into owner-validated `create_order`. For old forms phone/address are optional, and selected workers do not see private contacts, address, description or questionnaire answers automatically. A service call accepting, cancelling or completing an order requires explicit authenticated `actor`. See `docs/STAGE_04_ORDER_OWNERSHIP.md`.

@@ -166,7 +166,7 @@ class ModerationAndPermissionTests(TestCase):
         self.assertEqual(self.order.status, Order.Status.PUBLISHED)
         self.assertTrue(Response.objects.filter(pk=self.response.pk).exists())
         with self.assertRaises(ValueError):
-            accept_response(self.response)
+            accept_response(self.response, actor=self.owner)
         self.assertTrue(unblock_user(self.worker, actor=actor))
         self.worker.refresh_from_db()
         self.assertTrue(self.worker.is_active)

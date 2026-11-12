@@ -22,16 +22,35 @@ def can_view_private_order_details(user, order):
         stored.is_staff
         and stored.has_perm('moderation.review_complaints')
     )
-    return bool(
-        authorized_staff
-        or order.client_id == user.id
-        or order.worker_id == user.id
-    )
+    # A selected worker never gains the client's address, phone or raw
+    # descriptions automatically. Such details are voluntary in private chat.
+    return bool(authorized_staff or order.client_id == stored.pk)
 
 
-def create_order(client, category, city, address, description, price='Договорная', subcategory=None):
-    """Создать новую заявку."""
-    if client is None or not client.is_authenticated:
+def create_order(
+    client, category, city, address, description, price='Договорная',
+    subcategory=None, *, customer_name='', customer_phone='',
+    questionnaire_version=None, questionnaire_answers=None,
+    submission_key=None, return_created=False,
+):
+    """Create a published order once, with persisted owner authorization.
+
+    Modern clients supply a stable UUID submission_key. Legacy clients without
+    a key are deduplicated for 15 minutes using a keyed digest and a PostgreSQL
+    transaction-level advisory lock. The digest contains no readable contacts.
+    """
+    import hashlib
+    import hmac
+    import json
+    import uuid
+    from datetime import timedelta
+
+    from django.conf import settings
+    from django.core.exceptions import PermissionDenied
+    from django.db import IntegrityError, connection
+    from django.utils import timezone
+
+    if client is None or not getattr(client, 'is_authenticated', False):
         raise ValueError('Для создания заявки требуется авторизация.')
     if not User.objects.filter(
         pk=client.pk, is_active=True, is_blocked=False,
@@ -40,21 +59,124 @@ def create_order(client, category, city, address, description, price='Догов
         raise ValueError('Аккаунт недоступен.')
     if not city_is_public(city):
         raise ValueError('Город пока не обслуживается.')
+    if not Category.objects.filter(
+        pk=category.pk, is_active=True,
+    ).filter(Q(section__isnull=True) | Q(section__is_active=True)).exists():
+        raise ValueError('Услуга недоступна.')
+    if subcategory is not None and (
+        subcategory.category_id != category.pk
+        or not subcategory.is_active
+    ):
+        raise ValueError('Услуга недоступна.')
+    if questionnaire_version is not None and (
+        subcategory is None
+        or questionnaire_version.questionnaire.service_id != subcategory.pk
+    ):
+        raise ValueError('Анкета не соответствует услуге.')
+    try:
+        key = uuid.UUID(str(submission_key)) if submission_key else None
+    except (TypeError, ValueError, AttributeError) as error:
+        raise ValueError('Неверный ключ подачи заявки.') from error
+    fingerprint = json.dumps(
+        [client.pk, category.pk, subcategory.pk if subcategory else None,
+         city.pk, address, description, price, customer_name, customer_phone,
+         questionnaire_version.pk if questionnaire_version else None,
+         questionnaire_answers or {}],
+        sort_keys=True, ensure_ascii=False, separators=(',', ':'),
+    )
+    digest = hmac.new(
+        settings.SECRET_KEY.encode('utf-8'), fingerprint.encode('utf-8'),
+        hashlib.sha256,
+    ).hexdigest()
     with transaction.atomic():
-        order = Order.objects.create(
-            client=client,
-            category=category,
-            subcategory=subcategory,
-            city=city,
-            address=address,
-            description=description,
-            price=price,
-        )
-        OrderStatusEvent.objects.create(
-            order=order, actor=client, previous_status='',
-            new_status=order.status, reason=OrderStatusEvent.Reason.CREATED,
-        )
-    return order
+        # A blocked account cannot win a race via a stale in-memory User.
+        if not User.objects.filter(
+            pk=client.pk, is_active=True, is_blocked=False,
+            email_verification_required=False,
+        ).exists():
+            raise ValueError('Аккаунт недоступен.')
+        if key is None:
+            # Serializes *all* no-token duplicates with identical payloads
+            # across Django workers and processes attached to PostgreSQL.
+            lock = int.from_bytes(bytes.fromhex(digest[:16]), 'big', signed=True)
+            if connection.vendor != 'postgresql':
+                raise RuntimeError('Order submission guard requires PostgreSQL.')
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT pg_advisory_xact_lock(%s)', [lock])
+            original = Order.objects.filter(
+                client_id=client.pk, submission_digest=digest,
+                created_at__gte=timezone.now() - timedelta(minutes=15),
+            ).order_by('-created_at', '-pk').first()
+        else:
+            original = Order.objects.select_for_update().filter(
+                wizard_token=key,
+            ).first()
+            if original and (
+                original.client_id != client.pk or original.submission_digest != digest
+            ):
+                raise PermissionDenied('Ключ подачи заявки уже использован.')
+        if original:
+            return (original, False) if return_created else original
+
+        # A direct service call cannot bypass mandatory category questions.
+        if subcategory is not None:
+            from .models import ServiceQuestionnaire
+            q = ServiceQuestionnaire.objects.select_for_update().filter(
+                service_id=subcategory.pk,
+            ).first()
+            current_version_id = q.published_version_id if q else None
+            supplied_id = questionnaire_version.pk if questionnaire_version else None
+            if current_version_id != supplied_id:
+                raise ValueError('Анкета услуги изменилась.')
+            if current_version_id is not None:
+                from .wizard_forms import QuestionsStepForm
+                supplied = {
+                    'questionnaire_version': str(current_version_id),
+                }
+                for answer_key, answer_value in (questionnaire_answers or {}).items():
+                    if isinstance(answer_value, bool):
+                        answer_value = 'true' if answer_value else 'false'
+                    supplied['q_' + answer_key] = answer_value
+                validated = QuestionsStepForm(data=supplied, service_id=subcategory.pk)
+                if (not validated.is_valid()
+                        or validated.questionnaire_answers != questionnaire_answers):
+                    raise ValueError('Некорректные ответы на вопросы услуги.')
+
+        def insert():
+            order = Order.objects.create(
+                client_id=client.pk, category=category, city=city,
+                subcategory=subcategory, address=address,
+                description=description, price=price,
+                customer_name=customer_name, customer_phone=customer_phone,
+                wizard_token=key, submission_digest=digest,
+            )
+            OrderStatusEvent.objects.create(
+                order=order, actor_id=client.pk, previous_status='',
+                new_status=order.status, reason=OrderStatusEvent.Reason.CREATED,
+            )
+            if questionnaire_version is not None:
+                from .models import OrderQuestionnaireAnswer
+                OrderQuestionnaireAnswer.objects.create(
+                    order=order, version=questionnaire_version,
+                    schema_snapshot=questionnaire_version.schema,
+                    answers=questionnaire_answers or {},
+                )
+            return order
+
+        if key is not None:
+            try:
+                # Inner savepoint lets an identical concurrent POST recover
+                # from the unique constraint without aborting the transaction.
+                with transaction.atomic():
+                    order = insert()
+            except IntegrityError:
+                order = Order.objects.select_for_update().get(wizard_token=key)
+                if order.client_id != client.pk or order.submission_digest != digest:
+                    raise PermissionDenied('Ключ подачи заявки уже использован.') from None
+                return (order, False) if return_created else order
+        else:
+            order = insert()
+        return (order, True) if return_created else order
 
 
 
@@ -173,10 +295,21 @@ def create_response(order, worker_user, message=''):
     return response
 
 
-def accept_response(response):
-    """Принять отклик, отклонить остальные, назначить исполнителя."""
+def accept_response(response, *, actor):
+    """Accept one response only when the persisted order owner requested it."""
+    from django.core.exceptions import PermissionDenied
+
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=response.order_id)
+        if (
+            not getattr(actor, 'is_authenticated', False)
+            or order.client_id != actor.pk
+            or not User.objects.filter(
+                pk=actor.pk, is_active=True, is_blocked=False,
+                email_verification_required=False,
+            ).exists()
+        ):
+            raise PermissionDenied('Нет права назначать исполнителя.')
         if order.status != Order.Status.PUBLISHED:
             raise ValueError('Исполнитель для этой заявки уже выбран.')
 
@@ -203,26 +336,26 @@ def accept_response(response):
         # Preserve current UX: selection immediately starts work, but
         # record two distinct domain transitions under the same row lock.
         transition_order_status(
-            order.pk, Order.Status.ASSIGNED, actor=order.client,
+            order.pk, Order.Status.ASSIGNED, actor=actor,
             reason=OrderStatusEvent.Reason.WORKER_ASSIGNED,
         )
         transition_order_status(
-            order.pk, Order.Status.IN_PROGRESS, actor=order.client,
+            order.pk, Order.Status.IN_PROGRESS, actor=actor,
             reason=OrderStatusEvent.Reason.WORK_STARTED,
         )
         locked_response.order = order
     return locked_response
 
 
-def complete_order(order):
-    """Завершить заказ через единый валидатор переходов."""
+def complete_order(order, *, actor):
+    """Complete an order only for the authenticated, persisted owner."""
     return transition_order_status(
-        order, Order.Status.COMPLETED, actor=order.client,
+        order, Order.Status.COMPLETED, actor=actor,
     )
 
 
-def cancel_order(order):
-    """Отменить заказ; повторное действие не добавляет статусных событий."""
+def cancel_order(order, *, actor):
+    """Cancel an order only for the authenticated, persisted owner."""
     return transition_order_status(
-        order, Order.Status.CANCELLED, actor=order.client,
+        order, Order.Status.CANCELLED, actor=actor,
     )

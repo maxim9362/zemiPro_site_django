@@ -44,7 +44,7 @@ class ConcurrentResponseAcceptanceTests(TransactionTestCase):
             try:
                 response = Response.objects.get(pk=response_id)
                 barrier.wait(timeout=5)
-                accepted = accept_response(response)
+                accepted = accept_response(response, actor=self.owner)
                 return ('accepted', accepted.worker_id)
             except ValueError as error:
                 return ('rejected', str(error))

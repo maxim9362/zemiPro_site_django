@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db import transaction
 from django.db.models import Avg, Count, F, Prefetch, Q
 from django.http import Http404, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
@@ -24,10 +23,10 @@ from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating,
-    ServiceQuestionnaire, OrderQuestionnaireAnswer, OrderStatusEvent,
+    ServiceQuestionnaire, OrderQuestionnaireAnswer,
 )
 from .services import (
-    get_available_orders_for_worker, create_response,
+    get_available_orders_for_worker, create_response, create_order,
     accept_response, complete_order, cancel_order,
     can_view_private_order_details, workers_serving_city,
 )
@@ -382,45 +381,54 @@ def toggle_favorite_worker_view(request, pk):
 
 
 @login_required
+@never_cache
 def order_create_view(request):
-    initial = {}
-    if request.user.is_authenticated:
+    """Retain legacy POST compatibility but route writes through owner service.
+
+    New GET sessions are sent to the wizard rather than collecting unnecessary
+    address/phone fields in the old form.
+    """
+    if request.method not in ('GET', 'POST'):
+        raise Http404
+    ensure_wizard_owner(request.user)
+    if request.method == 'GET':
         profile = get_client_profile(request.user)
-        if profile:
-            initial = {'city': profile.city}
-
-    if request.method == 'POST':
-        form = OrderCreateForm(request.POST)
-        if form.is_valid():
-            order = form.save(commit=False)
-            order.client = request.user
-            with transaction.atomic():
-                order.save()
-                OrderStatusEvent.objects.create(
-                    order=order, actor=request.user, previous_status='',
-                    new_status=order.status, reason=OrderStatusEvent.Reason.CREATED,
-                )
-                if form.active_questionnaire_version is not None:
-                    OrderQuestionnaireAnswer.objects.create(
-                        order=order,
-                        version=form.active_questionnaire_version,
-                        schema_snapshot=form.active_questionnaire_version.schema,
-                        answers=form.questionnaire_answers,
-                    )
-
-            create_notification(
-                recipient=request.user,
-                title='Заявка создана',
-                message=f'Ваша заявка №{order.pk} успешно создана. Мастера смогут откликнуться на неё.',
-                notification_type='order_created',
-                related_order=order,
+        initial = {'city': profile.city} if profile else {}
+        return render(request, 'pages/order_create.html', {
+            'form': OrderCreateForm(initial=initial), 'seo_noindex': True,
+        })
+    form = OrderCreateForm(request.POST)
+    if form.is_valid():
+        values = form.cleaned_data
+        try:
+            order, created = create_order(
+                client=request.user,
+                category=values['category'],
+                subcategory=values['subcategory'],
+                city=values['city'],
+                address=values.get('address') or '',
+                description=values['description'],
+                price=values['price'],
+                customer_name=values.get('customer_name') or '',
+                customer_phone=values.get('customer_phone') or '',
+                questionnaire_version=form.active_questionnaire_version,
+                questionnaire_answers=form.questionnaire_answers,
+                submission_key=request.POST.get('submission_key'),
+                return_created=True,
             )
-
+        except ValueError as error:
+            form.add_error(None, str(error))
+        else:
+            if created:
+                create_notification(
+                    recipient=request.user,
+                    title='Заявка создана',
+                    message=f'Ваша заявка №{order.pk} успешно создана.',
+                    notification_type='order_created',
+                    related_order=order,
+                )
             return redirect('marketplace:order_detail', pk=order.pk)
-    else:
-        form = OrderCreateForm(initial=initial)
-
-    return render(request, 'pages/order_create.html', {'form': form})
+    return render(request, 'pages/order_create.html', {'form': form, 'seo_noindex': True})
 
 
 
@@ -674,7 +682,7 @@ def order_accept_response_view(request, order_id, response_id):
     )
 
     try:
-        response = accept_response(response)
+        response = accept_response(response, actor=request.user)
     except ValueError as error:
         messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
@@ -717,7 +725,7 @@ def order_cancel_view(request, pk):
         Response.objects.filter(order=order).values_list('worker_id', flat=True)
     )
 
-    cancel_order(order)
+    cancel_order(order, actor=request.user)
 
     from apps.accounts.models import User
     for worker_id in responding_workers:
@@ -743,7 +751,7 @@ def order_complete_view(request, pk):
         raise Http404
 
     order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.IN_PROGRESS)
-    complete_order(order)
+    complete_order(order, actor=request.user)
 
     if order.worker:
         create_notification(
