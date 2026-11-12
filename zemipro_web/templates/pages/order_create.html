@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Создать заявку на ремонт — ZemiPro{% endblock %}
+{% block title %}{% trans 'Создать заявку на ремонт — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Создать заявку на ремонт</h1>
-        <p>Опишите проблему, выберите город и категорию — мастер сможет связаться с вами</p>
+        <h1>{% trans 'Создать заявку на ремонт' %}</h1>
+        <p>{% trans 'Опишите проблему, выберите город и категорию — мастер сможет связаться с вами' %}</p>
     </div>
 </section>
 
@@ -25,7 +26,7 @@
 
             <div class="form__row">
                 <div class="form__group">
-                    <label for="id_customer_name" class="form__label">Ваше имя *</label>
+                    <label for="id_customer_name" class="form__label">{% trans 'Ваше имя *' %}</label>
                     {{ form.customer_name }}
                     {% if form.customer_name.errors %}
                     <span class="form__error">{{ form.customer_name.errors.0 }}</span>
@@ -33,7 +34,7 @@
                 </div>
 
                 <div class="form__group">
-                    <label for="id_customer_phone" class="form__label">Телефон *</label>
+                    <label for="id_customer_phone" class="form__label">{% trans 'Телефон *' %}</label>
                     {{ form.customer_phone }}
                     {% if form.customer_phone.errors %}
                     <span class="form__error">{{ form.customer_phone.errors.0 }}</span>
@@ -43,7 +44,7 @@
 
             <div class="form__row">
                 <div class="form__group">
-                    <label for="id_category" class="form__label">Категория *</label>
+                    <label for="id_category" class="form__label">{% trans 'Категория *' %}</label>
                     {{ form.category }}
                     {% if form.category.errors %}
                     <span class="form__error">{{ form.category.errors.0 }}</span>
@@ -51,7 +52,7 @@
                 </div>
 
                 <div class="form__group">
-                    <label for="id_subcategory" class="form__label">Подкатегория</label>
+                    <label for="id_subcategory" class="form__label">{% trans 'Подкатегория' %}</label>
                     {{ form.subcategory }}
                     {% if form.subcategory.errors %}
                     <span class="form__error">{{ form.subcategory.errors.0 }}</span>
@@ -59,9 +60,30 @@
                 </div>
             </div>
 
+            <div class="form__group" id="service-questionnaire"
+                 aria-live="polite" data-url-base="/api/questionnaire/">
+                <h2>{% trans 'Уточняющие вопросы' %}</h2>
+                {{ form.questionnaire_version }}
+                <div id="service-questionnaire-fields">
+                    {% for item in form.questionnaire_questions %}
+                    <div class="form__group" data-question-key="{{ item.key }}"
+                         {% if item.question.depends_on %}data-depends-key="{{ item.question.depends_on.key }}"
+                         data-depends-equals="{{ item.question.depends_on.equals }}"{% endif %}>
+                        <label class="form__label" for="{{ item.field.id_for_label }}">
+                            {{ item.field.label }}{% if item.question.required %} *{% endif %}
+                        </label>
+                        {{ item.field }}
+                        {% for error in item.field.errors %}
+                        <span class="form__error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="form__row">
                 <div class="form__group">
-                    <label for="id_city" class="form__label">Город *</label>
+                    <label for="id_city" class="form__label">{% trans 'Город *' %}</label>
                     {{ form.city }}
                     {% if form.city.errors %}
                     <span class="form__error">{{ form.city.errors.0 }}</span>
@@ -69,7 +91,7 @@
                 </div>
 
                 <div class="form__group">
-                    <label for="id_address" class="form__label">Адрес *</label>
+                    <label for="id_address" class="form__label">{% trans 'Адрес *' %}</label>
                     {{ form.address }}
                     {% if form.address.errors %}
                     <span class="form__error">{{ form.address.errors.0 }}</span>
@@ -78,50 +100,154 @@
             </div>
 
             <div class="form__group">
-                <label for="id_description" class="form__label">Описание задачи *</label>
+                <label for="id_description" class="form__label">{% trans 'Описание задачи *' %}</label>
                 {{ form.description }}
                 {% if form.description.errors %}
                 <span class="form__error">{{ form.description.errors.0 }}</span>
                 {% endif %}
-                <span class="form__hint">Минимум 30 символов</span>
+                <span class="form__hint">{% trans 'Минимум 30 символов' %}</span>
             </div>
 
             <div class="form__group">
-                <label for="id_price" class="form__label">Бюджет</label>
+                <label for="id_price" class="form__label">{% trans 'Бюджет' %}</label>
                 {{ form.price }}
-                <span class="form__hint">Оставьте пустым, если цена договорная</span>
+                <span class="form__hint">{% trans 'Оставьте пустым, если цена договорная' %}</span>
             </div>
 
             <button type="submit" class="btn btn--primary btn--lg">
-                Отправить заявку
+                {% trans 'Отправить заявку' %}
             </button>
         </form>
     </div>
 </section>
 
+{% trans '— Не выбрана —' as unselected_label %}
+{% trans '— Загрузка... —' as loading_label %}
 <script>
-document.getElementById('id_category').addEventListener('change', function() {
-    var categoryId = this.value;
-    var subcategorySelect = document.getElementById('id_subcategory');
-    subcategorySelect.innerHTML = '<option value="">— Загрузка... —</option>';
+(function () {
+    const category = document.getElementById('id_category');
+    const subcategory = document.getElementById('id_subcategory');
+    if (!category || !subcategory) return;
 
-    if (!categoryId) {
-        subcategorySelect.innerHTML = '<option value="">— Не выбрана —</option>';
-        return;
+    const notSelected = '{{ unselected_label|escapejs }}';
+    const loading = '{{ loading_label|escapejs }}';
+    const servicePanel = document.getElementById('service-questionnaire');
+    const serviceFields = document.getElementById('service-questionnaire-fields');
+    const hiddenVersion = document.getElementById('id_questionnaire_version');
+
+    function clearQuestionnaire() {
+        serviceFields.replaceChildren();
+        hiddenVersion.value = '';
+    }
+    function manageDependencies() {
+        serviceFields.querySelectorAll('[data-depends-key]').forEach(function (row) {
+            const parent = serviceFields.querySelector('[name="q_' + row.dataset.dependsKey + '"]');
+            if (!parent) {
+                row.hidden = true;
+                return;
+            }
+            const expected = row.dataset.dependsEquals;
+            const visible = parent.value === expected || (
+                parent.value === 'true' && expected === 'True'
+            ) || (parent.value === 'false' && expected === 'False');
+            row.hidden = !visible;
+            row.querySelectorAll('input,select,textarea').forEach(function (input) {
+                input.disabled = !visible;
+            });
+        });
+    }
+    function renderQuestionnaire(data) {
+        clearQuestionnaire();
+        if (!data || !data.version) return;
+        hiddenVersion.value = String(data.version);
+        data.questions.forEach(function (question) {
+            const row = document.createElement('div');
+            row.className = 'form__group';
+            row.dataset.questionKey = question.key;
+            const label = document.createElement('label');
+            const fieldId = 'id_q_' + question.key;
+            label.className = 'form__label';
+            label.htmlFor = fieldId;
+            label.textContent = question.label + (question.required ? ' *' : '');
+            row.append(label);
+            let field;
+            if (question.type === 'single' || question.type === 'boolean') {
+                field = document.createElement('select');
+                field.append(new Option('—', ''));
+                const choices = question.options;
+                choices.forEach(function (option) {
+                    field.add(new Option(option.label, option.value));
+                });
+            } else if (question.type === 'multiple') {
+                field = document.createElement('div');
+                question.options.forEach(function (option) {
+                    const optionLabel = document.createElement('label');
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.name = 'q_' + question.key;
+                    cb.value = option.value;
+                    optionLabel.append(cb, document.createTextNode(' ' + option.label));
+                    field.append(optionLabel);
+                });
+            } else {
+                field = document.createElement('input');
+                field.type = question.type === 'date' ? 'date'
+                    : question.type === 'number' ? 'number' : 'text';
+                if (question.type === 'text') field.maxLength = 500;
+                if (question.type === 'number') field.step = '0.01';
+            }
+            if (question.type !== 'multiple') {
+                field.name = 'q_' + question.key;
+                field.id = fieldId;
+            }
+            row.append(field);
+            if (question.depends_on) {
+                row.dataset.dependsKey = question.depends_on.key;
+                row.dataset.dependsEquals = String(question.depends_on.equals);
+            }
+            serviceFields.append(row);
+        });
+        manageDependencies();
     }
 
-    fetch('/api/subcategories/' + categoryId + '/')
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            var html = '<option value="">— Не выбрана —</option>';
-            data.forEach(function(item) {
-                html += '<option value="' + item.id + '">' + item.name + '</option>';
+    serviceFields.addEventListener('change', manageDependencies);
+    subcategory.addEventListener('change', function () {
+        clearQuestionnaire();
+        if (!subcategory.value) return;
+        const selectedId = subcategory.value;
+        fetch('/api/questionnaire/' + encodeURIComponent(selectedId) + '/')
+            .then(function (response) {
+                if (!response.ok) throw new Error('Request failed');
+                return response.json();
+            })
+            .then(function (data) {
+                if (subcategory.value === selectedId) renderQuestionnaire(data);
+            })
+            .catch(clearQuestionnaire);
+    });
+    manageDependencies();
+
+    category.addEventListener('change', function () {
+        clearQuestionnaire();
+        const selectedId = category.value;
+        subcategory.replaceChildren(new Option(selectedId ? loading : notSelected, ''));
+        if (!selectedId) return;
+
+        fetch('/api/subcategories/' + encodeURIComponent(selectedId) + '/')
+            .then(function (response) {
+                if (!response.ok) throw new Error('Request failed');
+                return response.json();
+            })
+            .then(function (items) {
+                subcategory.replaceChildren(new Option(notSelected, ''));
+                items.forEach(function (item) {
+                    subcategory.add(new Option(item.name, String(item.id)));
+                });
+            })
+            .catch(function () {
+                subcategory.replaceChildren(new Option(notSelected, ''));
             });
-            subcategorySelect.innerHTML = html;
-        })
-        .catch(function() {
-            subcategorySelect.innerHTML = '<option value="">— Не выбрана —</option>';
-        });
-});
+    });
+}());
 </script>
 {% endblock %}

@@ -11,9 +11,35 @@ import ipaddress
 from django.conf import settings
 from django.db import DatabaseError, connection
 from django.http import HttpResponse
+from django.middleware.locale import LocaleMiddleware
+from django.utils import translation
+from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
 
 from apps.accounts.models import SensitivePostCounter
+
+
+class LegacySafeLocaleMiddleware(LocaleMiddleware):
+    """Keep all unprefixed 404s as 404 after adding optional i18n catalog.
+
+    Django's LocaleMiddleware otherwise tries to turn *any* unprefixed 404
+    into /ru/... or /he/... if the pattern resolves. That would unexpectedly
+    redirect legacy URLs (including non-existent or former PSEO paths).
+    Language activation and response headers still behave normally.
+    """
+
+    def process_response(self, request, response):
+        if (
+            response.status_code == 404
+            and not translation.get_language_from_path(request.path_info)
+        ):
+            patch_vary_headers(response, ('Accept-Language',))
+            response.headers.setdefault(
+                'Content-Language', translation.get_language(),
+            )
+            return response
+        return super().process_response(request, response)
+
 
 
 class DynamicHtmlNoStoreMiddleware:

@@ -3,7 +3,7 @@ name: Django CI
 on:
   push:
     branches:
-      - stage-01-development
+      - 'stage-*'
   pull_request:
     branches:
       - main
@@ -91,6 +91,77 @@ jobs:
         run: |
           python manage.py migrate --noinput
           python manage.py migrate --check
+
+      - name: Stage 02.1 catalog seed round-trip on isolated CI PostgreSQL
+        run: |
+          python manage.py seed_service_catalog --plan
+          python manage.py seed_service_catalog
+          python manage.py seed_service_catalog --check
+          python manage.py seed_service_catalog
+          python manage.py seed_service_catalog --check
+          python manage.py shell -c "from apps.marketplace.models import ServiceSection, Category, Subcategory; counts = (ServiceSection.objects.count(), Category.objects.count(), Subcategory.objects.count()); assert counts == (12, 19, 88), counts; print('STAGE_02_1_CATALOG_SEED_PASS', counts)"
+
+      - name: Stage 02.2 city/district seed round-trip on isolated CI PostgreSQL
+        run: |
+          python manage.py seed_israel_cities --plan
+          python manage.py seed_israel_cities
+          python manage.py seed_israel_cities --check
+          python manage.py seed_israel_cities
+          python manage.py seed_israel_cities --check
+          python manage.py shell -c "from apps.locations.models import District, City, CityAlias; counts = (District.objects.count(), City.objects.count(), CityAlias.objects.count()); assert counts == (6, 25, 4), counts; print('STAGE_02_2_GEO_SEED_PASS', counts)"
+
+      - name: Stage 02.5 versioned questionnaire seed on isolated PostgreSQL
+        run: |
+          python manage.py seed_demo_questionnaires --plan
+          python manage.py seed_demo_questionnaires --publish
+          python manage.py seed_demo_questionnaires --check
+          python manage.py seed_demo_questionnaires --publish
+          python manage.py shell -c "from apps.marketplace.models import ServiceQuestionnaire, QuestionnaireVersion; counts = (ServiceQuestionnaire.objects.count(), QuestionnaireVersion.objects.count()); assert counts == (4, 4), counts; print('STAGE_02_5_QUESTIONNAIRES_PASS', counts)"
+
+      - name: Stage 02.5 questionnaire version and private answer regressions
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_questionnaires
+
+      - name: Stage 02.3 English/Hebrew locale regression tests
+        run: |
+          python manage.py test core.tests.test_i18n
+
+      - name: Stage 02.4 add-only multilingual public URL regression tests
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_i18n_urls
+
+      - name: Stage 02.6 integrated identity, seed and i18n regressions
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_integration
+
+      - name: Stage 02 Ashdod-only public pilot regression tests
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_ashdod_pilot
+
+      - name: Install pinned isolated Chrome driver for mobile viewport checks
+        run: |
+          python -m pip install playwright==1.56.0
+
+      - name: Stage 02.6 browser mobile RTL smoke (isolated synthetic CI)
+        # Public-browser checks must exercise the real Ashdod-only policy;
+        # historical multi-city unit tests run separately in general test mode.
+        env:
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8765 > /tmp/stage02-django-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage02_mobile_rtl_smoke.py
+
+      - name: Upload Stage 02.6 screenshots for independent visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage02-mobile-rtl-screenshots
+          path: zemipro_web/artifacts/stage02-mobile-rtl/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Run Django suite with service coverage gate
         run: |

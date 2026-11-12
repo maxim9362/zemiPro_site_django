@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
+from django.utils.translation import gettext as _
 
 from .forms import ClientProfileForm, RegistrationForm, WorkerProfileForm
 from .services import (
@@ -30,7 +31,7 @@ def client_profile_view(request):
         form = ClientProfileForm(request.POST, instance=profile)
         if form.is_valid():
             create_or_update_client_profile(request.user, form.cleaned_data)
-            messages.success(request, 'Профиль клиента сохранён.')
+            messages.success(request, _('Профиль клиента сохранён.'))
             return redirect('marketplace:client_dashboard')
     else:
         initial = {}
@@ -52,7 +53,7 @@ def worker_profile_view(request):
         form = WorkerProfileForm(request.POST, instance=profile)
         if form.is_valid():
             create_or_update_worker_profile(request.user, form.cleaned_data)
-            messages.success(request, 'Профиль мастера сохранён.')
+            messages.success(request, _('Профиль мастера сохранён.'))
             return redirect('marketplace:worker_dashboard')
     else:
         initial = {}
@@ -62,6 +63,8 @@ def worker_profile_view(request):
                 'contact': profile.contact,
                 'description': profile.description,
                 'skills': profile.skills.all(),
+                'service_cities': profile.service_cities.all(),
+                'offers_remote': profile.offers_remote,
                 'receive_notifications': profile.receive_notifications,
             }
         form = WorkerProfileForm(initial=initial)

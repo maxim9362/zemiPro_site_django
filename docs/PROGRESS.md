@@ -3,6 +3,8 @@
 > Начальная редакция: 2026-11-05
 > Источник статусов: docs/ROADMAP.md и docs/DEVELOPMENT_PLAN.md
 
+**Текущий продуктовый scope (2026-11-12): первый публичный пилот ZemiPro — ТОЛЬКО АШДОД.** Все упоминания «25-city pilot» ниже относятся к ранее рассмотренной, **отменённой** версии решения или к 25 техническим City-записям (не 25 обслуживаемым городам). Национальное покрытие CBS — только после отдельного разрешения владельца. CI Ashdod-only PASS на `f21444d7` (12/12 targeted, 163/163 Django, Chrome 45/45); новый Codex review, HE/UX/mobile и release-гейты остаются открытыми.
+
 ## Историческое исходное состояние 2026-11-05
 
 - Этапы: 0 из 13 подтверждены в новой программе.
@@ -377,3 +379,196 @@
 - **Приёмочный статус:** `LOCAL_VERIFIED / ACCEPTED_FOR_STAGE_02`. Это подтверждение пригодности для продолжения локальной разработки, **не** `DONE` всей внешней/production инфраструктуры.
 - **Обязательства при будущей подготовке к релизу:** off-host зашифрованный backup и восстановление, реальная доставка alert, branch protection для `main`, публичный staging HTTPS/TLS, реальные p50/p95/RSS на сервере и визуальный HE RTL. Всё `DEFERRED / NOT_VERIFIED`, а не `PASS`.
 - **Ограничения:** Merge только кода, никакого автоматического deploy, миграций на VPS, DNS/Cloudflare, изменения prod БД или создания настоящего staging без отдельного разрешения.
+
+## 2026-11-11 — Stage 01 merged; Stage 02 branch kickoff
+
+- **Stage 01:** PR [#7](https://github.com/maxim9362/zemiPro_site_django/pull/7) **MERGED** into `main`, merge SHA `7202ce1f8f1a6697d9bc6db878666ee719de7017`. Before merge, GitHub Django CI #43080172545 and staging smoke #43080172542 **PASS** on `e5cfbf2`. Stage 01 remains `LOCAL_VERIFIED / ACCEPTED_FOR_STAGE_02`, with external production gates not yet verified and deliberately deferred.
+- **Stage 02:** created branch `stage-02-catalog-localization` **directly from merged main** at `7202ce1`. One branch for all stage 02 substages, one final PR at stage completion; do not open a PR for every substage. Work continues in this ChatGPT development chat; isolated Windows Codex runs tests/reviews.
+- **Sequence:** 02.1 catalog `Category/Subcategory`, verified RU/EN/HE fields and idempotent synthetic seed; 02.2 city/service geography; 02.3 translations & Hebrew RTL; 02.4 localized public catalogue URLs; 02.5 editable service questions; 02.6 import/i18n regression tests and integration review.
+- **Constraints:** no import from Telegram, PSEO or legacy DB; no lost IDs, slugs or existing orders; no arbitrary modifications to the four approved frontend HTML designs; keep public SEO pages accessible; register to create orders; preserve privacy; no production/DNS/VPS/Cloudflare or real-data migrations. Changes are incremental within the single stage branch, with targeted tests and docs per substage.
+- **02.1 state:** `NOT_IMPLEMENTED` (branch and plan prepared only). Need inspect normative catalog TЗ and existing seed/model before proposing code changes; do not assume a category list from incomplete context.
+
+## 2026-11-11 — Stage 02.1: Django catalog baseline implemented, independent QA pending
+
+- **Branch:** `stage-02-catalog-localization`, stage rule one branch / one final PR.
+- **Schema:** additive `marketplace.0005_catalog_hierarchy`; 12-section `ServiceSection`; `Category.section` nullable for legacy preservation; localized names/descriptions/SEO and work modes at all three levels. Existing FK relations and IDs untouched.
+- **Seed:** explicit `seed_service_catalog`, pure manifest, 12 sections, 19 categories (including unchanged 8 pre-existing repair slugs), 88 services (including unchanged 56); --plan/--check, atomic get_or_create, fill-only blanks, fail-closed reparent and duplicate detection. Existing repair-only command stops mutating global seed data.
+- **UI/Admin:** section-grouped catalog with existing unassigned categories as fallback, localized label properties, inactive sections excluded from public catalog/order form, Django Admin editing. The four approved frontend HTML mockups are not changed.
+- **Coverage added:** idempotency, no changes to existing order/category PKs, Admin edit preservation, duplicate and section-conflict guards, three-language fallback, public visibility, legacy repair command repeatability.
+- **Status:** `IMPLEMENTED / CI_PENDING / LOCAL_CODEX_NOT_RUN`. No local Docker/PG tests run by ChatGPT; GitHub Actions to validate after push. New service taxonomy and Hebrew/English editorial quality require owner review before production; full RTL Stage 02.3.
+- **No actions:** no production/DNS/VPS/Cloudflare/real data migration, no PR, no merge.
+
+## 2026-11-11 — Stage 02.1 independent GitHub QA verified, code accepted
+
+- **One shared Draft PR:** [#8](https://github.com/maxim9362/zemiPro_site_django/pull/8), same `stage-02-catalog-localization` branch for all 02.1–02.6; no merge.
+- **Verified code SHA:** `91e665791ea832c64a1dd239865c7f3091eb1800`.
+- **GitHub Django CI:** [#43086273717](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273717) **SUCCESS**; Ruff/compileall, Django checks and `makemigrations --check --dry-run` PASS, isolated PostgreSQL `marketplace.0005_catalog_hierarchy` migration PASS; Django **92/92 tests PASS** including 11 new catalog tests. Service-only coverage `apps.marketplace.services` **89.5%**, not project-wide.
+- **Independent live seed execution on *ephemeral CI PostgreSQL*, never production:** `seed_service_catalog --plan` → 12/19/88; first seed created (12 sections, 19 categories, 88 services), second seed created (0,0,0); `--check` PASS twice; explicit SQL/model count assertion `STAGE_02_1_CATALOG_SEED_PASS (12,19,88)`.
+- **Docker staging smoke:** [#43086273848](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273848) **SUCCESS**, isolated localhost Caddy/PostgreSQL/backup checks.
+- **Acceptance:** `02.1 CODE_DONE / CI_VERIFIED`. Technical scope complete on synthetic CI database. `EDITORIAL_REVIEW_PENDING` for the 11 newly proposed categories and translated catalog wording (native Hebrew proofread before public release). No real-user database import, no deployment, no PR merge.
+- **Next:** 02.2 city/geographic coverage and service zones; reuse stage branch and Draft PR #8. Test suite may expand; full stage 02 acceptance only after 02.6.
+
+## 2026-11-11 — Stage 02.2 geography and service zones implemented (CI pending)
+
+- **Branch/PR:** `stage-02-catalog-localization` / single [Draft #8](https://github.com/maxim9362/zemiPro_site_django/pull/8). No merge or production changes.
+- **Additive schema:** `locations.0002_district_city_alias` creates 6 canonical statistical District keys + CityAlias, adds nullable City.district. `accounts.0004_worker_service_zones` creates `WorkerProfile.service_cities` M2M and `offers_remote=False`. No data migration or rewrite of City PK/slugs, user profiles, orders or worker skills.
+- **Curated seed:** existing Django 25 cities preserved as original stable slugs; English/Hebrew names added, 6 districts and 4 non-shadowing alternate slug aliases. `seed_israel_cities --plan/--check` read-only, default atomic fill-missing-only, preservers admin edits/is_active; fails closed on re-parenting or alias collisions. **These are 25 internal technical city records, NOT the approved public pilot geography and NOT Israel's complete locality register.**
+- **Matching:** service zones are explicit selectable City PKs; if an existing profile has no explicit zones, the existing home City acts as sole fallback. Remote opt-in matches only categories that explicitly support `online`/`both`. Public city/category searches and new-order feed use those zones; unrelated cities and onsite-only remote jobs are excluded. Private order access rules are unchanged.
+- **Forms/Admin:** worker form controls cities + remote flag with validation; public profile shows service locations (not contacts); City/District/Alias editing in admin, localized names with RU fallback.
+- **Coverage written:** 13 targeted tests for seed idempotency, existing IDs/admin edits, atomic conflict, alias collision, translations, legacy fallback, multi-city search, remote compatibility, form tampering and geo-specific job feed. **Not yet independently executed**, no claim of PASS.
+- **Source reference:** Israel CBS [2022 census](https://census.cbs.gov.il/en) and [2023 localities dataset](https://data.gov.il/he/datasets/lamas/localities-in-israel/d47a54ff-87f0-44b3-b33a-f284c0c38e5a). Native Hebrew name review and nationally complete locality import remain open before public full coverage.
+- **Next gate:** GitHub Django CI migrations/Ruff/13 tests and repeated seeded isolated PG counts `6/25/4`; isolated Docker smoke; document results before `CODE_VERIFIED`.
+
+## 2026-11-11 — Stage 02.2 GitHub QA PASS; technical geography accepted
+
+- **Verified code SHA:** `51bc4525fcfbf3dfec9f1edd8c3e12cb0022f58a`, shared [Draft PR #8](https://github.com/maxim9362/zemiPro_site_django/pull/8).
+- **Django CI:** [#43090165800](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43090165800) **SUCCESS**: Ruff, Django checks, `makemigrations --check --dry-run`, PostgreSQL `locations.0002_district_city_alias` + `accounts.0004_worker_service_zones` applied cleanly, **106/106 tests PASS**; target-only `apps.marketplace.services` coverage **94.0%** (not entire project).
+- **Isolated PostgreSQL geo seed:** plan 6 districts / 25 cities / 4 aliases, first seed created `6/25/4`, second created `0/0/0`, two `--check` runs PASS, model counts assertion `STAGE_02_2_GEO_SEED_PASS (6, 25, 4)`. Preserves city FK identity and prior admin edits in tests. Catalog seed 02.1 round-trip also PASS.
+- **Staging smoke:** [#43090165776](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43090165776) **SUCCESS** (disposable runner, not public HTTPS).
+- **Alias collision hardening:** canonical City.slug and CityAlias.slug cross-table conflicts rejected by admin form validation and seed guards; test added. No production input or site changes.
+- **Status:** `02.2 CODE_DONE / CI_VERIFIED / NATIONAL_COVERAGE_PENDING`. Technical service-zone and remote search functionality verified. 25 cities are an explicit pilot subset, **not** a claim of complete Israeli locality coverage; need official complete registry and editorial RU/EN/HE translations, plus full UI localization in 02.3.
+- **Next:** 02.3 three-language interface and mobile Hebrew RTL, within same stage branch / one Draft PR. No merge or deploy.
+
+## 2026-11-11 — Stage 02.3 Django i18n/RTL implementation, CI pending
+
+- **Draft PR #8**, `stage-02-catalog-localization`; single stage branch unchanged. `main`, VPS, production, DNS, existing orders and original 4 approved frontend mockups untouched.
+- **Language layer:** existing `LocaleMiddleware` + `LOCALE_PATHS`, Django `set_language` via CSRF-protected POST/cookie and current path/query `next`; do not introduce `/ru/` prefixes until 02.4. Page language/dir is set server-side.
+- **Translation catalogs:** Django RU source strings in main templates, compiled `locale/en,he/LC_MESSAGES/django.mo` and corresponding editable `.po`; form labels/choices/validation and notification templates use active language at render time. User-supplied text remains in original language, with `dir=auto`; no automatic translation of personal chat/requests.
+- **RTL CSS:** logical margins/padding, neutral phone/email/budget bidi, responsive 390/768 width baseline; **static CSS checks only**, not actual screenshots or device/browser measurements. Approved 4 front-end mockups remain untouched.
+- **Safety:** category dependent select uses localized public JSON endpoint and DOM `new Option` rather than untrusted HTML; order prices stored with canonical legacy fallback unchanged; notification event translations do not rewrite stored notification rows.
+- **Tests:** 10 targeted trilingual regression tests added (home/catalog/cities/registration, safe switch redirect, forms validation and localized choices, API JSON, user data invariance, system notification, static RTL selectors).
+- **Status:** `IMPLEMENTED / CI_PENDING / MOBILE_VISUAL_PENDING / HEBREW_EDITORIAL_PENDING`. Do not call 02.3 DONE until GitHub Actions PASS and mobile screenshot/content gates resolved or accepted for later 02.6.
+
+
+- **Post-implementation static review 2026-11-11:** 20 main Django templates audited for unlocalized Russian UI literals: only the language selector's proper name `Русский` remains. Editable EN/HE `.po` and compiled binary `.mo` catalog contents are aligned (249 messages in each language). New automated regression checks PO/MO binary parity with `gettext.GNUTranslations` (10 targeted i18n tests in total). **GitHub Actions still QUEUED; tests have not executed on the current SHA**. Last checked head `9e35c3c2d5bca09071f67adc3bf6412740580ea0`. CI and Android/mobile visual RTL remain non-verified.
+
+## 2026-11-12 — Stage 02.4 add-only localized public catalog routes (QA pending)
+
+- **Same Draft PR #8**, branch `stage-02-catalog-localization`; no merge/deploy.
+- Added `catalog_i18n` routes under Django `i18n_patterns` for sections, categories, subcategories, cities, lists (`ru/en/he`); existing unprefixed routes and privileged endpoints untouched.
+- One stable model PK + slug across all languages. For service detail, category slug is included because subcategory slug is category-scoped.
+- Additive templates and catalog links keep their language; language switch uses Django `set_language` to translate the current prefixed path and retain query string.
+- New prefixed routes only: absolute `canonical`, reciprocal `hreflang`, `noindex,follow` by default. Explicit config flag remains off and thin pages remain noindex; production SEO/PSEO URL mappings are not changed.
+- Prefixed known CityAlias → exact canonical city 301, unknown/inactive returns 404. Unprefixed legacy aliases keep their old 404 behavior; no guessed redirects.
+- Tests written: 9 targeted test methods, covering 6 × 3 route matrix, same object identity, SEO/canonical, 404/301, query preservation, default index guard and private data exclusion. **Not executed** until GitHub Actions complete.
+- **02.3 QA still pending:** GitHub runners for that commit did not execute (last seen `queued`); 02.4 does not inherit its PASS.
+- **Status**: `02.4 IMPLEMENTED / CI_PENDING / MOBILE_VISUAL_PENDING`. Real domain/Cloudflare unchanged. Next stage after QA: 02.5.
+- **Legacy 404 safeguard:** `LegacySafeLocaleMiddleware` prevents Django's automatic unprefixed-404 to prefixed-path redirect, preserving unknown legacy/PSEO paths. Regression checks verify old unknown category/city URLs still return 404 even for Hebrew Accept-Language.
+- **CI findings (initial SHA 3d96a536):** Stage 02.3 localized tests **10/10 PASS**; Stage 02.4 targeted set **FAILED** (12 errors from test-only `resolve()` active-language mismatch, 1 redirect failure from `set_language` source locale, 1 legacy-404 failure from stock locale middleware); initial Docker staging smoke **SUCCESS**. Fixed within same branch: source-language-aware wrapper around Django `set_language`, 404-safe locale subclass, and route test using `translation.override(language)`. Await corrected HEAD CI; do not claim 02.4 PASS from failed earlier run.
+
+## 2026-11-12 — Stage 02.4 fully verified in isolated GitHub CI
+
+- **Verified code SHA:** `8d7427d4641c82283861ad5ea9fdc0fc1952e3b5`, Draft PR #8.
+- [Django CI #43155367524](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155367524) **SUCCESS**: 02.3 `10/10 PASS`, 02.4 `9/9 PASS`, full Django `125/125 PASS`, Ruff PASS, `makemigrations --check` PASS, PostgreSQL migrations PASS, catalog/geography seed round-trips PASS, targeted service coverage `94.0%`.
+- [Ephemeral Docker staging smoke #43155367578](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43155367578) **SUCCESS**, synthetic infrastructure only.
+- 02.4 fixes: restore original unprefixed 404, ensure `resolve()` tests run under selected language, wrap Django's `set_language` with validated source-language activation for no-cookie visits to `/he/...`.
+- **02.4:** `CODE_DONE / CI_VERIFIED / INDEXING_DISABLED_BY_DEFAULT`. **02.3:** code CI-verified, still `MOBILE_VISUAL_PENDING / HEBREW_EDITORIAL_PENDING`. No PSEO redirects, sitemap/robots, production-domain changes, deployment, merge or user data migration.
+- **Next:** 02.5 configurable service questions in same branch/PR, after recording this verification. Full 02 gate remains pending 02.5/02.6 and outstanding reviews.
+
+## 2026-11-12 — Stage 02.5 configurable questionnaires implemented, independent QA pending
+
+- Shared `stage-02-catalog-localization` / Draft PR #8, no merge/deploy.
+- Additive migration `marketplace.0006_versioned_questionnaires`: ServiceQuestionnaire editable JSON draft per Subcategory, QuestionnaireVersion published immutable snapshot, OrderQuestionnaireAnswer private per-order versioned answer snapshot. Existing Order rows/PK/FKs remain untouched.
+- Django Admin explicitly publishes new versions through `publish_questionnaire` under `select_for_update` and atomic transaction. Re-publishing unchanged draft is idempotent; direct admin modification/deletion of published versions and order snapshots disabled.
+- Validation: up to 20 questions, six types (text/single/multiple/number/date/boolean), RU/EN/HE labels, stable value IDs and bounded options, one-level earlier single/boolean dependency, client cannot select unpublished/unknown choices or save a stale version.
+- Authenticated order creation stores Order+answers in same DB transaction; existing orders with no questionnaire remain valid. Only owner/authorized designated worker sees answers via existing `can_view_private_order_details`. Public API returns only published questions and allowed option identifiers; dynamic client widgets do not use `innerHTML`.
+- Optional operator-invoked `seed_demo_questionnaires` for plumbing, math tutoring, landing pages, event photography; `--plan`, `--check`, `--publish`, no production auto-seed or overwriting administrator drafts. Four drafted demonstrations are provisional content.
+- Added 15 targeted tests: invalid schemas, idempotent revisions, immutable old versions/answers, tamper resistance, conditional questions, multi-language API, privacy, legacy order behavior and demo seed re-run. EN/HE gettext catalogs updated to 257 entries.
+- `02.5 IMPLEMENTED / QA_PENDING` until GitHub CI Django/migrations/seed/full suite and Docker smoke succeed. Native Hebrew editorial review and mobile RTL visual checks remain for Stage 02.6. No Docker/production credentials changed.
+
+## 2026-11-12 — Stage 02.5 technical acceptance on GitHub Actions
+
+- **Code SHA:** `22297226d781a43f3279386f9bdec2ed0aaf374d`, same Draft PR #8.
+- [Django CI #43156737078](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43156737078) **SUCCESS**: migration `marketplace.0006_versioned_questionnaires`, Ruff, `makemigrations --check`, 15/15 targeted questionnaire tests, 10/10 i18n, 9/9 localized URLs, **140/140 complete Django suite**, target service-layer coverage 94.0%.
+- Isolated CI PG seed: `seed_demo_questionnaires --plan`, first `--publish` = 4 drafts + 4 versions, `--check` PASS, second `--publish` = 0 new drafts and 0 new versions, model counts `(4,4)` asserted. The regular catalog 12/19/88 and geography 6/25/4 repeated checks also PASS.
+- [Docker staging smoke #43156737097](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43156737097) **SUCCESS** on disposable GitHub runner; not public staging deployment.
+- **02.5 `CODE_DONE / CI_VERIFIED`.** Technical versioned questionnaires accepted. Sample wording/HE translations remain editorial-pending and real mobile browser/RTL screenshots remain Stage 02.6 gates. No real contacts/order data read or altered; no production/domain/VPS changes; PR stays Draft.
+- **Next:** 02.6 integrated Stage 02 verification, including official national locality and Hebrew editorial completeness decisions, with separate Codex Cloud final review.
+
+## 2026-11-12 — Stage 02.6 integration QA implementation
+
+- **Branch/PR:** stage-02-catalog-localization, existing Draft PR #8. No new branch/PR and no merge.
+- **Implemented:** Django integration coverage for all three seed manifests, stable catalog and city IDs/foreign keys, synthetic historic order/answer snapshot, editor overrides, collision rejection, privacy, route/menu/form and language-switch behavior in RU/EN/HE.
+- **Browser smoke:** separate headless Chrome emulator on GitHub-hosted runner checks 320/360/375/390/768 pixel viewports for catalog/cities/authenticated order form, rtl/ltr HTML and CSS, horizontal overflow, phone field direction; screenshots retained for manual review. This is not a real Android or iPhone test.
+- **Historical status at the initial implementation commit (before CI):** tests were pending; superseded by 2026-11-12 results below. Independent Code Review of the original SHA produced `CHANGES_REQUIRED` (ZP-02-001), now addressed in a later code commit.
+- **Remaining gates:** independent visual review of screenshots and native Hebrew editorial validation of new 11 categories, **Ashdod** city labels and 4 demo forms (earlier multi-city review was a superseded plan). Full official national localities, external staging HTTPS, off-host backup, alerts, credential rotation and branch protection are not implied complete by Stage 02 CI.
+- **Next (historical):** initial CI and independent review were required; see current verified status below. No live DB/VPS/DNS/production changes.
+
+## 2026-11-12 — Stage 02.6 final integration CI and Codex finding ZP-02-001
+
+- **Independent Codex Cloud assessment of SHA `127a9d7e3ea8039f093d85e34bd184c365486587`:** `CHANGES_REQUIRED`. Reproduced `ZP-02-001` (MEDIUM/BLOCKER): with indexing flag enabled, incomplete translated category/city lists could be indexed; translated description fallback likewise failed to prevent thin indexed details. Documentation status `ZP-02-002` (LOW/NON-BLOCKER) needed refresh.
+- **Correction SHA:** `067da9da669a9c66645404b1ec293cada1144f74`, existing `stage-02-catalog-localization` and Draft PR #8. Added lazy indexability predicate (only evaluates under opt-in), RU/EN/HE names and required description coverage for *every displayed catalog/location entry*, without modifying display fallback, PK/FK, URLs, seed or production. Seven SEO regression tests reproduce missing EN/HE labels/descriptions, including section/category/city/district/service cross-links, and prove fully translated supplied pages can index only when explicitly enabled.
+- **GitHub [Django CI #43162334570](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162334570) SUCCESS on correction SHA:** 16/16 targeted 02.4 SEO tests, 4/4 Stage 02.6 integration, 10/10 i18n, 15/15 questionnaires, 45/45 Playwright Chrome viewport scenarios, **151/151 complete Django suite**, Ruff, migrations and seed repetitions PASS; coverage 94,0% of *targeted `apps.marketplace.services` only*, not whole repo.
+- **[Isolated Docker smoke #43162342520](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162342520) SUCCESS** on correction SHA; disposable CI environment only, not a publicly trusted staging host.
+- **Now:** `02.4 CODE_VERIFIED / ZP-02-001_FIXED / TARGETED_CODEX_RECHECK_PENDING`; `02.6 CI_VERIFIED / FINAL_ACCEPTANCE_OPEN`. Prior `QA_PENDING` and automated-test `NOT_RUN` entries are historical, not the current state.
+- **Remaining:** repeat *focused* Codex review of the new SEO guard and documentation; native Hebrew content/editorial approval (including 11 suggested categories, **Ashdod** and 4 demo forms) not obtained; earlier 25-city pilot was superseded; physical Android/iPhone `NOT_RUN`; national city registry incomplete; off-host backup, delivered alert, credential rotation, branch protection, public staging HTTPS and PSEO release plan pending. PR #8 **Draft / NOT_MERGED**; no VPS, production, DNS, Cloudflare or live user DB operations.
+
+## 2026-11-12 — Stage 02 focused Codex re-review: CODE_REVIEW_PASS
+
+- **Independently reviewed SHA:** `cad90a071a169a9d70d99629422ff852db610e7c` in the existing `stage-02-catalog-localization` branch / Draft PR #8. Final report: **`CODE_REVIEW_PASS`**, no new code blockers.
+- **`ZP-02-001 FIXED`:** lazy SEO indexability, all visible entities' RU/EN/HE names and required descriptions, whitespace/missing translations, default noindex, filtered/no-supply routes and legacy URL safety confirmed. Targeted independent run: Ruff, Django system check, migrations consistency, 16/16 SEO tests, canonical/hreflang and private contact marker PASS.
+- **`ZP-02-002 FIXED`:** ROADMAP, PROGRESS, STAGE_02_INTEGRATION and STAGE_02_LOCALIZED_URLS correctly distinguished historical outcomes from verified CI and open manual gates.
+- **Exact-SHA GitHub Actions:** [Django CI #43162656220](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656220) **SUCCESS** (151/151 full tests, 16/16 SEO, 45/45 Chrome, targeted service coverage 94.0%); [isolated Docker smoke #43162656363](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43162656363) **SUCCESS**. Codex deliberately did **not** repeat unchanged full suite / Chrome locally.
+- **Decision:** `STAGE_02_CODE_REVIEW_PASS / CI_VERIFIED / MANUAL_AND_INFRASTRUCTURE_GATES_OPEN`, **not** `STAGE_02_DONE` or permission to deploy/merge. This note updates documentation only after the reviewed SHA; source code remains unchanged.
+- **Manual gates:** native Hebrew proofreading; review of 11 new categories, **Ashdod** city content and four sample questionnaires; physical Android/iPhone NOT_RUN; complete national CBS city dataset; original CI screenshot artifact/UX final approval; verified legacy SEO URL inventory before Stage 08.
+- **External infrastructure gates:** off-host backups, delivered alerts, credential rotation, branch protection, publicly trusted staging HTTPS and production/DNS/Cloudflare/VPS rollout are unverified or require owner authorization. PR #8 remains **Draft / NOT_MERGED**.
+
+## 2026-11-12 — Shared isolated Stage 00–02 environment verified
+
+- **Branch/PR/base:** `stage-02-catalog-localization`, existing Draft PR #8; verified application baseline `632226b3e24601b4eb469172667ab89b21d6fe6a`. No new branch/PR, merge or deployment.
+- **Reusable tool:** `zemipro_web/scripts/shared_test_env.sh` reuses the existing development Compose with `start/verify/browser/report/stop`; project `zemipro-shared-test`, loopback ports 18000/15433, persistent volumes preserved by stop. Managed proxy CA is an optional BuildKit secret and is not copied into the image.
+- **Environment:** Python 3.12.14, Django 5.2.19, PostgreSQL 17.11, non-root Django container. Fresh migrations = 34. Normal full Compose restart preserved `34:12:25` migration/section/city counts.
+- **Automated result:** pip/compile/Ruff, Compose render, Django/system/migration/deploy checks, current-tree secret/legacy-runtime check, repeat seeds `12/19/88`, `6/25/4`, `4/4`, synthetic checksum dump/restore and full Django suite **151/151 PASS**. Targeted `apps.marketplace.services` coverage **94,0%**, not whole-project coverage.
+- **Browser:** real headless Chromium against the running site; home/catalog/section/category/service/cities/city/login/register/authenticated order form; RU/EN/HE; 320/360/375/390/768/1440 px; language switch, RTL/LTR, forms, phone/mixed text, HTTP/JS errors and overflow. **180/180 PASS**, 54 screenshots; sampled RU/EN/HE mobile/desktop images visually reviewed without clipping. Physical Android/iPhone = `NOT_RUN`.
+- **Stage matrix:** Stage 00 remains `CORE_VERIFIED / FOLLOW_UP_REQUIRED`; Stage 01 remains `LOCAL_VERIFIED / EXTERNAL_GATES_OPEN`; Stage 02 becomes `CODE_VERIFIED / SHARED_ENV_VERIFIED / MANUAL_GATES_OPEN`, not `DONE`.
+- **Open gates:** legacy credential provider revocation and return to 00.4 before Stage 08; native HE/editorial review of categories/cities/questionnaires; complete CBS national locality decision; physical devices and owner screenshot UX approval; branch protection, publicly trusted staging, delivered alerts, off-host backup and production rollout. Rootless Docker here has no cgroup enforcement, so staging memory limits are `NOT_RUN`.
+- **Documentation/artifacts:** `docs/SHARED_TEST_ENVIRONMENT.md`; local ignored report/screenshots under `zemipro_web/artifacts/shared-test-env/`. No GitHub Actions workflow was duplicated or replaced.
+
+## 2026-11-12 — Historical 25-city proposal (SUPERSEDED by later Ashdod-only approval)
+
+- **Historical, no longer valid public scope:** owner previously considered a pilot on **25 cities** with **6 districts and 4 aliases**, later replaced by **Ashdod-only**; implementation/test evidence unchanged (`seed_israel_cities` idempotent, stable IDs and slugs, 151/151 Django, 180/180 Chromium). This is **not** a claim of nationwide locality coverage or permission to launch.
+- **National expansion:** full official Israel CBS locality catalogue, deduplication, district/alias reconciliation, RU/EN/HE editorial review and preservation of existing identifiers are **`DEFERRED / REQUIRED_BEFORE_NATIONWIDE_ROLLOUT`**. Do not mark this nationwide deliverable `DONE`; no bulk import on production and no automatic insertion of unreviewed places. The original national requirement remains in `docs/TECHNICAL_SPEC.md`.
+- **Current Ashdod-only pilot release gates remain OPEN:** validate Hebrew with a qualified native-language reviewer, approve names/text for 11 proposed new categories, **Ashdod** and 4 sample questionnaires, test real Android/iPhone, owner acceptance of original screenshots and final UX. Only advertise/search places actually present and supported. The pilot scope is not approval of those contents or physical devices.
+- **Other pre-release / prior-stage obligations remain OPEN:** original legacy SEO URL inventory before Stage 08; credential revocation/rotation, off-host backup, independently confirmed alert delivery, branch protection, publicly trusted HTTPS staging, and authorized production/DNS/Cloudflare/VPS rollout. Rootless CI without cgroup enforcement is not real memory-limit validation. None are waived by the geographic decision.
+- **Historical status (SUPERSEDED):** `PILOT_25_APPROVED` was superseded by `ASHDOD_ONLY_PILOT_APPROVED`; **not `DONE`**. Single existing `stage-02-catalog-localization` branch and Draft PR #8; `main` and deployment unchanged. This update is documentation-only; no test run or user-data change is implied by it.
+- **Next owner decisions:** how to close or formally schedule the remaining HE/content/physical-device/UX checks and when to authorize PR review/merge. This message does **not** authorize Stage 03, merge, or deployment.
+
+## 2026-11-12 — Owner correction supersedes 25-city pilot: ASHDOD ONLY
+
+- **Newest explicit owner instruction supersedes the preceding 25-city scope approval:** the **first public ZemiPro pilot is only Ashdod (Ашдод)**. Ashkelon and the other 24 stored cities are NOT in the approved launch geography, even if present as active records in the technical catalogue. Do not market, display as available, or permit orders/services for those cities in the future live pilot.
+- **Do not destructively alter technical geography:** retain the existing 6 districts, 25 city records and 4 aliases in seed/test DB for foreign-key integrity, historical migrations, repeatable CI and future expansion. The national CBS scope remains `DEFERRED / REQUIRED_BEFORE_NATIONWIDE_ROLLOUT`.
+- **New implementation/release gate `ASHDOD_ONLY_PUBLIC_ACCESS_PENDING`:** current catalogue/UI is based on active City records and is **not yet guaranteed to enforce Ashdod-only availability**. Before any public pilot, implement server-side restriction for city lists/details (including localized and legacy routes), city selection in registration/order forms, order create/update, worker search/coverage and any relevant API. Non-Ashdod direct requests must be rejected or show clear not-yet-served status; merely hiding city options is insufficient. Preserve existing IDs/aliases/relations and test Ashdod positive + other-city negative cases in isolated PostgreSQL/Chromium. No code changes in this documentation-only commit.
+- **Other open gates remain unchanged:** qualified Hebrew/editorial review for public pilot content (Ashdod names, categories, demo questionnaires), physical Android/iPhone, owner's actual screenshot/UX acceptance, historic SEO inventory before Stage 08, credential rotation, off-host backup, real alert delivery, branch protection and publicly trusted HTTPS staging. Explicit owner permission still required for merge and deployment.
+- **Status:** `STAGE_02_CODE_VERIFIED_FOR_PREVIOUS_SCOPE / ASHDOD_ONLY_PILOT_APPROVED / ASHDOD_ONLY_PUBLIC_ACCESS_PENDING / MANUAL_AND_RELEASE_GATES_OPEN`. PR #8 remains Draft/NOT_MERGED; no new technical tests run for this owner-scope correction.
+
+## 2026-11-12 — Ashdod-only public code gate implemented and CI verified
+
+- Owner scope: **Ashdod only** for first public pilot; the 25-city/6-district/4-alias seed is retained as internal technical data, no deletes, migration or broken historical PK/FK.
+- Code SHA `43c0b561` and fix `28133a2f`: default normal settings fix `ZEMIPRO_PILOT_CITY_SLUG='ashdod'`; centralized `get_public_cities/city_is_public`; legacy/RU/EN/HE city routes and aliases reject other cities; city selectors, category worker discovery, worker profile visibility, client/worker profile service writes, order creation and new worker responses are server-restricted. Historical orders remain readable to authorized users.
+- General legacy multi-city regression tests remain in `DJANGO_ENV=test`; dedicated `@override_settings` tests enforce the **real Ashdod mode**. CI browser explicitly sets `ZEMIPRO_TEST_ASHDOD_ONLY=1`; this setting is test-only, not a production feature flag. An initial browser run failed on older `43c0b561` because CI synthetic settings included all cities; corrected in `28133a2f`.
+- [Django CI #43170333703](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43170333703) **SUCCESS**: 11/11 Ashdod-only tests, full **162/162 Django**, **45/45 Chrome**, Ruff/PG migration/seed PASS; **94.7% targeted marketplace.services coverage**, not whole-site coverage. [Docker staging smoke #43170341760](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43170341760) **SUCCESS**.
+- Independent targeted Codex review on this new scope: **PENDING**; previous `CODE_REVIEW_PASS` and expanded 180/180 shared browser were on an older code baseline. Native HE/content, physical devices, owner UX acceptance, nationwide CBS, off-host backup, alerts, legacy credentials, branch protection, real HTTPS staging and Stage 08 SEO inventory remain open.
+- Stage 02: `ASHDOD_SCOPE_CI_VERIFIED / TARGETED_CODEX_REVIEW_PENDING / MANUAL_AND_RELEASE_GATES_OPEN`, not `DONE`. PR #8 remains **Draft / NOT_MERGED**, no deployment or Stage 03 authorization.
+
+## 2026-11-12 — Final Ashdod-only code SHA `f21444d7`: all GitHub Actions PASS
+
+- After the previously verified `28133a2f`, the order-create address placeholder was changed from the Tel Aviv example to the existing localized generic “Адрес” label. Added a regression asserting no Tel Aviv example in the Ashdod-only order form. No migrations, seed changes or new application dependencies.
+- **Exact code SHA:** `f21444d72ab804bffca1dccc067d124ac97a5014`. [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111): **SUCCESS** — **12/12** Ashdod-only targeted, **163/163** full Django, **45/45** Chrome, Ruff/migrations/seed PASS, targeted service-layer coverage **94.7%**. [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632): **SUCCESS**.
+- CI evidence certifies isolated application behavior, not owner sign-off of original screenshots, real Android/iPhone, native HE, public infrastructure or entire national city catalogue. Independent **focused Codex review of the complete Ashdod-only diff remains PENDING**. PR #8 is still Draft/NOT_MERGED, Stage 02 not DONE, production unchanged.
+
+## 2026-11-12 — Owner-approved release-gate scheduling for Stage 00–02
+
+- **Explicit owner approval:** pending manual/editorial/real-device and infrastructure obligations are scheduled to be completed **BEFORE FIRST PUBLIC ASHDOD PILOT**, not during subsequent isolated backend development. **This is a scheduling change only: each remains OPEN/NOT_VERIFIED, never PASS or waived.**
+- **Stage 02 technical implementation:** `TECHNICAL_IMPLEMENTATION_COMPLETE / CI_VERIFIED` for Ashdod-only; code `f21444d7` passed 12/12 targeted, 163/163 Django, Chrome 45/45 and Docker smoke. Previous documentation SHA `e4776876` CI [#43172878784](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43172878784) and Docker smoke [#43172878734](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43172878734) both SUCCESS.
+- **Public-release conditions, still open:** native HE review of Ashdod and shared UI, 11 unapproved category texts, 4 demo questionnaires, real Android/iPhone, owner's actual screenshot/mobile UX approval, legacy credential rotation, off-host backup/restore, delivered monitoring alerts, branch protection, publicly trusted staging HTTPS, release rollback and explicit owner GO. See `docs/STAGE_02_RELEASE_GATES.md`.
+- **Nondeferrable technical condition:** independent **focused Codex review** of the new Ashdod-only diff on PR #8. An earlier CODE_REVIEW_PASS was for older code. Formal Stage 02 DONE still awaits that review and explicit owner-authorized PR acceptance/merge. Stage 00 PR #6 and Stage 01 PR #7 already MERGED; their release/follow-up obligations remain open.
+- **Different deadlines preserved:** Stage 00.4 and verified legacy SEO URL inventory **before Stage 08**; complete official CBS catalogue **before nationwide rollout** (not before first Ashdod public pilot).
+- **Status now:** Stage 00 `CORE_VERIFIED / FOLLOW_UP_REQUIRED`, Stage 01 `LOCAL_VERIFIED / EXTERNAL_RELEASE_GATES_OPEN`, Stage 02 `TECHNICAL_IMPLEMENTATION_COMPLETE / CI_VERIFIED / RELEASE_GATES_DEFERRED_BY_OWNER / TARGETED_CODEX_REVIEW_PENDING / PR_DRAFT`, **not DONE**, **not MERGED**, **not DEPLOYED**. No permission to start Stage 03 implied by release-gate decision.
+
+## 2026-11-12 — Independent final Ashdod-only review and remote-profile fix
+
+- Review baseline `36cfb9965d7cffe7a09cb68b252b0d8ba9761acc` exposed one HIGH boundary bypass: an existing worker profile based outside Ashdod could use `offers_remote` to appear in an online category and respond to an Ashdod order.
+- Fix `3a8e99886d108f401b2247a1b4a918d633e4d33d` keeps all historical rows but requires an Ashdod home profile for public discovery, order-feed access and response creation. A regression covers catalogue/profile visibility, GET/POST tampering and direct service calls.
+- Independent loopback PostgreSQL 17/Docker verification: 13/13 Ashdod-only; 164/164 full Django; Ruff, compile, checks, migrations, repeatable seeds, persistence and synthetic backup/restore PASS; targeted service coverage 95.2%; real Chromium 180/180 across RU/EN/HE and 320–1440 px, with 54 screenshots sampled. Physical devices remain NOT_RUN.
+- GitHub Actions for the forthcoming documentation HEAD are pending. PR #8 remains Draft/NOT_MERGED; native Hebrew/editorial, real-device, owner UX and infrastructure release gates remain OPEN.
+

@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Отзыв на заказ #{{ order.pk }} — ZemiPro{% endblock %}
+{% block title %}{% trans 'Отзыв на заказ' %} #{{ order.pk }} — ZemiPro{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Оставить отзыв мастеру</h1>
-        <p>Заказ #{{ order.pk }} · {{ order.category.name_ru }} · {{ order.worker }}</p>
+        <h1>{% trans 'Оставить отзыв мастеру' %}</h1>
+        <p>{% trans 'Заказ' %} #{{ order.pk }} · {{ order.category.localized_name }} · {{ order.worker }}</p>
     </div>
 </section>
 
@@ -24,7 +25,7 @@
             {% endif %}
 
             <div class="form__group">
-                <label for="id_rating" class="form__label">Оценка (от 1 до 5) *</label>
+                <label for="id_rating" class="form__label">{% trans 'Оценка (от 1 до 5) *' %}</label>
                 {{ form.rating }}
                 {% if form.rating.errors %}
                 <span class="form__error">{{ form.rating.errors.0 }}</span>
@@ -32,19 +33,19 @@
             </div>
 
             <div class="form__group">
-                <label for="id_review_text" class="form__label">Текст отзыва</label>
+                <label for="id_review_text" class="form__label">{% trans 'Текст отзыва' %}</label>
                 {{ form.review_text }}
                 {% if form.review_text.errors %}
                 <span class="form__error">{{ form.review_text.errors.0 }}</span>
                 {% endif %}
-                <span class="form__hint">Необязательно. Расскажите о качестве работы.</span>
+                <span class="form__hint">{% trans 'Необязательно. Расскажите о качестве работы.' %}</span>
             </div>
 
             <button type="submit" class="btn btn--primary btn--lg">
-                Отправить отзыв
+                {% trans 'Отправить отзыв' %}
             </button>
             <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-left: 12px;">
-                Назад
+                {% trans 'Назад' %}
             </a>
         </form>
     </div>

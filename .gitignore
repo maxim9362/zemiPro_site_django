@@ -17,8 +17,10 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+zemipro_web/artifacts/shared-test-env/
 venv/
 .venv/
+.venv-shared-test/
 env/
 *.egg-info/
 dist/

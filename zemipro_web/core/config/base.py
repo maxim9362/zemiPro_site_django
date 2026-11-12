@@ -27,7 +27,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
+    'core.middleware.LegacySafeLocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'core.middleware.DynamicHtmlNoStoreMiddleware',
     'core.middleware.SensitivePostThrottleMiddleware',
@@ -75,6 +75,12 @@ LANGUAGES = [
 ]
 TIME_ZONE = 'Asia/Jerusalem'
 USE_I18N = True
+LOCALE_PATHS = [BASE_DIR / 'locale']
+# New prefixed catalog pages remain noindex until explicit editorial/SEO approval.
+ZEMIPRO_CATALOG_INDEXING_ENABLED = env_bool('ZEMIPRO_CATALOG_INDEXING_ENABLED', False)
+# Owner-approved first public pilot: only Ashdod. Expansion requires a code review.
+# Not environment-overridable, so a production .env cannot silently open all cities.
+ZEMIPRO_PILOT_CITY_SLUG = 'ashdod'
 USE_TZ = True
 
 STATIC_URL = '/static/'

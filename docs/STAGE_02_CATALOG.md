@@ -1,0 +1,100 @@
+# ZemiPro — Stage 02.1: Django catalog hierarchy and seed
+
+**Status:** `CODE_DONE / CI_VERIFIED / EDITORIAL_REVIEW_PENDING`; all work lives on
+`stage-02-catalog-localization`. This is **not** a production deployment.
+
+## Scope and source of truth
+
+Based on `docs/TECHNICAL_SPEC.md` `REQ-CAT-001–004`:
+- **Section → Category → Subcategory/service** represented by
+  `ServiceSection`, `Category`, `Subcategory`; stable database IDs and slugs,
+  not translation-dependent identifiers.
+- RU/EN/HE names, descriptions, SEO title/description fields and work modes
+  (onsite/online/both) are stored in Django models and editable in Admin.
+- The dynamic order questionnaire is *not* implemented here; it belongs to
+  02.5. Deep unlimited nesting and localized public URLs are likewise later work.
+- All existing category and subcategory records are retained by additive
+  `0005_catalog_hierarchy`; `Category.section` starts **nullable** to avoid
+  rewriting any previously stored relationship.
+- Existing orders, responses, worker skills, category IDs and slugs are
+  preserved. No operation connects to or imports Telegram/PSEO/SQLite data.
+- The 12 section labels are taken directly from REQ-CAT-002. The 8 pre-existing
+  repair categories and 56 services/slugs remain as the Django baseline.
+  **11 additional sample categories / 32 services** are authored from scratch
+  to cover other sections. These names/translations are a **proposed initial
+  taxonomy, not yet final editorial or legal approval**; review before public
+  rollout. Content expands via Admin without code changes.
+- Admin can manually disable categories, modify labels, SEO metadata,
+  ordering or work modes; subsequent safe seeding does **not** undo those edits.
+  New categorization collisions fail closed. No data removal or re-parenting.
+
+## Operator commands (ONLY an approved isolated local/test PostgreSQL)
+
+From `zemipro_web/` with the correct `DJANGO_ENV`, check the database target
+before running any write operation:
+
+```bash
+python manage.py makemigrations --check --dry-run
+python manage.py migrate --plan
+python manage.py migrate --noinput
+python manage.py seed_service_catalog --plan
+python manage.py seed_service_catalog
+python manage.py seed_service_catalog --check
+python manage.py seed_service_catalog --check
+```
+
+- `--plan` validates source data and counts **without touching the DB**.
+- Default command is explicit/manual, atomic and idempotent; never auto-runs
+  from a migration, Docker entrypoint, or GitHub CI against any live DB.
+- `--check` reads the existing seeded DB and fails when required seed entries
+  or translations are missing; no writes.
+- Expected baseline when run on an initially empty isolated DB:
+  12 sections, 19 categories (8 existing Django repair slugs), 88 subcategories
+  (56 existing + 32 sample services).
+- This catalog is not a claim that all regulated specialist services are
+  legally reviewed, available or validated. Do not auto-publish a marketing
+  promise of availability.
+
+## Verification and acceptance
+
+```bash
+python -m ruff check apps/marketplace core
+python manage.py makemigrations --check --dry-run
+python manage.py test apps.marketplace.tests.test_stage02_catalog
+python manage.py test
+```
+
+Target regressions:
+1. Repeated legacy `seed_repair_categories` does not mutate its own global
+   manifest and does not overwrite existing labels.
+2. `seed_service_catalog` is deterministic with no duplicate slugs, stable IDs
+   and no deleted orders/worker references, even after repeated execution.
+3. Existing Admin changes (`is_active`, custom name, sort order) survive.
+4. Three-language display/fallback; inactive section hides its children from
+   public catalog and order form; pre-existing unassigned categories stay visible.
+5. Correct migration state on clean and existing synthetic PostgreSQL 17
+   databases. Zero legacy imports.
+
+**Still pending:** editorial approval of the proposed taxonomy and
+native-speaking proofreading of Hebrew names/descriptions before public release.
+Laptop checks are not required for Stage 02.1 code acceptance because Django,
+PostgreSQL, seed round-trip and isolated Docker smoke have all passed in
+GitHub Actions. Actual-device visual RTL and the full translated UI belong to
+Stage 02.3/02.6. The **single** Stage 02 Draft PR #8 already exists but must
+not be merged until the owner approves completion of Stage 02.
+
+The separate four approved frontend HTML mockups are **not edited**.
+No production/VPS/DNS/Cloudflare/data-import operations are authorized.
+
+## GitHub Actions evidence — 2026-11-11
+
+- Code SHA: `91e665791ea832c64a1dd239865c7f3091eb1800`.
+- [Django CI #43086273717](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273717): **SUCCESS**, 92/92 Django tests, Ruff, model/migration check, `marketplace.0005` on fresh PostgreSQL; coverage of **service layer only** 89.5%.
+- On the same isolated PostgreSQL: `seed_service_catalog --plan` returned 12/19/88, first seed created 12/19/88, subsequent seed **created 0** in all groups; two independent `--check` executions PASS; count assertion PASS.
+- [Staging smoke #43086273848](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43086273848): **SUCCESS** on disposable GitHub runner, not a real public staging server.
+- Shared [Draft PR #8](https://github.com/maxim9362/zemiPro_site_django/pull/8) remains OPEN / NOT MERGED.
+
+**Technical work accepted for 02.1.** All 11 extra categories and translated
+RU/EN/HE editorial names are provisional seed content; native Hebrew proofread
+and owner/content validation must be completed before public publishing.
+Stage 02 remains `IN_PROGRESS`; 02.2 starts next, without separate PR.

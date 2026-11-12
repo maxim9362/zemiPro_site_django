@@ -1,39 +1,149 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, F
-from django.http import Http404
+from django.db import transaction
+from django.db.models import Avg, Count, F, Prefetch, Q
+from django.http import Http404, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
+from django.utils.translation import gettext as _
 
 from apps.accounts.forms import RatingCreateForm
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
-from apps.locations.models import City
+from apps.locations.models import CityAlias
+from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from apps.notifications.services import create_notification
+from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
+from .questionnaires import localized_label
+from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
-from .models import Category, Order, Response, Rating
+from .models import (
+    Category, ServiceSection, Subcategory, Order, Response, Rating,
+    ServiceQuestionnaire, OrderQuestionnaireAnswer,
+)
 from .services import (
     get_available_orders_for_worker, create_response,
     accept_response, complete_order, cancel_order,
-    can_view_private_order_details,
+    can_view_private_order_details, workers_serving_city,
 )
 
 ITEMS_PER_PAGE = 10
 
 
 def home(request):
-    categories = Category.objects.filter(is_active=True).order_by('sort_order')
+    categories = Category.objects.filter(is_active=True).filter(
+        Q(section__isnull=True) | Q(section__is_active=True)
+    ).order_by('sort_order', 'pk')
     return render(request, 'pages/home.html', {'categories': categories})
 
 
 def categories_list(request):
-    categories = Category.objects.filter(is_active=True).order_by('sort_order')
-    return render(request, 'pages/categories.html', {'categories': categories})
+    categories = Category.objects.filter(
+        is_active=True
+    ).filter(Q(section__isnull=True) | Q(section__is_active=True)).order_by(
+        'sort_order', 'pk'
+    )
+    sections = ServiceSection.objects.filter(is_active=True).prefetch_related(
+        Prefetch(
+            'categories',
+            queryset=Category.objects.filter(is_active=True).order_by(
+                'sort_order', 'pk'
+            ),
+        )
+    )
+    unassigned_categories = categories.filter(section__isnull=True)
+    context = {
+        'categories': categories,
+        'sections': sections,
+        'unassigned_categories': unassigned_categories,
+    }
+    def ready_for_indexing():
+        if not categories.exists():
+            return False
+        # Sections without categories are not rendered by the template.
+        for section in sections:
+            visible = list(section.categories.all())
+            if visible and not (
+                complete_names(section)
+                and complete_collection(visible, description=True)
+            ):
+                return False
+        return complete_collection(unassigned_categories, description=True)
+
+    context.update(catalog_context(
+        request, 'categories_list', indexable=ready_for_indexing,
+    ))
+    return render(request, 'pages/categories.html', context)
+
+
+
+def api_questionnaire(request, service_id):
+    """Public read-only published schema. Only safe labels and stable option IDs."""
+    if request.method != 'GET':
+        raise Http404
+    service = get_object_or_404(
+        Subcategory.objects.filter(
+            is_active=True, category__is_active=True,
+        ).filter(
+            Q(category__section__isnull=True)
+            | Q(category__section__is_active=True)
+        ), pk=service_id,
+    )
+    template = ServiceQuestionnaire.objects.select_related(
+        'published_version',
+    ).filter(service=service).first()
+    version = template.published_version if template is not None else None
+    if version is None:
+        return JsonResponse({'version': None, 'questions': []})
+    questions = []
+    for question in version.schema:
+        condition = question.get('depends_on')
+        questions.append({
+            'key': question['key'],
+            'type': question['type'],
+            'label': localized_label(question['labels']),
+            'required': question['required'],
+            'options': (
+                [{'value': 'true', 'label': _('Да')},
+                 {'value': 'false', 'label': _('Нет')}]
+                if question['type'] == 'boolean'
+                else [
+                    {'value': item['value'], 'label': localized_label(item['labels'])}
+                    for item in question.get('options', [])
+                ]
+            ),
+            'depends_on': condition,
+        })
+    return JsonResponse({'version': version.pk, 'questions': questions})
+
+
+def api_subcategories(request, category_id):
+    """Public localized dependent choices; no free-text or private data."""
+    if request.method != 'GET':
+        raise Http404
+    get_object_or_404(
+        Category.objects.filter(is_active=True).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ),
+        pk=category_id,
+    )
+    choices = Subcategory.objects.filter(
+        category_id=category_id, is_active=True,
+    ).order_by('sort_order', 'pk')
+    return JsonResponse([
+        {'id': item.pk, 'name': item.localized_name}
+        for item in choices
+    ], safe=False)
 
 
 def category_detail(request, slug):
-    category = get_object_or_404(Category, slug=slug, is_active=True)
-    cities = City.objects.filter(is_active=True).order_by('name_ru')
+    category = get_object_or_404(
+        Category.objects.filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ), slug=slug, is_active=True,
+    )
+    cities = get_public_cities().order_by('name_ru')
     selected_city = request.GET.get('city')
 
     workers = WorkerProfile.objects.filter(
@@ -44,57 +154,185 @@ def category_detail(request, slug):
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
 
     if selected_city:
-        workers = workers.filter(city__slug=selected_city)
+        target_city = get_public_cities().filter(slug=selected_city).first()
+        if target_city is None:
+            workers = workers.none()
+        else:
+            workers = workers_serving_city(workers, target_city, category=category)
+    elif public_city_slug():
+        # Do not advertise workers serving only outside the first pilot city.
+        pilot_city = get_public_cities().first()
+        workers = (
+            workers_serving_city(workers, pilot_city, category=category)
+            if pilot_city is not None else workers.none()
+        )
 
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
 
-    return render(request, 'pages/category_detail.html', {
+    subcategories = Subcategory.objects.filter(
+        category=category, is_active=True
+    ).order_by('sort_order', 'pk')
+
+    context = {
+        'subcategories': subcategories,
         'category': category,
         'page_obj': page,
         'cities': cities,
         'selected_city': selected_city,
-    })
+    }
+    context.update(catalog_context(
+        request, 'category_detail', kwargs={'slug': category.slug},
+        indexable=lambda: (
+            page.paginator.count > 0
+            and complete_content(category, description=True)
+            and complete_collection(subcategories)
+            and complete_collection(cities)
+            and all(
+                worker.city is None or complete_names(worker.city)
+                for worker in page.object_list
+            )
+        ),
+    ))
+    return render(request, 'pages/category_detail.html', context)
 
 
 def cities_list(request):
-    cities = City.objects.filter(is_active=True).order_by('name_ru')
-    return render(request, 'pages/cities.html', {'cities': cities})
+    cities = get_public_cities().select_related(
+        'district'
+    ).order_by('name_ru', 'pk')
+    context = {'cities': cities}
+    context.update(catalog_context(
+        request, 'cities_list', indexable=lambda: (
+            cities.exists()
+            and all(
+                complete_names(city)
+                and (city.district is None or complete_names(city.district))
+                for city in cities
+            )
+        ),
+    ))
+    return render(request, 'pages/cities.html', context)
 
 
 def city_detail(request, slug):
-    city = get_object_or_404(City, slug=slug, is_active=True)
-    categories = Category.objects.filter(is_active=True).order_by('sort_order')
+    is_prefixed = (
+        request.resolver_match is not None
+        and request.resolver_match.namespace == 'catalog_i18n'
+    )
+    if is_prefixed:
+        alias = CityAlias.objects.select_related('city').filter(slug=slug).first()
+        if alias is not None:
+            if not city_is_public(alias.city):
+                raise Http404
+            pathname = reverse(
+                'catalog_i18n:city_detail', kwargs={'slug': alias.city.slug},
+            )
+            if request.GET:
+                pathname += '?' + request.GET.urlencode()
+            return HttpResponsePermanentRedirect(pathname)
+    city = get_object_or_404(get_public_cities(), slug=slug)
+    categories = Category.objects.filter(is_active=True).filter(
+        Q(section__isnull=True) | Q(section__is_active=True)
+    ).order_by('sort_order', 'pk')
     selected_category = request.GET.get('category')
 
     workers = WorkerProfile.objects.filter(
-        city=city, user__is_active=True, user__is_blocked=False
+        user__is_active=True, user__is_blocked=False
     ).select_related('user').prefetch_related('skills').annotate(
         avg_rating=Avg('user__received_ratings__rating'),
         review_count=Count('user__received_ratings', distinct=True),
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
 
     if selected_category:
-        workers = workers.filter(skills__slug=selected_category)
+        category = categories.filter(slug=selected_category).first()
+        if category is None:
+            workers = workers.none()
+        else:
+            workers = workers.filter(skills=category)
+            workers = workers_serving_city(workers, city, category=category)
+    else:
+        workers = workers_serving_city(workers, city)
 
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
 
-    return render(request, 'pages/city_detail.html', {
+    context = {
         'city': city,
         'categories': categories,
         'page_obj': page,
         'selected_category': selected_category,
-    })
+    }
+    context.update(catalog_context(
+        request, 'city_detail', kwargs={'slug': city.slug},
+        indexable=lambda: (
+            complete_names(city)
+            and page.paginator.count > 0
+            and complete_collection(categories)
+            and all(
+                complete_collection(worker.skills.all())
+                for worker in page.object_list
+            )
+        ),
+    ))
+    return render(request, 'pages/city_detail.html', context)
+
+
+
+def section_detail(request, slug):
+    section = get_object_or_404(
+        ServiceSection, slug=slug, is_active=True,
+    )
+    categories = Category.objects.filter(
+        section=section, is_active=True,
+    ).order_by('sort_order', 'pk')
+    context = {'section': section, 'categories': categories}
+    context.update(catalog_context(
+        request, 'section_detail', kwargs={'slug': section.slug},
+        indexable=lambda: (
+            complete_content(section, description=True)
+            and categories.exists()
+            and complete_collection(categories, description=True)
+        ),
+    ))
+    return render(request, 'pages/section_detail.html', context)
+
+
+def service_detail(request, category_slug, service_slug):
+    service = get_object_or_404(
+        Subcategory.objects.select_related('category', 'category__section')
+        .filter(
+            Q(category__section__isnull=True)
+            | Q(category__section__is_active=True),
+        ),
+        category__slug=category_slug, slug=service_slug,
+        is_active=True, category__is_active=True,
+    )
+    # We don't have service-specific workers yet. Avoid implying supply
+    # based on category membership, and never index an empty/thin service page.
+    context = {'service': service, 'category': service.category}
+    context.update(catalog_context(
+        request, 'service_detail',
+        kwargs={
+            'category_slug': service.category.slug,
+            'service_slug': service.slug,
+        },
+        indexable=False,
+    ))
+    return render(request, 'pages/service_detail.html', context)
 
 
 def worker_public_profile_view(request, pk):
-    profile = get_object_or_404(
-        WorkerProfile.objects.filter(
-            user__is_active=True, user__is_blocked=False
-        ).select_related('city', 'user').prefetch_related('skills'),
-        pk=pk,
-    )
+    workers = WorkerProfile.objects.filter(
+        user__is_active=True, user__is_blocked=False
+    ).select_related('city', 'user').prefetch_related('skills', 'service_cities')
+    if public_city_slug():
+        pilot_city = get_public_cities().first()
+        workers = (
+            workers_serving_city(workers, pilot_city)
+            if pilot_city is not None else workers.none()
+        )
+    profile = get_object_or_404(workers, pk=pk)
     reviews = Rating.objects.filter(
         worker=profile.user
     ).select_related('client').order_by('-created_at')
@@ -123,7 +361,15 @@ def order_create_view(request):
         if form.is_valid():
             order = form.save(commit=False)
             order.client = request.user
-            order.save()
+            with transaction.atomic():
+                order.save()
+                if form.active_questionnaire_version is not None:
+                    OrderQuestionnaireAnswer.objects.create(
+                        order=order,
+                        version=form.active_questionnaire_version,
+                        schema_snapshot=form.active_questionnaire_version.schema,
+                        answers=form.questionnaire_answers,
+                    )
 
             create_notification(
                 recipient=request.user,
@@ -168,14 +414,24 @@ def order_detail_view(request, pk):
 
             existing_rating = Rating.objects.filter(order=order).first()
 
+    can_read_private = can_view_private_order_details(request.user, order)
+    private_question_answers = []
+    if can_read_private:
+        snapshot = OrderQuestionnaireAnswer.objects.select_related(
+            'version',
+        ).filter(order=order).first()
+        if snapshot is not None:
+            private_question_answers = present_order_answers(snapshot)
+
     return render(request, 'pages/order_detail.html', {
         'order': order,
+        'private_question_answers': private_question_answers,
         'worker_response': worker_response,
         'has_worker_profile': has_worker_profile,
         'is_owner': is_owner,
         'responses': responses,
         'existing_rating': existing_rating,
-        'can_view_private_details': can_view_private_order_details(request.user, order),
+        'can_view_private_details': can_read_private,
     })
 
 
@@ -242,7 +498,7 @@ def order_accept_response_view(request, order_id, response_id):
     try:
         response = accept_response(response)
     except ValueError as error:
-        messages.error(request, str(error))
+        messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
 
     create_notification(
@@ -268,7 +524,7 @@ def order_accept_response_view(request, order_id, response_id):
         except User.DoesNotExist:
             continue
 
-    messages.success(request, f'Мастер {response.worker} выбран!')
+    messages.success(request, _('Мастер %(worker)s выбран!') % {'worker': response.worker})
     return redirect('marketplace:order_detail', pk=order.pk)
 
 
@@ -299,7 +555,7 @@ def order_cancel_view(request, pk):
         except User.DoesNotExist:
             continue
 
-    messages.success(request, 'Заявка отменена.')
+    messages.success(request, _('Заявка отменена.'))
     return redirect('marketplace:order_detail', pk=pk)
 
 
@@ -320,7 +576,7 @@ def order_complete_view(request, pk):
             related_order=order,
         )
 
-    messages.success(request, 'Заявка отмечена как выполненная!')
+    messages.success(request, _('Заявка отмечена как выполненная!'))
     return redirect('marketplace:order_detail', pk=pk)
 
 
@@ -331,11 +587,11 @@ def rating_create_view(request, pk):
     )
 
     if Rating.objects.filter(order=order).exists():
-        messages.info(request, 'Вы уже оставили отзыв на этот заказ.')
+        messages.info(request, _('Вы уже оставили отзыв на этот заказ.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if not order.worker:
-        messages.error(request, 'Невозможно оставить отзыв: исполнитель не выбран.')
+        messages.error(request, _('Невозможно оставить отзыв: исполнитель не выбран.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if request.method == 'POST':
@@ -355,7 +611,7 @@ def rating_create_view(request, pk):
                 related_order=order,
             )
 
-            messages.success(request, 'Отзыв сохранён!')
+            messages.success(request, _('Отзыв сохранён!'))
             return redirect('marketplace:order_detail', pk=pk)
     else:
         form = RatingCreateForm()
@@ -391,21 +647,25 @@ def worker_dashboard_view(request):
 def order_respond_view(request, pk):
     profile = get_worker_profile(request.user)
     if not profile:
-        messages.warning(request, 'Сначала заполните профиль мастера.')
+        messages.warning(request, _('Сначала заполните профиль мастера.'))
         return redirect('accounts:worker_profile')
+    if public_city_slug() and not city_is_public(profile.city):
+        raise Http404
 
     order = get_object_or_404(
-        Order.objects.select_related('category', 'city'),
+        Order.objects.select_related('category', 'city').filter(
+            city__in=get_public_cities()
+        ),
         pk=pk, status=Order.Status.NEW,
     )
 
     if order.client_id == request.user.pk:
-        messages.error(request, 'Нельзя откликнуться на собственную заявку.')
+        messages.error(request, _('Нельзя откликнуться на собственную заявку.'))
         return redirect('marketplace:order_detail', pk=order.pk)
 
     existing = Response.objects.filter(order=order, worker=request.user).first()
     if existing:
-        messages.info(request, 'Вы уже откликались на этот заказ.')
+        messages.info(request, _('Вы уже откликались на этот заказ.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if request.method == 'POST':
@@ -427,10 +687,10 @@ def order_respond_view(request, pk):
                         related_order=order,
                     )
 
-                messages.success(request, 'Отклик отправлен!')
+                messages.success(request, _('Отклик отправлен!'))
                 return redirect('marketplace:order_detail', pk=pk)
             except ValueError as e:
-                messages.error(request, str(e))
+                messages.error(request, _(str(e)))
     else:
         form = ResponseCreateForm()
 

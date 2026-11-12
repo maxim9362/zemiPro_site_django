@@ -1,7 +1,12 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
+from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
+
+from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 
 from apps.locations.models import City
+from apps.locations.services import get_public_cities
 from apps.marketplace.models import Category, Rating
 from .models import ClientProfile, User, WorkerProfile
 
@@ -17,18 +22,23 @@ class RegistrationForm(UserCreationForm):
 class ClientProfileForm(forms.ModelForm):
     """Форма профиля клиента."""
 
-    city = forms.ModelChoiceField(
+    city = LocalizedModelChoiceField(
         queryset=City.objects.filter(is_active=True),
-        label='Город',
-        empty_label='Выберите город',
+        label=_('Город'),
+        empty_label=_('Выберите город'),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['city'].queryset = get_public_cities()
 
     class Meta:
         model = ClientProfile
         fields = ['city', 'contact']
+        labels = {'contact': _('Контакт для связи')}
         widgets = {
             'contact': forms.TextInput(attrs={
-                'placeholder': '+972-XX-XXX-XXXX или @username',
+                'placeholder': _('+972-XX-XXX-XXXX или @username'),
             }),
         }
 
@@ -36,34 +46,73 @@ class ClientProfileForm(forms.ModelForm):
 class WorkerProfileForm(forms.ModelForm):
     """Форма профиля мастера."""
 
-    city = forms.ModelChoiceField(
+    city = LocalizedModelChoiceField(
         queryset=City.objects.filter(is_active=True),
-        label='Город',
-        empty_label='Выберите город',
+        label=_('Город'),
+        empty_label=_('Выберите город'),
     )
-    skills = forms.ModelMultipleChoiceField(
-        queryset=Category.objects.filter(is_active=True),
-        label='Категории работ',
+    skills = LocalizedModelMultipleChoiceField(
+        queryset=Category.objects.filter(is_active=True).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ),
+        label=_('Категории работ'),
         widget=forms.CheckboxSelectMultiple,
+    )
+
+    service_cities = LocalizedModelMultipleChoiceField(
+        queryset=City.objects.filter(is_active=True).order_by('name_ru', 'pk'),
+        label=_('Города обслуживания (можно выбрать несколько)'),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    offers_remote = forms.BooleanField(
+        required=False,
+        label=_('Выполняю подходящие услуги онлайн'),
     )
 
     class Meta:
         model = WorkerProfile
-        fields = ['city', 'contact', 'description', 'skills', 'receive_notifications']
+        fields = [
+            'city', 'contact', 'description', 'skills', 'service_cities',
+            'offers_remote', 'receive_notifications',
+        ]
+        labels = {
+            'contact': _('Контакт для связи'),
+            'description': _('Описание услуг'),
+            'receive_notifications': _('Получать уведомления о новых заявках'),
+        }
         widgets = {
             'contact': forms.TextInput(attrs={
-                'placeholder': '+972-XX-XXX-XXXX или @username',
+                'placeholder': _('+972-XX-XXX-XXXX или @username'),
             }),
             'description': forms.Textarea(attrs={
                 'rows': 4,
-                'placeholder': 'Опишите ваш опыт, инструменты, особенности работы (минимум 20 символов)',
+                'placeholder': _('Опишите ваш опыт, инструменты, особенности работы (минимум 20 символов)'),
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        cities = get_public_cities()
+        self.fields['city'].queryset = cities
+        self.fields['service_cities'].queryset = cities
+
+    def clean(self):
+        data = super().clean()
+        if data.get('offers_remote'):
+            skills = data.get('skills')
+            if skills is not None and not skills.filter(
+                work_mode__in=('online', 'both')
+            ).exists():
+                raise forms.ValidationError(
+                    _('Для онлайн-работы выберите хотя бы одну услугу с онлайн-форматом.')
+                )
+        return data
 
     def clean_description(self):
         desc = self.cleaned_data.get('description', '')
         if len(desc) < 20:
-            raise forms.ValidationError('Описание должно содержать минимум 20 символов.')
+            raise forms.ValidationError(_('Описание должно содержать минимум 20 символов.'))
         return desc
 
 
@@ -79,10 +128,10 @@ class RatingCreateForm(forms.ModelForm):
             }),
             'review_text': forms.Textarea(attrs={
                 'rows': 4,
-                'placeholder': 'Расскажите о качестве работы (необязательно)',
+                'placeholder': _('Расскажите о качестве работы (необязательно)'),
             }),
         }
         labels = {
-            'rating': 'Оценка (от 1 до 5)',
-            'review_text': 'Текст отзыва',
+            'rating': _('Оценка (от 1 до 5)'),
+            'review_text': _('Текст отзыва'),
         }

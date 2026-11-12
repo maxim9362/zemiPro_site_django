@@ -1,23 +1,39 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}{{ category.name_ru }} — ZemiPro{% endblock %}
-{% block meta_description %}{{ category.description }}. Найдите мастера по категории «{{ category.name_ru }}» в Израиле.{% endblock %}
+{% block title %}{{ category.localized_name }} — ZemiPro{% endblock %}
+{% block meta_description %}{{ category.localized_description }}. {% trans 'Найдите мастера по категории' %} {{ category.localized_name }}.{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>{{ category.emoji }} {{ category.name_ru }}</h1>
-        <p>{{ category.description }}</p>
+        <h1>{{ category.emoji }} {{ category.localized_name }}</h1>
+        <p>{{ category.localized_description }}</p>
     </div>
 </section>
 
 <section class="category-content">
     <div class="container">
 
+        {% if subcategories %}
+        <section aria-label="{% trans 'Виды услуг' %}">
+            <h2>{% trans 'Виды услуг' %}</h2>
+            <ul class="catalog-services">
+                {% for service in subcategories %}
+                <li>
+                    {% if catalog_localized %}
+                    <a href="{% url 'catalog_i18n:service_detail' category_slug=category.slug service_slug=service.slug %}">{{ service.localized_name }}</a>
+                    {% else %}{{ service.localized_name }}{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+
         <div class="filter-bar">
             <form method="get" class="filter-form">
                 <select name="city" class="form__select" onchange="this.form.submit()">
-                    <option value="">Все города</option>
+                    <option value="">{% trans 'Все города' %}</option>
                     {% for city in cities %}
                     <option value="{{ city.slug }}" {% if selected_city == city.slug %}selected{% endif %}>
                         {{ city.localized_name }}
@@ -42,7 +58,7 @@
                     <p class="order-card-sm__desc">{{ wp.description|truncatewords:20 }}</p>
                 </div>
                 <div class="order-card-sm__actions">
-                    <a href="{% url 'marketplace:worker_public_profile' pk=wp.pk %}" class="btn btn--primary btn--sm">Открыть профиль</a>
+                    <a href="{% url 'marketplace:worker_public_profile' pk=wp.pk %}" class="btn btn--primary btn--sm">{% trans 'Открыть профиль' %}</a>
                 </div>
             </div>
             {% endfor %}
@@ -51,23 +67,23 @@
         {% if page_obj.has_other_pages %}
         <div class="pagination">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if selected_city %}&city={{ selected_city }}{% endif %}" class="btn btn--secondary btn--sm">← Назад</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if selected_city %}&city={{ selected_city }}{% endif %}" class="btn btn--secondary btn--sm">← {% trans 'Назад' %}</a>
             {% endif %}
-            <span class="pagination__current">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if selected_city %}&city={{ selected_city }}{% endif %}" class="btn btn--secondary btn--sm">Далее →</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if selected_city %}&city={{ selected_city }}{% endif %}" class="btn btn--secondary btn--sm">{% trans 'Далее' %} →</a>
             {% endif %}
         </div>
         {% endif %}
 
         {% else %}
-        <p class="empty-state">Мастеров в этой категории{% if selected_city %} в выбранном городе{% endif %} пока нет.</p>
+        <p class="empty-state">{% trans 'Мастеров в этой категории' %}{% if selected_city %} {% trans 'в выбранном городе' %}{% endif %} {% trans 'пока нет.' %}</p>
         {% endif %}
 
         <div class="cta-block" style="margin-top: 32px;">
-            <h2>Нужен мастер по «{{ category.name_ru }}»?</h2>
-            <p>Создайте заявку и получите отклики от проверенных специалистов</p>
-            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">Создать заявку</a>
+            <h2>{% trans 'Нужен мастер по' %} «{{ category.localized_name }}»?</h2>
+            <p>{% trans 'Создайте заявку и получите отклики от проверенных специалистов' %}</p>
+            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
         </div>
 
     </div>

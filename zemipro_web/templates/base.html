@@ -5,8 +5,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ZemiPro — Мастера по ремонту в Израиле{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}Найдите надёжного мастера по ремонту в Израиле. Сантехника, электрика, кондиционеры, ремонт квартир — бесплатно и без посредников.{% endblock %}">
+    <title>{% block title %}{% trans 'ZemiPro — Мастера по ремонту в Израиле' %}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{% trans 'Найдите надёжного мастера по ремонту в Израиле. Сантехника, электрика, кондиционеры, ремонт квартир — бесплатно и без посредников.' %}{% endblock %}">
+    {% if seo_noindex %}<meta name="robots" content="noindex,follow">{% endif %}
+    {% if seo_canonical %}<link rel="canonical" href="{{ seo_canonical }}">{% endif %}
+    {% for alternate in seo_alternates %}<link rel="alternate" hreflang="{{ alternate.language }}" href="{{ alternate.url }}">{% endfor %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
@@ -14,25 +17,37 @@
         <div class="container">
             <a href="{% url 'marketplace:home' %}" class="logo">ZemiPro</a>
             <nav class="nav">
-                <a href="{% url 'marketplace:categories_list' %}">Категории</a>
-                <a href="{% url 'marketplace:cities_list' %}">Города</a>
-                <a href="{% url 'marketplace:order_create' %}">Создать заявку</a>
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:categories_list' %}{% else %}{% url 'marketplace:categories_list' %}{% endif %}">{% trans 'Категории' %}</a>
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:cities_list' %}{% else %}{% url 'marketplace:cities_list' %}{% endif %}">{% trans 'Города' %}</a>
+                <a href="{% url 'marketplace:order_create' %}">{% trans 'Создать заявку' %}</a>
                 {% if user.is_authenticated %}
-                <a href="{% url 'marketplace:client_dashboard' %}">Кабинет клиента</a>
-                <a href="{% url 'marketplace:worker_dashboard' %}">Кабинет мастера</a>
+                <a href="{% url 'marketplace:client_dashboard' %}">{% trans 'Кабинет клиента' %}</a>
+                <a href="{% url 'marketplace:worker_dashboard' %}">{% trans 'Кабинет мастера' %}</a>
                 <a href="{% url 'notifications:notification_list' %}" class="nav__notif">
-                    Уведомления
+                    {% trans 'Уведомления' %}
                     {% if unread_notifications_count %}
                     <span class="notif-badge">{{ unread_notifications_count }}</span>
                     {% endif %}
                 </a>
-                <a href="{% url 'accounts:client_profile' %}">Профиль</a>
-                <a href="{% url 'accounts:logout' %}">Выйти</a>
+                <a href="{% url 'accounts:client_profile' %}">{% trans 'Профиль' %}</a>
+                <a href="{% url 'accounts:logout' %}">{% trans 'Выйти' %}</a>
                 {% else %}
-                <a href="{% url 'accounts:login' %}">Войти</a>
-                <a href="{% url 'accounts:register' %}">Регистрация</a>
+                <a href="{% url 'accounts:login' %}">{% trans 'Войти' %}</a>
+                <a href="{% url 'accounts:register' %}">{% trans 'Регистрация' %}</a>
                 {% endif %}
             </nav>
+            <form method="post" action="{% url 'set_language' %}" class="language-switcher"
+                  aria-label="{% trans 'Язык сайта' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <label class="sr-only" for="language-choice">{% trans 'Язык сайта' %}</label>
+                <select id="language-choice" name="language" onchange="this.form.submit()">
+                    <option value="ru" {% if current_language == 'ru' %}selected{% endif %}>Русский</option>
+                    <option value="en" {% if current_language == 'en' %}selected{% endif %}>English</option>
+                    <option value="he" {% if current_language == 'he' %}selected{% endif %}>עברית</option>
+                </select>
+                <noscript><button type="submit">{% trans 'Применить' %}</button></noscript>
+            </form>
         </div>
     </header>
 
@@ -42,7 +57,7 @@
 
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2026 ZemiPro — Сервис поиска мастеров по ремонту в Израиле</p>
+            <p>&copy; 2026 ZemiPro — {% trans 'Сервис поиска мастеров по ремонту в Израиле' %}</p>
         </div>
     </footer>
 </body>

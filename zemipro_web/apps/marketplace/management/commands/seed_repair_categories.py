@@ -145,11 +145,14 @@ class Command(BaseCommand):
         updated_subcategories = 0
 
         for cat_data in CATEGORIES_DATA:
-            subcategories_data = cat_data.pop('subcategories')
+            subcategories_data = cat_data['subcategories']
+            category_defaults = {
+                key: value for key, value in cat_data.items() if key != 'subcategories'
+            }
 
-            category, created = Category.objects.update_or_create(
+            category, created = Category.objects.get_or_create(
                 slug=cat_data['slug'],
-                defaults=cat_data,
+                defaults=category_defaults,
             )
             if created:
                 created_categories += 1
@@ -158,7 +161,7 @@ class Command(BaseCommand):
                 updated_categories += 1
 
             for sub_name, sub_slug in subcategories_data:
-                sub, sub_created = Subcategory.objects.update_or_create(
+                sub, sub_created = Subcategory.objects.get_or_create(
                     category=category,
                     slug=sub_slug,
                     defaults={'name_ru': sub_name},
@@ -170,6 +173,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f'\nГотово!'
-            f'\n  Категории: создано {created_categories}, обновлено {updated_categories}'
-            f'\n  Подкатегории: создано {created_subcategories}, обновлено {updated_subcategories}'
+            f'\n  Категории: создано {created_categories}, уже существовало {updated_categories}'
+            f'\n  Подкатегории: создано {created_subcategories}, уже существовало {updated_subcategories}'
         ))

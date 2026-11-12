@@ -1,26 +1,57 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Категории услуг — ZemiPro{% endblock %}
+{% block title %}{% trans 'Категории услуг — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Категории услуг</h1>
-        <p>Выберите категорию для вашего заказа</p>
+        <h1>{% trans 'Категории услуг' %}</h1>
+        <p>{% trans 'Выберите направление и категорию услуги' %}</p>
     </div>
 </section>
 
 <section class="categories-list">
     <div class="container">
-        <div class="categories-grid">
-            {% for cat in categories %}
-            <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
-                <span class="category-card__emoji">{{ cat.emoji }}</span>
-                <h3 class="category-card__title">{{ cat.name }}</h3>
-                <p class="category-card__desc">{{ cat.description }}</p>
-            </a>
-            {% endfor %}
-        </div>
+        {% for section in sections %}
+        {% if section.categories.all %}
+        <section class="catalog-section" aria-label="{{ section.localized_name }}">
+            <h2>
+                {% if catalog_localized %}
+                <a href="{% url 'catalog_i18n:section_detail' slug=section.slug %}">{{ section.localized_name }}</a>
+                {% else %}{{ section.localized_name }}{% endif %}
+            </h2>
+            <div class="categories-grid">
+                {% for cat in section.categories.all %}
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:category_detail' slug=cat.slug %}{% else %}{% url 'marketplace:category_detail' slug=cat.slug %}{% endif %}" class="category-card">
+                    <span class="category-card__emoji">{{ cat.emoji }}</span>
+                    <h3 class="category-card__title">{{ cat.localized_name }}</h3>
+                    <p class="category-card__desc">{{ cat.localized_description }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+        {% endfor %}
+
+        {% if unassigned_categories %}
+        <section class="catalog-section" aria-label="{% trans 'Другие категории' %}">
+            <h2>{% trans 'Другие категории' %}</h2>
+            <div class="categories-grid">
+                {% for cat in unassigned_categories %}
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:category_detail' slug=cat.slug %}{% else %}{% url 'marketplace:category_detail' slug=cat.slug %}{% endif %}" class="category-card">
+                    <span class="category-card__emoji">{{ cat.emoji }}</span>
+                    <h3 class="category-card__title">{{ cat.localized_name }}</h3>
+                    <p class="category-card__desc">{{ cat.localized_description }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if not categories %}
+        <p class="empty-state">{% trans 'Категории пока не добавлены.' %}</p>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

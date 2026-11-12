@@ -1,17 +1,18 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Пожаловаться — ZemiPro{% endblock %}
+{% block title %}{% trans 'Пожаловаться — ZemiPro' %}{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>Пожаловаться</h1>
+        <h1>{% trans 'Пожаловаться' %}</h1>
         {% if target_user %}
-        <p>На пользователя: {{ target_user }}</p>
+        <p>{% trans 'На пользователя:' %} {{ target_user }}</p>
         {% elif target_order %}
-        <p>На заявку №{{ target_order.pk }}</p>
+        <p>{% trans 'На заявку №' %}{{ target_order.pk }}</p>
         {% elif target_rating %}
-        <p>На отзыв</p>
+        <p>{% trans 'На отзыв' %}</p>
         {% endif %}
     </div>
 </section>
@@ -30,7 +31,7 @@
             {% endif %}
 
             <div class="form__group">
-                <label for="id_reason" class="form__label">Причина жалобы *</label>
+                <label for="id_reason" class="form__label">{% trans 'Причина жалобы *' %}</label>
                 {{ form.reason }}
                 {% if form.reason.errors %}
                 <span class="form__error">{{ form.reason.errors.0 }}</span>
@@ -38,7 +39,7 @@
             </div>
 
             <div class="form__group">
-                <label for="id_message" class="form__label">Описание *</label>
+                <label for="id_message" class="form__label">{% trans 'Описание *' %}</label>
                 {{ form.message }}
                 {% if form.message.errors %}
                 <span class="form__error">{{ form.message.errors.0 }}</span>
@@ -46,10 +47,10 @@
             </div>
 
             <button type="submit" class="btn btn--primary btn--lg">
-                Отправить жалобу
+                {% trans 'Отправить жалобу' %}
             </button>
-            <a href="javascript:history.back()" class="btn btn--secondary" style="margin-left: 12px;">
-                Назад
+            <a href="javascript:history.back()" class="btn btn--secondary" style="margin-inline-start: 12px;">
+                {% trans 'Назад' %}
             </a>
         </form>
     </div>
