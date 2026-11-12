@@ -112,8 +112,9 @@ class QuestionnaireFlowTests(TestCase):
             ('he', 'איפה הנזילה?'),
         ):
             with self.subTest(language=language):
-                with override(language):
-                    response = self.client.get(api)
+                response = self.client.get(
+                    api, HTTP_ACCEPT_LANGUAGE=language,
+                )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json()['version'], version.pk)
                 self.assertEqual(response.json()['questions'][0]['label'], translated)
@@ -213,7 +214,7 @@ class QuestionnaireFlowTests(TestCase):
             reverse('marketplace:order_create'), self.payload(old.pk),
         )
         self.assertEqual(invalid.status_code, 200)
-        self.assertContains(invalid, 'Questionnaire changed')
+        self.assertContains(invalid, 'Анкета изменилась.')
         self.assertFalse(Order.objects.exists())
         forged = self.client.post(
             reverse('marketplace:order_create'), self.payload('99999999'),
