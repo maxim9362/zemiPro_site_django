@@ -218,6 +218,14 @@ class Order(models.Model):
         max_length=20, null=True, blank=True, editable=False,
         verbose_name='Исходный исторический статус',
     )
+    wizard_data = models.JSONField(
+        default=dict, blank=True, editable=False,
+        verbose_name='Приватные данные мастера создания заявки',
+    )
+    wizard_token = models.UUIDField(
+        null=True, blank=True, unique=True, editable=False,
+        verbose_name='Ключ защиты от повторного создания черновика',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлена')
 

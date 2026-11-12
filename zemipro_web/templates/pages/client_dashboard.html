@@ -28,7 +28,7 @@
             <p><strong>{% trans 'Контакт:' %}</strong> {{ profile.contact }}</p>
             <a href="{% url 'accounts:client_profile' %}" class="btn btn--secondary">{% trans 'Редактировать профиль' %}</a>
             <a href="{% url 'accounts:client_settings' %}" class="btn btn--secondary">{% trans 'Личные данные и приватность' %}</a>
-            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary" style="margin-inline-start: 8px;">{% trans 'Создать заявку' %}</a>
+            <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary" style="margin-inline-start: 8px;">{% trans 'Создать заявку' %}</a>
         </div>
 
         {% if favorite_workers %}
@@ -190,7 +190,7 @@
         {% endif %}
 
         {% if not active_orders and not in_progress_orders and not completed_orders and not cancelled_orders %}
-        <p class="empty-state">{% trans 'У вас пока нет заявок.' %} <a href="{% url 'marketplace:order_create' %}">{% trans 'Создайте первую заявку' %}</a></p>
+        <p class="empty-state">{% trans 'У вас пока нет заявок.' %} <a href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создайте первую заявку' %}</a></p>
         {% endif %}
 
     </div>

@@ -32,6 +32,17 @@ from .services import (
     can_view_private_order_details, workers_serving_city,
 )
 
+from django.views.decorators.cache import never_cache
+import uuid
+
+from .wizard_forms import STEP_FORMS, ServiceStepForm, QuestionsStepForm
+from .wizard_services import (
+    ensure_wizard_owner, get_owner_wizard, publish_order_wizard,
+    save_order_wizard_step, start_order_wizard, wizard_initial,
+    wizard_max_step, wizard_summary,
+)
+from .wizard_ui import wizard_copy
+
 ITEMS_PER_PAGE = 10
 
 
@@ -412,12 +423,152 @@ def order_create_view(request):
     return render(request, 'pages/order_create.html', {'form': form})
 
 
+
+def _wizard_render(request, *, step, form, order=None, token='', drafts=None):
+    t = wizard_copy()
+    return render(request, 'pages/order_wizard.html', {
+        'copy': t, 'form': form, 'step': step, 'order': order,
+        'previous_step': max(1, step - 1),
+        'wizard_steps': [
+            {'number': number, 'title': t['step' + str(number)]}
+            for number in range(1, 9)
+        ],
+        'token': token, 'drafts': drafts or [],
+        'wizard_title': t['step' + str(step)],
+        'is_new_wizard': order is None,
+        'summary_rows': wizard_summary(order) if order and step == 8 else [],
+        'questionnaire_questions': (
+            form.questionnaire_questions if step == 2 else []
+        ),
+        'has_questions': (
+            bool(form.active_questionnaire_version) if step == 2 else False
+        ),
+        'seo_noindex': True,
+    })
+
+
+def _wizard_form_for_step(order, step, data=None):
+    kwargs = {} if data is None else {'data': data}
+    if step == 2:
+        return QuestionsStepForm(
+            service_id=order.subcategory_id,
+            stored_answers=wizard_initial(order, 2), **kwargs,
+        )
+    if step == 3:
+        return STEP_FORMS[step](
+            service=order.subcategory,
+            initial=wizard_initial(order, step), **kwargs,
+        )
+    return STEP_FORMS[step](initial=wizard_initial(order, step), **kwargs)
+
+
+@login_required
+@never_cache
+def order_wizard_start_view(request):
+    """Default visible entry point; older POST /orders/create/ remains compatible."""
+    ensure_wizard_owner(request.user)
+    if request.method == 'POST':
+        if request.POST.get('action') != 'start':
+            raise Http404
+        form = ServiceStepForm(request.POST)
+        token = request.POST.get('token', '')
+        if form.is_valid():
+            # Per-session token prevents accidental repeat creation across taps.
+            if token != request.session.get('order_wizard_token'):
+                raise Http404
+            try:
+                order = start_order_wizard(
+                    actor=request.user, form=form, token=token,
+                )
+            except ValueError as error:
+                form.add_error(None, str(error))
+            else:
+                request.session.pop('order_wizard_token', None)
+                return redirect('marketplace:order_wizard_edit', pk=order.pk)
+    else:
+        token = str(uuid.uuid4())
+        request.session['order_wizard_token'] = token
+        form = ServiceStepForm()
+    drafts = Order.objects.filter(
+        client=request.user, status=Order.Status.DRAFT,
+        wizard_token__isnull=False,
+    ).select_related('subcategory').order_by('-updated_at', '-pk')[:10]
+    return _wizard_render(
+        request, step=1, form=form,
+        token=request.session.get('order_wizard_token', ''),
+        drafts=drafts,
+    )
+
+
+@login_required
+@never_cache
+def order_wizard_edit_view(request, pk):
+    """Resume any saved step but never expose draft state across owners."""
+    ensure_wizard_owner(request.user)
+    order = get_owner_wizard(pk, request.user)
+    if order is None:
+        raise Http404
+    if order.status == Order.Status.PUBLISHED:
+        return redirect('marketplace:order_detail', pk=order.pk)
+    if order.status != Order.Status.DRAFT:
+        raise Http404
+
+    latest = wizard_max_step(order)
+    try:
+        step = int(request.GET.get('step', latest))
+    except (TypeError, ValueError):
+        raise Http404 from None
+    if not 1 <= step <= 8:
+        raise Http404
+    if step > latest:
+        return redirect(
+            reverse('marketplace:order_wizard_edit', args=[pk]) + f'?step={latest}'
+        )
+    if request.method == 'POST':
+        if request.POST.get('action') != ('publish' if step == 8 else 'next'):
+            raise Http404
+        form = _wizard_form_for_step(order, step, request.POST)
+        if form.is_valid():
+            try:
+                if step == 8:
+                    published, created = publish_order_wizard(
+                        order_id=order.pk, actor=request.user,
+                    )
+                    if created:
+                        create_notification(
+                            recipient=request.user, title='Заявка создана',
+                            message=f'Ваша заявка №{published.pk} опубликована.',
+                            notification_type='order_created', related_order=published,
+                        )
+                    return redirect('marketplace:order_detail', pk=published.pk)
+                saved = save_order_wizard_step(
+                    order_id=order.pk, actor=request.user,
+                    step=step, form=form,
+                )
+                next_step = min(step + 1, wizard_max_step(saved))
+                return redirect(
+                    reverse('marketplace:order_wizard_edit', args=[pk])
+                    + f'?step={next_step}'
+                )
+            except ValueError as error:
+                form.add_error(None, str(error))
+        # Re-render bound fields and errors without losing the draft.
+    else:
+        form = _wizard_form_for_step(order, step)
+    return _wizard_render(request, step=step, form=form, order=order)
+
+
+
 @login_required
 def order_detail_view(request, pk):
     order = get_object_or_404(
         Order.objects.select_related('category', 'subcategory', 'city', 'client', 'worker'),
         pk=pk,
     )
+    if order.status == Order.Status.DRAFT:
+        if order.client_id != request.user.pk or not order.wizard_token:
+            raise Http404
+        return redirect('marketplace:order_wizard_edit', pk=order.pk)
     worker_response = None
     has_worker_profile = False
     is_owner = False

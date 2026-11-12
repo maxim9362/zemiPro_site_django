@@ -14,6 +14,8 @@ urlpatterns = [
     path('cities/<slug:slug>/', views.city_detail, name='city_detail'),
 
     path('orders/create/', views.order_create_view, name='order_create'),
+    path('orders/new/', views.order_wizard_start_view, name='order_wizard_start'),
+    path('orders/<int:pk>/wizard/', views.order_wizard_edit_view, name='order_wizard_edit'),
     path('orders/<int:pk>/', views.order_detail_view, name='order_detail'),
     path('orders/<int:pk>/respond/', views.order_respond_view, name='order_respond'),
     path('orders/<int:order_id>/responses/<int:response_id>/accept/',

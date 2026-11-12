@@ -133,7 +133,7 @@
 
                 {# Ссылка для зарегистрированных пользователей без профиля мастера #}
                 {% if not is_owner and not has_worker_profile and order.status == 'published' %}
-                <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">
+                <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">
                     {% trans 'Создать ещё одну заявку' %}
                 </a>
                 {% endif %}

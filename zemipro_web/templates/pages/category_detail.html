@@ -83,7 +83,7 @@
         <div class="cta-block" style="margin-top: 32px;">
             <h2>{% trans 'Нужен мастер по' %} «{{ category.localized_name }}»?</h2>
             <p>{% trans 'Создайте заявку и получите отклики от специалистов' %}</p>
-            <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
+            <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
         </div>
 
     </div>
