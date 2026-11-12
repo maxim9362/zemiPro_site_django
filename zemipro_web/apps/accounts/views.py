@@ -42,7 +42,8 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            return redirect('accounts:client_profile')
+            messages.info(request, _('Подтвердите email, чтобы завершить регистрацию.'))
+            return redirect('accounts:contact_verification')
     else:
         form = RegistrationForm()
     return render(request, 'accounts/register.html', {
@@ -138,6 +139,11 @@ class SafeLoginView(auth_views.LoginView):
         data = super().get_context_data(**kwargs)
         data['google_login_enabled'] = settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED
         return data
+
+    def get_success_url(self):
+        if self.request.user.email_verification_required:
+            return str(reverse_lazy('accounts:contact_verification'))
+        return super().get_success_url()
 
 
 class VerifiedPasswordResetView(auth_views.PasswordResetView):

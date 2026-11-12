@@ -14,8 +14,8 @@ from apps.accounts.models import (
     ContactChallenge, ContactDeliveryEvent, VerifiedContact,
 )
 from apps.accounts.verification import (
-    confirm_contact_verification, normalize_israeli_phone,
-    request_contact_verification,
+    _code_digest, confirm_contact_verification, contact_fingerprint,
+    normalize_israeli_phone, request_contact_verification,
 )
 
 
@@ -29,22 +29,38 @@ class AccountSecurityTests(TestCase):
             'password2': 'Synthetic-Password-9362!',
         })
 
-    def test_registration_normalizes_email_phone_and_keeps_username_login(self):
+    @override_settings(ZEMIPRO_CONTACT_DELIVERY_MODE='test-email')
+    def test_new_registration_is_gated_until_email_confirmation(self):
         response = self.register()
-        self.assertRedirects(response, reverse('accounts:client_profile'))
+        self.assertRedirects(response, reverse('accounts:contact_verification'))
         user = get_user_model().objects.get(username='synthetic-registrant')
         self.assertEqual(user.email, 'synthetic.user@example.invalid')
         self.assertIsNone(user.phone)
         self.assertIsNone(user.email_verified_at)
         self.assertIsNone(user.phone_verified_at)
+        self.assertTrue(user.email_verification_required)
         self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
+        self.assertRedirects(
+            self.client.get(reverse('accounts:client_profile')),
+            reverse('accounts:contact_verification'),
+        )
         self.client.post(reverse('accounts:logout'))
         logged_in = self.client.post(reverse('accounts:login'), {
             'username': user.username, 'password': 'Synthetic-Password-9362!',
         })
         self.assertRedirects(
-            logged_in, reverse('marketplace:client_dashboard'),
+            logged_in, reverse('accounts:contact_verification'),
             fetch_redirect_response=False,
+        )
+        self.assertTrue(request_contact_verification(user, 'email'))
+        code = re.search(r'\b\d{6}\b', mail.outbox[-1].body).group()
+        self.assertTrue(confirm_contact_verification(user, 'email', code))
+        user.refresh_from_db()
+        self.assertFalse(user.email_verification_required)
+        self.assertIsNotNone(user.email_verified_at)
+        self.assertEqual(
+            self.client.get(reverse('accounts:client_profile')).status_code,
+            200,
         )
 
     def test_missing_or_invalid_email_registration_is_rejected(self):
@@ -197,11 +213,13 @@ class AccountSecurityTests(TestCase):
         self.assertFalse(VerifiedContact.objects.exists())
 
         # Recovery before confirmation is generic and sends no reset link.
+        self.client.post(reverse('accounts:logout'))
         unverified = self.client.post(reverse('accounts:password_reset'), {
             'email': user.email,
         })
         self.assertRedirects(unverified, reverse('accounts:password_reset_done'))
         self.assertEqual(len(mail.outbox), 1)
+        self.client.force_login(user)
 
         bad = self.client.post(reverse('accounts:confirm_verification'), {
             'channel': 'email', 'code': '999999' if code != '999999' else '999998',
@@ -306,6 +324,31 @@ class AccountSecurityTests(TestCase):
         })
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(VerifiedContact.objects.get().user_id, verified.pk)
+
+    def test_concurrent_email_claim_winner_does_not_verify_second_account(self):
+        first = get_user_model().objects.create_user(
+            username='first-claim', email='shared@example.invalid',
+        )
+        second = get_user_model().objects.create_user(
+            username='second-claim', email='shared@example.invalid',
+            email_verification_required=True,
+        )
+        digest = contact_fingerprint('email', second.email)
+        VerifiedContact.objects.create(
+            user=first, channel='email', fingerprint=digest,
+        )
+        code = '482913'
+        ContactChallenge.objects.create(
+            user=second, channel='email', destination_digest=digest,
+            code_digest=_code_digest(second.pk, 'email', digest, code),
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+
+        self.assertFalse(confirm_contact_verification(second, 'email', code))
+        second.refresh_from_db()
+        self.assertIsNone(second.email_verified_at)
+        self.assertTrue(second.email_verification_required)
+        self.assertEqual(VerifiedContact.objects.get().user_id, first.pk)
 
     @override_settings(ZEMIPRO_CONTACT_DELIVERY_MODE='test-email')
     def test_changing_email_without_reverification_disables_recovery(self):

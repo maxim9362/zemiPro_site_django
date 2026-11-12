@@ -13,6 +13,7 @@ def can_view_private_order_details(user, order):
     # Read persisted moderation state, never rely on a stale User instance.
     stored = User.objects.filter(
         pk=user.pk, is_active=True, is_blocked=False,
+        email_verification_required=False,
     ).first()
     if stored is None:
         return False
@@ -31,7 +32,10 @@ def create_order(client, category, city, address, description, price='Догов
     """Создать новую заявку."""
     if client is None or not client.is_authenticated:
         raise ValueError('Для создания заявки требуется авторизация.')
-    if not User.objects.filter(pk=client.pk, is_active=True, is_blocked=False).exists():
+    if not User.objects.filter(
+        pk=client.pk, is_active=True, is_blocked=False,
+        email_verification_required=False,
+    ).exists():
         raise ValueError('Аккаунт недоступен.')
     if not city_is_public(city):
         raise ValueError('Город пока не обслуживается.')
@@ -91,6 +95,7 @@ def get_available_orders_for_worker(worker_profile):
     if (not worker_profile.is_published
             or not User.objects.filter(
                 pk=worker_profile.user_id, is_active=True, is_blocked=False,
+                email_verification_required=False,
             ).exists()
             or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE
             or (public_city_slug() and not city_is_public(worker_profile.city))):
@@ -126,7 +131,10 @@ def create_response(order, worker_user, message=''):
     """Создать отклик мастера на заказ."""
     if not hasattr(worker_user, 'worker_profile'):
         raise ValueError('Пользователь не является мастером.')
-    if not User.objects.filter(pk=worker_user.pk, is_active=True, is_blocked=False).exists():
+    if not User.objects.filter(
+        pk=worker_user.pk, is_active=True, is_blocked=False,
+        email_verification_required=False,
+    ).exists():
         raise ValueError('Аккаунт недоступен.')
 
     if public_city_slug() and not city_is_public(worker_user.worker_profile.city):
@@ -171,7 +179,8 @@ def accept_response(response):
         ).get(pk=response.pk, order=order)
         if locked_response.status != Response.Status.PENDING:
             raise ValueError('Этот отклик уже обработан.')
-        if not locked_response.worker.is_active or locked_response.worker.is_blocked:
+        if (not locked_response.worker.is_active or locked_response.worker.is_blocked
+                or locked_response.worker.email_verification_required):
             raise ValueError('Исполнитель недоступен.')
 
         locked_response.status = Response.Status.ACCEPTED
@@ -193,7 +202,8 @@ def accept_response(response):
 
 def complete_order(order):
     """Завершить заказ."""
-    if not order.client.is_active or order.client.is_blocked:
+    if (not order.client.is_active or order.client.is_blocked
+            or order.client.email_verification_required):
         raise ValueError('Аккаунт недоступен.')
     order.status = Order.Status.COMPLETED
     order.save(update_fields=['status', 'updated_at'])
@@ -202,7 +212,8 @@ def complete_order(order):
 
 def cancel_order(order):
     """Отменить заказ."""
-    if not order.client.is_active or order.client.is_blocked:
+    if (not order.client.is_active or order.client.is_blocked
+            or order.client.email_verification_required):
         raise ValueError('Аккаунт недоступен.')
     order.status = Order.Status.CANCELLED
     order.save(update_fields=['status', 'updated_at'])

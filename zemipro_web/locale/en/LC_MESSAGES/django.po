@@ -1203,3 +1203,12 @@ msgstr "Photos are supplied by the professional; ZemiPro has not verified that t
 
 msgid "Управлять портфолио"
 msgstr "Manage portfolio"
+
+msgid "Имя пользователя или email"
+msgstr "Username or email"
+
+msgid "Подтвердите email, чтобы завершить регистрацию."
+msgstr "Verify your email to complete registration."
+
+msgid "Google-вход недоступен для этого аккаунта. Войдите по email и паролю."
+msgstr "Google sign-in is unavailable for this account. Sign in with your username or email and password."

@@ -101,6 +101,29 @@ Do **not** run `migrate`, `collectstatic` against production paths, or
 Some Django deployment checks may warn that HSTS preload is not enabled;
 it is intentionally opt-in, not a reason to enable it blindly.
 
+## Email and Google authentication (Draft PR #10)
+
+The default configuration sends no email and exposes no Google OAuth route:
+`ZEMIPRO_CONTACT_DELIVERY_MODE=disabled` and
+`ZEMIPRO_GOOGLE_LOGIN_ENABLED=False`. New local registrations require email
+verification before private pages become available; legacy username/password
+accounts remain compatible. SMS, phone login and phone recovery are unsupported.
+
+For an owner-approved isolated staging check, configure Google Client ID/Secret
+in the environment and set `ZEMIPRO_GOOGLE_LOGIN_ENABLED=True`. The authorized
+callback must exactly match
+`https://<approved-host>/oauth/google/login/callback/`. Never put credentials in
+`.env.example`, Git, logs or browser-visible settings. Enabling Google without
+both values fails startup. OAuth initiation is CSRF-protected POST and allauth
+uses state plus PKCE; matching an existing email does not link accounts.
+
+SMTP is separately opt-in with `ZEMIPRO_CONTACT_DELIVERY_MODE=smtp` and all of
+`ZEMIPRO_SMTP_HOST`, `ZEMIPRO_SMTP_PORT`, `ZEMIPRO_SMTP_USERNAME`,
+`ZEMIPRO_SMTP_PASSWORD`, `ZEMIPRO_EMAIL_FROM`. Incomplete configuration fails
+startup. Real Google/SMTP validation requires separate owner approval, public
+HTTPS/domain configuration and provider credentials; it is not performed by
+local or CI tests.
+
 ## Test commands
 
 ```bash

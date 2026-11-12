@@ -328,7 +328,9 @@ browser_check() {
     mv "$STATUS_FILE.tmp" "$STATUS_FILE"
   fi
   set +e
-  env ZEMIPRO_TEST_BASE_URL="$BASE_URL" \
+  env DJANGO_ENV=development DJANGO_SETTINGS_MODULE=core.settings \
+    DB_HOST=127.0.0.1 DB_PORT="$DB_PORT" \
+    ZEMIPRO_TEST_BASE_URL="$BASE_URL" \
     ZEMIPRO_TEST_SCREENSHOT_DIR="$ARTIFACT_DIR/screenshots" \
     "$VENV_DIR/bin/python" "$PROJECT_DIR/scripts/shared_browser_smoke.py" \
     > >(tee "$log") 2>&1

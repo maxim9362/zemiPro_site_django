@@ -61,6 +61,19 @@ class ServiceWorkflowTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.COMPLETED)
 
+    def test_unverified_new_account_cannot_bypass_gate_via_service(self):
+        self.owner.email_verification_required = True
+        self.owner.save(update_fields=['email_verification_required'])
+        with self.assertRaisesMessage(ValueError, 'Аккаунт недоступен'):
+            create_order(
+                client=self.owner,
+                category=self.category,
+                city=self.city,
+                address='Must not be created',
+                description='Direct service bypass must remain blocked.',
+            )
+        self.assertFalse(Order.objects.filter(address='Must not be created').exists())
+
     def test_guest_cannot_create_order_from_service(self):
         with self.assertRaisesMessage(ValueError, 'требуется авторизация'):
             create_order(

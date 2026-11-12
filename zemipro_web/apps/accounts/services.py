@@ -25,6 +25,7 @@ def create_client_profile(user, city=None, contact=''):
     """Создать профиль заказчика для пользователя."""
     if not user.is_authenticated or not User.objects.filter(
         pk=user.pk, is_active=True, is_blocked=False,
+        email_verification_required=False,
     ).exists():
         raise PermissionDenied('Аккаунт недоступен.')
     _validate_public_profile_cities({'city': city})
@@ -40,6 +41,7 @@ def create_or_update_client_profile(user, form_data):
     """Создать или обновить профиль клиента."""
     if not user.is_authenticated or not User.objects.filter(
         pk=user.pk, is_active=True, is_blocked=False,
+        email_verification_required=False,
     ).exists():
         raise PermissionDenied('Аккаунт недоступен.')
     _validate_public_profile_cities(form_data)
@@ -64,14 +66,16 @@ def _locked_worker_owner(user):
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied(_('Требуется вход в аккаунт.'))
     owner = User.objects.select_for_update().get(pk=user.pk)
-    if not owner.is_active or owner.is_blocked:
+    if (not owner.is_active or owner.is_blocked
+            or owner.email_verification_required):
         raise PermissionDenied(_('Аккаунт недоступен.'))
     return owner
 
 
 def publication_issue(profile):
     """Shared publication criteria; reused after editing a published profile."""
-    if not profile.user.is_active or profile.user.is_blocked:
+    if (not profile.user.is_active or profile.user.is_blocked
+            or profile.user.email_verification_required):
         return _('Аккаунт недоступен.')
     if not profile.display_name.strip():
         return _('Укажите публичное имя или название компании.')
@@ -175,7 +179,8 @@ def select_active_role(user, role):
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied('Требуется вход в аккаунт.')
     stored = User.objects.select_for_update().get(pk=user.pk)
-    if not stored.is_active or stored.is_blocked:
+    if (not stored.is_active or stored.is_blocked
+            or stored.email_verification_required):
         raise PermissionDenied('Аккаунт недоступен.')
     if stored.active_role != role:
         stored.active_role = role

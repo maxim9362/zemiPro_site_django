@@ -31,6 +31,7 @@ class RegistrationForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
+        user.email_verification_required = True
         if commit:
             user.save()
         return user

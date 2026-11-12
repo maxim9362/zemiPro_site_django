@@ -12,13 +12,18 @@ from django.test import TransactionTestCase
 class TelegramIdentifierRemovalSafetyTests(TransactionTestCase):
     def test_populated_legacy_column_blocks_schema_change(self):
         previous = ('accounts', '0009_worker_portfolio')
-        current = ('accounts', '0010_remove_legacy_telegram_id')
-        MigrationExecutor(connection).migrate([previous])
+        telegram_removal = ('accounts', '0010_remove_legacy_telegram_id')
+        latest = ('accounts', '0011_user_email_verification_required')
+        executor = MigrationExecutor(connection)
+        executor.migrate([previous])
+        historical_user = executor.loader.project_state([previous]).apps.get_model(
+            'accounts', 'User',
+        )
         synthetic_pk = None
         try:
-            user = get_user_model().objects.create_user(
+            user = historical_user.objects.create(
                 username='s037-legacy-fixture',
-                password='Synthetic-Pass-9362',
+                password='!Synthetic-unusable-hash',
             )
             synthetic_pk = user.pk
             sample_id = 987654321012
@@ -28,7 +33,7 @@ class TelegramIdentifierRemovalSafetyTests(TransactionTestCase):
                     [sample_id, synthetic_pk],
                 )
             with self.assertRaisesRegex(RuntimeError, 'existing legacy Telegram identifiers'):
-                MigrationExecutor(connection).migrate([current])
+                MigrationExecutor(connection).migrate([telegram_removal])
             with connection.cursor() as cursor:
                 cursor.execute(
                     'SELECT telegram_id FROM accounts_user WHERE id = %s',
@@ -40,7 +45,7 @@ class TelegramIdentifierRemovalSafetyTests(TransactionTestCase):
                     'UPDATE accounts_user SET telegram_id = NULL WHERE id = %s',
                     [synthetic_pk],
                 )
-            MigrationExecutor(connection).migrate([current])
+            MigrationExecutor(connection).migrate([latest])
             with connection.cursor() as cursor:
                 columns = connection.introspection.get_table_description(
                     cursor, 'accounts_user',
@@ -61,4 +66,8 @@ class TelegramIdentifierRemovalSafetyTests(TransactionTestCase):
                             'UPDATE accounts_user SET telegram_id = NULL WHERE id = %s',
                             [synthetic_pk],
                         )
-                    MigrationExecutor(connection).migrate([current])
+                    MigrationExecutor(connection).migrate([latest])
+                elif 'email_verification_required' not in {
+                    column.name for column in columns
+                }:
+                    MigrationExecutor(connection).migrate([latest])

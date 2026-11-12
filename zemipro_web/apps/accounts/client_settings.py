@@ -12,7 +12,8 @@ def _active_owner(user):
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied('Требуется вход в аккаунт.')
     owner = User.objects.select_for_update().get(pk=user.pk)
-    if not owner.is_active or owner.is_blocked:
+    if (not owner.is_active or owner.is_blocked
+            or owner.email_verification_required):
         raise PermissionDenied('Аккаунт недоступен.')
     return owner
 

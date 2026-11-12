@@ -12,10 +12,11 @@ class RegistrationAndLoginTests(TestCase):
             'password2': 'Strong-test-password-9362',
         })
 
-        self.assertRedirects(response, reverse('accounts:client_profile'))
+        self.assertRedirects(response, reverse('accounts:contact_verification'))
         user = get_user_model().objects.get(username='new-customer')
         self.assertEqual(user._meta.label, 'accounts.User')
         self.assertTrue(user.check_password('Strong-test-password-9362'))
+        self.assertTrue(user.email_verification_required)
         self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
 
     def test_registered_custom_user_can_log_in(self):

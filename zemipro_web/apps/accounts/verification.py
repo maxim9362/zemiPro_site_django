@@ -1,8 +1,8 @@
 """Stage 03.2: bounded, secret-free contact verification service.
 
-Verification is strictly optional for browsing; password recovery accepts ONLY
-a previously claimed and verified email. No real delivery is available by
-default. The production SMS/email provider is a pre-public-release gate.
+Verification is mandatory before a newly registered local account can access
+private features; password recovery accepts ONLY a previously claimed and
+verified email. No real delivery is available by default and SMS is unsupported.
 """
 from datetime import timedelta
 import hashlib
@@ -163,22 +163,24 @@ def confirm_contact_verification(user, channel, code):
         challenge.save(update_fields=['attempts'])
         return False
 
-    # Unique fingerprint is DB-enforced; two accounts cannot claim one contact.
-    if VerifiedContact.objects.filter(fingerprint=digest).exclude(
-        user_id=stored.pk,
-    ).exists():
-        return False
-    VerifiedContact.objects.get_or_create(
+    # The unique fingerprint serializes concurrent claims. get_or_create may
+    # return the winner of another transaction, so ownership must be checked
+    # before granting verification to this account.
+    claim, _ = VerifiedContact.objects.get_or_create(
         fingerprint=digest,
         defaults={'user': stored, 'channel': channel},
     )
+    if claim.user_id != stored.pk or claim.channel != channel:
+        return False
     field = (
         'email_verified_at' if channel == ContactChallenge.Channel.EMAIL
         else 'phone_verified_at'
     )
     now = timezone.now()
     setattr(stored, field, now)
-    stored.save(update_fields=[field])
+    stored.email_verification_required = False
+    stored.save(update_fields=[field, 'email_verification_required'])
     setattr(user, field, now)
+    user.email_verification_required = False
     challenge.delete()
     return True
