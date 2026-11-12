@@ -10,6 +10,11 @@ def can_view_private_order_details(user, order):
     """Allow private order data only to its owner, assignee, or staff."""
     if not user.is_authenticated or not user.is_active or user.is_blocked:
         return False
+    # Read persisted moderation state, never rely on a stale User instance.
+    if not User.objects.filter(
+        pk=user.pk, is_active=True, is_blocked=False,
+    ).exists():
+        return False
     return bool(
         user.is_staff
         or order.client_id == user.id
@@ -74,8 +79,10 @@ def workers_serving_city(queryset, city, *, category=None):
 
 def get_available_orders_for_worker(worker_profile):
     """New orders only in selected zones or eligible opted-in online skills."""
-    if (not worker_profile.is_published or not worker_profile.user.is_active
-            or worker_profile.user.is_blocked
+    if (not worker_profile.is_published
+            or not User.objects.filter(
+                pk=worker_profile.user_id, is_active=True, is_blocked=False,
+            ).exists()
             or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE):
         return Order.objects.none()
     skills = worker_profile.skills.filter(is_active=True).filter(
