@@ -39,3 +39,6 @@
 - Login now tries the literal username before resolving a verified email/phone alias. A historical username equal to another account's verified contact therefore remains usable, while the verified owner can still use the same text with its own password. The regression proves both identities select only the account matching the submitted password.
 - Independent isolated PostgreSQL 17 result on the reviewed tree: all Stage 03 contact/auth tests and the complete 244-test Django suite PASS. Real SMS/SMTP delivery remains disabled and is not claimed as tested.
 
+## Post-merge revision (2026-11-12, Draft PR #10)
+
+Owner superseded the original dual-email/SMS authentication decision: **email/password plus Google OAuth; no SMS**. See `docs/DECISIONS/ADR-0002-EMAIL-GOOGLE-NO-SMS.md`. The original Stage 03.2 implementation evidence above is historical, not the current intended login policy. New registration now requires email; the phone remains an optional private contact, never a login or recovery channel. The Google and SMTP transports are disabled by default pending owner-controlled credentials and staging verification. This does not reverse Stage 03 PR #9 merge or authorize production migrations.
