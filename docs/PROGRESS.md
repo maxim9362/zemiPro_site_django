@@ -482,3 +482,12 @@
 - [Docker staging smoke #43156737097](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43156737097) **SUCCESS** on disposable GitHub runner; not public staging deployment.
 - **02.5 `CODE_DONE / CI_VERIFIED`.** Technical versioned questionnaires accepted. Sample wording/HE translations remain editorial-pending and real mobile browser/RTL screenshots remain Stage 02.6 gates. No real contacts/order data read or altered; no production/domain/VPS changes; PR stays Draft.
 - **Next:** 02.6 integrated Stage 02 verification, including official national locality and Hebrew editorial completeness decisions, with separate Codex Cloud final review.
+
+## 2026-11-12 — Stage 02.6 integration QA implementation
+
+- **Branch/PR:** stage-02-catalog-localization, existing Draft PR #8. No new branch/PR and no merge.
+- **Implemented:** Django integration coverage for all three seed manifests, stable catalog and city IDs/foreign keys, synthetic historic order/answer snapshot, editor overrides, collision rejection, privacy, route/menu/form and language-switch behavior in RU/EN/HE.
+- **Browser smoke:** separate headless Chrome emulator on GitHub-hosted runner checks 320/360/375/390/768 pixel viewports for catalog/cities/authenticated order form, rtl/ltr HTML and CSS, horizontal overflow, phone field direction; screenshots retained for manual review. This is not a real Android or iPhone test.
+- **Status:** IMPLEMENTED / QA_PENDING. New CI browser/targeted suite/full regression and final Codex independent review are NOT_RUN until their logs verify completion. No invented PASS.
+- **Remaining gates:** independent visual review of screenshots and native Hebrew editorial validation of new 11 categories, 25 pilot cities and 4 demo forms. Full official national localities, external staging HTTPS, off-host backup, alerts, credential rotation and branch protection are not implied complete by Stage 02 CI.
+- **Next:** review latest GitHub Actions results on 02.6 commit, fix detected failures only in this branch, then send current SHA to Codex Cloud for end-of-stage acceptance. No live DB/VPS/DNS/production changes.

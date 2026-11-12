@@ -130,6 +130,31 @@ jobs:
         run: |
           python manage.py test apps.marketplace.tests.test_stage02_i18n_urls
 
+      - name: Stage 02.6 integrated identity, seed and i18n regressions
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_integration
+
+      - name: Install pinned isolated Chrome driver for mobile viewport checks
+        run: |
+          python -m pip install playwright==1.56.0
+
+      - name: Stage 02.6 browser mobile RTL smoke (isolated synthetic CI)
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8765 > /tmp/stage02-django-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage02_mobile_rtl_smoke.py
+
+      - name: Upload Stage 02.6 screenshots for independent visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage02-mobile-rtl-screenshots
+          path: zemipro_web/artifacts/stage02-mobile-rtl/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Run Django suite with service coverage gate
         run: |
           python -m coverage run manage.py test
