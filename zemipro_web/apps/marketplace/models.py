@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -161,10 +163,15 @@ class Order(models.Model):
     """Заявка на услугу от заказчика."""
 
     class Status(models.TextChoices):
-        NEW = 'new', 'В обработке'
+        DRAFT = 'draft', 'Черновик'
+        PUBLISHED = 'published', 'Опубликован'
+        IN_DISCUSSION = 'in_discussion', 'Обсуждение'
+        ASSIGNED = 'assigned', 'Исполнитель выбран'
         IN_PROGRESS = 'in_progress', 'В процессе'
         COMPLETED = 'completed', 'Выполнен'
         CANCELLED = 'cancelled', 'Отменён'
+        EXPIRED = 'expired', 'Истёк срок'
+        DISPUTED = 'disputed', 'Спор'
 
     client = models.ForeignKey(
         'accounts.User', on_delete=models.PROTECT,
@@ -204,8 +211,12 @@ class Order(models.Model):
         verbose_name='Цена'
     )
     status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.NEW,
+        max_length=20, choices=Status.choices, default=Status.PUBLISHED,
         db_index=True, verbose_name='Статус'
+    )
+    legacy_status = models.CharField(
+        max_length=20, null=True, blank=True, editable=False,
+        verbose_name='Исходный исторический статус',
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлена')
@@ -222,13 +233,57 @@ class Order(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(status__in=['new', 'in_progress', 'completed', 'cancelled']),
+                condition=models.Q(status__in=[
+                    'draft', 'published', 'in_discussion', 'assigned',
+                    'in_progress', 'completed', 'cancelled', 'expired', 'disputed',
+                ]),
                 name='order_status_allowed',
             ),
         ]
 
     def __str__(self):
         return f'Заказ #{self.pk} — {self.category.name_ru} ({self.get_status_display()})'
+
+
+class OrderStatusEvent(models.Model):
+    """Append-only, non-PII history of significant lifecycle changes."""
+
+    class Reason(models.TextChoices):
+        CREATED = 'created', 'Создание'
+        TRANSITION = 'transition', 'Смена статуса'
+        WORKER_ASSIGNED = 'worker_assigned', 'Выбор мастера'
+        WORK_STARTED = 'work_started', 'Начало работы'
+        LEGACY_MIGRATION = 'legacy_migration', 'Историческая миграция'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='status_events',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='order_status_actions',
+    )
+    previous_status = models.CharField(max_length=20, blank=True, default='')
+    new_status = models.CharField(max_length=20, choices=Order.Status.choices)
+    reason = models.CharField(
+        max_length=32, choices=Reason.choices, default=Reason.TRANSITION,
+    )
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_status_event'
+        verbose_name = 'Событие статуса заявки'
+        verbose_name_plural = 'События статусов заявок'
+        ordering = ['-occurred_at', '-pk']
+        indexes = [
+            models.Index(fields=['order', '-occurred_at'], name='order_event_time_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'operation_key'],
+                name='order_event_unique_operation',
+            ),
+        ]
 
 
 class Response(models.Model):

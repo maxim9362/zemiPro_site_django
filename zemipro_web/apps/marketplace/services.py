@@ -3,7 +3,8 @@ from django.db.models import Case, Exists, IntegerField, OuterRef, Q, Value, Whe
 
 from apps.accounts.models import User, WorkerProfile
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
-from .models import Category, Order, Response
+from .models import Category, Order, OrderStatusEvent, Response
+from .order_lifecycle import transition_order_status
 
 
 def can_view_private_order_details(user, order):
@@ -39,15 +40,20 @@ def create_order(client, category, city, address, description, price='Догов
         raise ValueError('Аккаунт недоступен.')
     if not city_is_public(city):
         raise ValueError('Город пока не обслуживается.')
-    order = Order.objects.create(
-        client=client,
-        category=category,
-        subcategory=subcategory,
-        city=city,
-        address=address,
-        description=description,
-        price=price,
-    )
+    with transaction.atomic():
+        order = Order.objects.create(
+            client=client,
+            category=category,
+            subcategory=subcategory,
+            city=city,
+            address=address,
+            description=description,
+            price=price,
+        )
+        OrderStatusEvent.objects.create(
+            order=order, actor=client, previous_status='',
+            new_status=order.status, reason=OrderStatusEvent.Reason.CREATED,
+        )
     return order
 
 
@@ -107,7 +113,7 @@ def get_available_orders_for_worker(worker_profile):
         return Order.objects.none()
 
     base_qs = Order.objects.select_related('category', 'city').filter(
-        status=Order.Status.NEW, category__in=skills,
+        status=Order.Status.PUBLISHED, category__in=skills,
         city__in=get_public_cities(),
     ).exclude(client_id=worker_profile.user_id)
 
@@ -146,7 +152,7 @@ def create_response(order, worker_user, message=''):
     if order.client_id == worker_user.pk:
         raise ValueError('Нельзя откликнуться на собственную заявку.')
 
-    if order.status != Order.Status.NEW:
+    if order.status != Order.Status.PUBLISHED:
         raise ValueError('Заказ уже не в статусе «В обработке».')
 
     worker_profile = worker_user.worker_profile
@@ -171,7 +177,7 @@ def accept_response(response):
     """Принять отклик, отклонить остальные, назначить исполнителя."""
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=response.order_id)
-        if order.status != Order.Status.NEW:
+        if order.status != Order.Status.PUBLISHED:
             raise ValueError('Исполнитель для этой заявки уже выбран.')
 
         locked_response = Response.objects.select_for_update().select_related(
@@ -193,28 +199,30 @@ def accept_response(response):
         ).update(status=Response.Status.REJECTED)
 
         order.worker = locked_response.worker
-        order.status = Order.Status.IN_PROGRESS
-        order.save(update_fields=['worker', 'status', 'updated_at'])
-
+        order.save(update_fields=['worker', 'updated_at'])
+        # Preserve current UX: selection immediately starts work, but
+        # record two distinct domain transitions under the same row lock.
+        transition_order_status(
+            order.pk, Order.Status.ASSIGNED, actor=order.client,
+            reason=OrderStatusEvent.Reason.WORKER_ASSIGNED,
+        )
+        transition_order_status(
+            order.pk, Order.Status.IN_PROGRESS, actor=order.client,
+            reason=OrderStatusEvent.Reason.WORK_STARTED,
+        )
         locked_response.order = order
     return locked_response
 
 
 def complete_order(order):
-    """Завершить заказ."""
-    if (not order.client.is_active or order.client.is_blocked
-            or order.client.email_verification_required):
-        raise ValueError('Аккаунт недоступен.')
-    order.status = Order.Status.COMPLETED
-    order.save(update_fields=['status', 'updated_at'])
-    return order
+    """Завершить заказ через единый валидатор переходов."""
+    return transition_order_status(
+        order, Order.Status.COMPLETED, actor=order.client,
+    )
 
 
 def cancel_order(order):
-    """Отменить заказ."""
-    if (not order.client.is_active or order.client.is_blocked
-            or order.client.email_verification_required):
-        raise ValueError('Аккаунт недоступен.')
-    order.status = Order.Status.CANCELLED
-    order.save(update_fields=['status', 'updated_at'])
-    return order
+    """Отменить заказ; повторное действие не добавляет статусных событий."""
+    return transition_order_status(
+        order, Order.Status.CANCELLED, actor=order.client,
+    )

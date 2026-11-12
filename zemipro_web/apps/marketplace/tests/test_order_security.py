@@ -167,7 +167,7 @@ class OrderSecurityTests(TestCase):
         response = self.client.post(cancel_url)
         self.assertEqual(response.status_code, 404)
         order.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.NEW)
+        self.assertEqual(order.status, Order.Status.PUBLISHED)
 
         self.client.force_login(self.owner)
         response = self.client.post(cancel_url)
@@ -211,7 +211,7 @@ class OrderSecurityTests(TestCase):
         self.assertEqual(review.status_code, 404)
         pending_order.refresh_from_db()
         self.private_order.refresh_from_db()
-        self.assertEqual(pending_order.status, Order.Status.NEW)
+        self.assertEqual(pending_order.status, Order.Status.PUBLISHED)
         self.assertEqual(self.private_order.status, Order.Status.IN_PROGRESS)
 
     def test_potential_worker_pages_do_not_disclose_address_before_assignment(self):

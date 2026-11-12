@@ -1,0 +1,150 @@
+"""Stage 04.1: lifecycle, replay and authorization regressions."""
+import uuid
+
+from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError, transaction
+from django.test import TestCase, override_settings
+
+from apps.marketplace.models import Order, OrderStatusEvent, Response
+from apps.marketplace.order_lifecycle import transition_order_status
+from apps.marketplace.services import accept_response, cancel_order, create_order
+
+from .factories import make_category, make_city, make_order, make_user
+
+
+@override_settings(ZEMIPRO_PILOT_CITY_SLUG=None)
+class OrderLifecycleTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.city = make_city('stage04-ashdod')
+        cls.other_city = make_city('stage04-haifa')
+        cls.category = make_category('stage04-category')
+        cls.owner = make_user('stage04-owner')
+        cls.other_user = make_user('stage04-stranger')
+        cls.worker = make_user('stage04-worker')
+
+    def make_draft(self):
+        return make_order(
+            client=self.owner, category=self.category,
+            city=self.city, status=Order.Status.DRAFT,
+        )
+
+    def test_declared_states_and_default_published(self):
+        self.assertEqual(set(Order.Status.values), {
+            'draft', 'published', 'in_discussion', 'assigned',
+            'in_progress', 'completed', 'cancelled', 'expired', 'disputed',
+        })
+        order = make_order(client=self.owner, category=self.category, city=self.city)
+        self.assertEqual(order.status, Order.Status.PUBLISHED)
+
+    def test_publish_discuss_republish_and_cancel_events(self):
+        order = self.make_draft()
+        for state in (
+            Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION,
+            Order.Status.PUBLISHED, Order.Status.CANCELLED,
+        ):
+            transition_order_status(order, state, actor=self.owner)
+        self.assertEqual(list(order.status_events.order_by('pk').values_list(
+            'previous_status', 'new_status',
+        )), [
+            ('draft', 'published'), ('published', 'in_discussion'),
+            ('in_discussion', 'published'), ('published', 'cancelled'),
+        ])
+
+    def test_invalid_and_terminal_transitions_do_not_write(self):
+        order = self.make_draft()
+        for state in (Order.Status.COMPLETED, Order.Status.IN_PROGRESS, 'new', 'bad'):
+            with self.subTest(state=state), self.assertRaises(ValueError):
+                transition_order_status(order, state, actor=self.owner)
+        self.assertFalse(order.status_events.exists())
+        transition_order_status(order, Order.Status.CANCELLED, actor=self.owner)
+        with self.assertRaises(ValueError):
+            transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        self.assertEqual(order.status_events.count(), 1)
+
+    def test_idempotent_target_and_replayed_key(self):
+        order = self.make_draft()
+        key = uuid.uuid4()
+        transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner, operation_key=key)
+        transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner, operation_key=key)
+        transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        self.assertEqual(order.status_events.count(), 1)
+        transition_order_status(order, Order.Status.IN_DISCUSSION, actor=self.owner)
+        transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner, operation_key=key)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.IN_DISCUSSION)
+        self.assertEqual(order.status_events.count(), 2)
+        with self.assertRaises(ValueError):
+            transition_order_status(order, Order.Status.CANCELLED, actor=self.owner, operation_key=key)
+
+    def test_idor_guest_blocked_and_unverified_guards(self):
+        order = self.make_draft()
+        for actor in (self.other_user, AnonymousUser()):
+            with self.subTest(actor=actor), self.assertRaises(PermissionDenied):
+                transition_order_status(order, Order.Status.PUBLISHED, actor=actor)
+        self.owner.is_blocked = True
+        self.owner.save(update_fields=['is_blocked'])
+        with self.assertRaises(PermissionDenied):
+            transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        self.owner.is_blocked = False
+        self.owner.email_verification_required = True
+        self.owner.save(update_fields=['is_blocked', 'email_verification_required'])
+        with self.assertRaises(PermissionDenied):
+            transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        self.assertEqual(order.status_events.count(), 0)
+
+    @override_settings(ZEMIPRO_PILOT_CITY_SLUG='ashdod')
+    def test_ashdod_only_cannot_publish_foreign_city(self):
+        order = make_order(
+            client=self.owner, category=self.category,
+            city=self.other_city, status=Order.Status.DRAFT,
+        )
+        with self.assertRaisesMessage(ValueError, 'Город пока не обслуживается'):
+            transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        self.assertFalse(order.status_events.exists())
+
+    def test_acceptance_generates_assigned_and_work_started_atomically(self):
+        order = make_order(client=self.owner, category=self.category, city=self.city)
+        with self.assertRaises(ValueError):
+            transition_order_status(order, Order.Status.ASSIGNED, actor=self.owner)
+        response = Response.objects.create(order=order, worker=self.worker)
+        accept_response(response)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.IN_PROGRESS)
+        self.assertEqual(order.worker_id, self.worker.pk)
+        self.assertEqual(list(order.status_events.order_by('pk').values_list(
+            'previous_status', 'new_status',
+        )), [('published', 'assigned'), ('assigned', 'in_progress')])
+        with self.assertRaises(ValueError):
+            accept_response(response)
+        self.assertEqual(order.status_events.count(), 2)
+
+    def test_create_and_repeat_cancel_no_duplicate_event(self):
+        order = create_order(
+            self.owner, self.category, self.city,
+            'Synthetic private location', 'Synthetic service request',
+        )
+        cancel_order(order)
+        cancel_order(order)
+        self.assertEqual(list(order.status_events.order_by('pk').values_list(
+            'previous_status', 'new_status',
+        )), [('', 'published'), ('published', 'cancelled')])
+
+    def test_database_constraint_rejects_old_new_status(self):
+        order = self.make_draft()
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Order.objects.filter(pk=order.pk).update(status='new')
+
+    def test_status_events_are_append_only(self):
+        order = self.make_draft()
+        transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        event = order.status_events.get()
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                OrderStatusEvent.objects.filter(pk=event.pk).update(new_status='cancelled')
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                OrderStatusEvent.objects.filter(pk=event.pk).delete()
+        self.assertEqual(order.status_events.count(), 1)

@@ -87,7 +87,7 @@
             <div class="order-card__footer">
                 {# Кнопки для владельца заявки #}
                 {% if is_owner %}
-                    {% if order.status == 'new' %}
+                    {% if order.status == 'published' %}
                     <form method="post" action="{% url 'marketplace:order_cancel' pk=order.pk %}" style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn--danger" onclick="return confirm('{% trans 'Отменить заявку?' %}')">
@@ -121,7 +121,7 @@
                 {% endif %}
 
                 {# Кнопки для мастера #}
-                {% if not is_owner and order.status == 'new' and has_worker_profile and not worker_response %}
+                {% if not is_owner and order.status == 'published' and has_worker_profile and not worker_response %}
                 <a href="{% url 'marketplace:order_respond' pk=order.pk %}" class="btn btn--primary">
                     {% trans 'Откликнуться' %}
                 </a>
@@ -132,7 +132,7 @@
                 {% endif %}
 
                 {# Ссылка для зарегистрированных пользователей без профиля мастера #}
-                {% if not is_owner and not has_worker_profile and order.status == 'new' %}
+                {% if not is_owner and not has_worker_profile and order.status == 'published' %}
                 <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">
                     {% trans 'Создать ещё одну заявку' %}
                 </a>
@@ -170,7 +170,7 @@
                     {% endif %}
                     <p style="font-size: 0.8125rem; color: var(--color-text-light);">{% trans 'Отклик:' %} {{ resp.created_at|date:"d.m.Y H:i" }}</p>
 
-                    {% if order.status == 'new' and resp.status == 'pending' %}
+                    {% if order.status == 'published' and resp.status == 'pending' %}
                     <form method="post" action="{% url 'marketplace:order_accept_response' order_id=order.pk response_id=resp.pk %}" style="margin-top: 8px;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn--primary btn--sm" onclick="return confirm('{% trans 'Выбрать этого мастера?' %}')">

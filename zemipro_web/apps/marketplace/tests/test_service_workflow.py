@@ -45,7 +45,7 @@ class ServiceWorkflowTests(TestCase):
             description='Synthetic test booking for a service',
         )
         self.assertEqual(order.client_id, self.owner.pk)
-        self.assertEqual(order.status, Order.Status.NEW)
+        self.assertEqual(order.status, Order.Status.PUBLISHED)
 
         response = create_response(order, self.worker, 'Synthetic availability')
         self.assertEqual(response.status, Response.Status.PENDING)

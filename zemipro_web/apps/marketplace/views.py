@@ -24,7 +24,7 @@ from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating,
-    ServiceQuestionnaire, OrderQuestionnaireAnswer,
+    ServiceQuestionnaire, OrderQuestionnaireAnswer, OrderStatusEvent,
 )
 from .services import (
     get_available_orders_for_worker, create_response,
@@ -385,6 +385,10 @@ def order_create_view(request):
             order.client = request.user
             with transaction.atomic():
                 order.save()
+                OrderStatusEvent.objects.create(
+                    order=order, actor=request.user, previous_status='',
+                    new_status=order.status, reason=OrderStatusEvent.Reason.CREATED,
+                )
                 if form.active_questionnaire_version is not None:
                     OrderQuestionnaireAnswer.objects.create(
                         order=order,
@@ -470,7 +474,7 @@ def client_dashboard_view(request):
     ).select_related('category', 'city', 'worker').order_by('-created_at', '-pk')
 
     active_orders = Paginator(
-        my_orders.filter(status=Order.Status.NEW).annotate(
+        my_orders.filter(status=Order.Status.PUBLISHED).annotate(
             response_count=Count('responses')
         ),
         ITEMS_PER_PAGE,
@@ -511,7 +515,7 @@ def order_accept_response_view(request, order_id, response_id):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=order_id, client=request.user, status=Order.Status.NEW)
+    order = get_object_or_404(Order, pk=order_id, client=request.user, status=Order.Status.PUBLISHED)
     response = get_object_or_404(Response, pk=response_id, order=order)
 
     rejected_workers = list(
@@ -556,7 +560,7 @@ def order_cancel_view(request, pk):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.NEW)
+    order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.PUBLISHED)
 
     responding_workers = list(
         Response.objects.filter(order=order).values_list('worker_id', flat=True)
@@ -681,7 +685,7 @@ def order_respond_view(request, pk):
         Order.objects.select_related('category', 'city').filter(
             city__in=get_public_cities()
         ),
-        pk=pk, status=Order.Status.NEW,
+        pk=pk, status=Order.Status.PUBLISHED,
     )
 
     if order.client_id == request.user.pk:

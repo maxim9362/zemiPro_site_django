@@ -50,7 +50,7 @@
             <h2>{% trans 'Активные заявки' %}</h2>
             <div class="orders-list">
                 {% for item in orders_with_responses %}
-                {% if item.order.status == 'new' %}
+                {% if item.order.status == 'published' %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
                         <span class="order-card__status order-card__status--new">{% trans 'В обработке' %}</span>
