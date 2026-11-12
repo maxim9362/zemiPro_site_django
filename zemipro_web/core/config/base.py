@@ -27,7 +27,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
+    'core.middleware.LegacySafeLocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'core.middleware.DynamicHtmlNoStoreMiddleware',
     'core.middleware.SensitivePostThrottleMiddleware',

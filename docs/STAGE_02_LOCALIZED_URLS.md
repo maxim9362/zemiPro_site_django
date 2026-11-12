@@ -28,7 +28,11 @@ and services return 404.
 
 Known `CityAlias.slug` records redirect only **prefixed** city URLs using
 a 301 to the current language's canonical `City.slug` (preserve query parameters).
-Unknown aliases 404. This does **not** authorize redirecting legacy/PSEO URLs:
+Unknown aliases 404. `LegacySafeLocaleMiddleware` explicitly preserves
+legacy unprefixed 404 responses: Django's stock `LocaleMiddleware` would
+otherwise auto-redirect a 404 to `/<language>/...` if the new pattern
+happened to resolve. Existing language activation and Vary/
+Content-Language semantics are preserved. This does **not** authorize redirecting legacy/PSEO URLs:
 those need a verified per-URL equivalence migration at Stage 08.
 
 ## SEO and safety

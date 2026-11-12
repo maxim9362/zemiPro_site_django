@@ -451,3 +451,4 @@
 - Tests written: 9 targeted test methods, covering 6 × 3 route matrix, same object identity, SEO/canonical, 404/301, query preservation, default index guard and private data exclusion. **Not executed** until GitHub Actions complete.
 - **02.3 QA still pending:** GitHub runners for that commit did not execute (last seen `queued`); 02.4 does not inherit its PASS.
 - **Status**: `02.4 IMPLEMENTED / CI_PENDING / MOBILE_VISUAL_PENDING`. Real domain/Cloudflare unchanged. Next stage after QA: 02.5.
+- **Legacy 404 safeguard:** `LegacySafeLocaleMiddleware` prevents Django's automatic unprefixed-404 to prefixed-path redirect, preserving unknown legacy/PSEO paths. Regression checks verify old unknown category/city URLs still return 404 even for Hebrew Accept-Language.

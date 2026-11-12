@@ -207,6 +207,14 @@ class CatalogLanguageUrlTests(TestCase):
                 self.assertNotIn('Location', result.headers)
                 self.assertNotContains(result, 'rel="canonical"')
         self.assertEqual(self.client.get('/de/categories/').status_code, 404)
+        # Django's default locale 404 redirect must not hijack legacy paths.
+        for old_path in (
+            '/categories/does-not-exist-024/',
+            '/cities/does-not-exist-024/',
+        ):
+            missing = self.client.get(old_path, HTTP_ACCEPT_LANGUAGE='he')
+            self.assertEqual(missing.status_code, 404)
+            self.assertNotIn('Location', missing.headers)
 
     def test_known_city_alias_redirects_only_in_prefixed_catalog(self):
         url = self.localized('he', 'city_detail', slug=self.alias.slug)
