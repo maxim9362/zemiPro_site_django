@@ -462,3 +462,14 @@
 - 02.4 fixes: restore original unprefixed 404, ensure `resolve()` tests run under selected language, wrap Django's `set_language` with validated source-language activation for no-cookie visits to `/he/...`.
 - **02.4:** `CODE_DONE / CI_VERIFIED / INDEXING_DISABLED_BY_DEFAULT`. **02.3:** code CI-verified, still `MOBILE_VISUAL_PENDING / HEBREW_EDITORIAL_PENDING`. No PSEO redirects, sitemap/robots, production-domain changes, deployment, merge or user data migration.
 - **Next:** 02.5 configurable service questions in same branch/PR, after recording this verification. Full 02 gate remains pending 02.5/02.6 and outstanding reviews.
+
+## 2026-11-12 — Stage 02.5 configurable questionnaires implemented, independent QA pending
+
+- Shared `stage-02-catalog-localization` / Draft PR #8, no merge/deploy.
+- Additive migration `marketplace.0006_versioned_questionnaires`: ServiceQuestionnaire editable JSON draft per Subcategory, QuestionnaireVersion published immutable snapshot, OrderQuestionnaireAnswer private per-order versioned answer snapshot. Existing Order rows/PK/FKs remain untouched.
+- Django Admin explicitly publishes new versions through `publish_questionnaire` under `select_for_update` and atomic transaction. Re-publishing unchanged draft is idempotent; direct admin modification/deletion of published versions and order snapshots disabled.
+- Validation: up to 20 questions, six types (text/single/multiple/number/date/boolean), RU/EN/HE labels, stable value IDs and bounded options, one-level earlier single/boolean dependency, client cannot select unpublished/unknown choices or save a stale version.
+- Authenticated order creation stores Order+answers in same DB transaction; existing orders with no questionnaire remain valid. Only owner/authorized designated worker sees answers via existing `can_view_private_order_details`. Public API returns only published questions and allowed option identifiers; dynamic client widgets do not use `innerHTML`.
+- Optional operator-invoked `seed_demo_questionnaires` for plumbing, math tutoring, landing pages, event photography; `--plan`, `--check`, `--publish`, no production auto-seed or overwriting administrator drafts. Four drafted demonstrations are provisional content.
+- Added 15 targeted tests: invalid schemas, idempotent revisions, immutable old versions/answers, tamper resistance, conditional questions, multi-language API, privacy, legacy order behavior and demo seed re-run. EN/HE gettext catalogs updated to 257 entries.
+- `02.5 IMPLEMENTED / QA_PENDING` until GitHub CI Django/migrations/seed/full suite and Docker smoke succeed. Native Hebrew editorial review and mobile RTL visual checks remain for Stage 02.6. No Docker/production credentials changed.

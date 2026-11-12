@@ -110,6 +110,18 @@ jobs:
           python manage.py seed_israel_cities --check
           python manage.py shell -c "from apps.locations.models import District, City, CityAlias; counts = (District.objects.count(), City.objects.count(), CityAlias.objects.count()); assert counts == (6, 25, 4), counts; print('STAGE_02_2_GEO_SEED_PASS', counts)"
 
+      - name: Stage 02.5 versioned questionnaire seed on isolated PostgreSQL
+        run: |
+          python manage.py seed_demo_questionnaires --plan
+          python manage.py seed_demo_questionnaires --publish
+          python manage.py seed_demo_questionnaires --check
+          python manage.py seed_demo_questionnaires --publish
+          python manage.py shell -c "from apps.marketplace.models import ServiceQuestionnaire, QuestionnaireVersion; counts = (ServiceQuestionnaire.objects.count(), QuestionnaireVersion.objects.count()); assert counts == (4, 4), counts; print('STAGE_02_5_QUESTIONNAIRES_PASS', counts)"
+
+      - name: Stage 02.5 questionnaire version and private answer regressions
+        run: |
+          python manage.py test apps.marketplace.tests.test_stage02_questionnaires
+
       - name: Stage 02.3 English/Hebrew locale regression tests
         run: |
           python manage.py test core.tests.test_i18n
