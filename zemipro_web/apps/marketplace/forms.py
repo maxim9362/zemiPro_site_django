@@ -100,8 +100,8 @@ class OrderCreateForm(forms.ModelForm):
             attach_questions(self, int(service_id) if service_id else None)
         except (TypeError, ValueError):
             attach_questions(self, None)
-        if self.questionnaire_version and not self.is_bound:
-            self.initial['questionnaire_version'] = self.questionnaire_version.pk
+        if self.active_questionnaire_version and not self.is_bound:
+            self.initial['questionnaire_version'] = self.active_questionnaire_version.pk
         for item in self.questionnaire_questions:
             item['field'] = self[item['name']]
 

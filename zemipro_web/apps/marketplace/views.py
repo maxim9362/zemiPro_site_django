@@ -307,11 +307,11 @@ def order_create_view(request):
             order.client = request.user
             with transaction.atomic():
                 order.save()
-                if form.questionnaire_version is not None:
+                if form.active_questionnaire_version is not None:
                     OrderQuestionnaireAnswer.objects.create(
                         order=order,
-                        version=form.questionnaire_version,
-                        schema_snapshot=form.questionnaire_version.schema,
+                        version=form.active_questionnaire_version,
+                        schema_snapshot=form.active_questionnaire_version.schema,
                         answers=form.questionnaire_answers,
                     )
 

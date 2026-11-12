@@ -36,7 +36,7 @@ def question_field(item):
 
 
 def attach_questions(form, service_id):
-    form.questionnaire_version = None
+    form.active_questionnaire_version = None
     form.questionnaire_questions = []
     if not service_id:
         return
@@ -46,7 +46,7 @@ def attach_questions(form, service_id):
     if not questionnaire or not questionnaire.published_version_id:
         return
     version = questionnaire.published_version
-    form.questionnaire_version = version
+    form.active_questionnaire_version = version
     for question in version.schema:
         name = 'q_' + question['key']
         form.fields[name] = question_field(question)
@@ -57,12 +57,12 @@ def attach_questions(form, service_id):
 
 def normalize_question_answers(form):
     """Conditionally required, whitelist fields/options, and ignore invisible inputs."""
-    if not form.questionnaire_version:
+    if not form.active_questionnaire_version:
         if form.data.get('questionnaire_version'):
             form.add_error(None, 'The selected questionnaire is no longer available.')
         return {}
     supplied = str(form.data.get('questionnaire_version', ''))
-    if form.is_bound and supplied != str(form.questionnaire_version.pk):
+    if form.is_bound and supplied != str(form.active_questionnaire_version.pk):
         form.add_error(None, 'Questionnaire changed; reload and answer current questions.')
         return {}
 
