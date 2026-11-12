@@ -1,6 +1,4 @@
 """Safe manually invoked seed for draft examples, optional explicit publishing."""
-from io import StringIO
-
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 

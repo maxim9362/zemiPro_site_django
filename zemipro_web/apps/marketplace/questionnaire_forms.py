@@ -1,6 +1,7 @@
 """Server-side authoritative dynamic fields from a published questionnaire."""
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from .models import ServiceQuestionnaire
 from .questionnaires import is_question_visible, localized_label
@@ -23,7 +24,7 @@ def question_field(item):
         )
     if kind == 'boolean':
         return forms.ChoiceField(
-            choices=[('', '—'), ('true', 'Yes'), ('false', 'No')], **args,
+            choices=[('', '—'), ('true', _('Да')), ('false', _('Нет'))], **args,
         )
     choices = [(o['value'], localized_label(o['labels'])) for o in item['options']]
     if kind == 'single':
@@ -59,11 +60,11 @@ def normalize_question_answers(form):
     """Conditionally required, whitelist fields/options, and ignore invisible inputs."""
     if not form.active_questionnaire_version:
         if form.data.get('questionnaire_version'):
-            form.add_error(None, 'The selected questionnaire is no longer available.')
+            form.add_error(None, _('Анкета услуги больше недоступна.'))
         return {}
     supplied = str(form.data.get('questionnaire_version', ''))
     if form.is_bound and supplied != str(form.active_questionnaire_version.pk):
-        form.add_error(None, 'Questionnaire changed; reload and answer current questions.')
+        form.add_error(None, _('Анкета изменилась. Обновите страницу и ответьте на актуальные вопросы.'))
         return {}
 
     answers = {}
@@ -75,7 +76,7 @@ def normalize_question_answers(form):
         kind = question['type']
         if raw in (None, '', []):
             if question['required']:
-                form.add_error(name, 'This question is required.')
+                form.add_error(name, _('Ответ на этот вопрос обязателен.'))
             continue
         if kind == 'number':
             raw = str(raw)

@@ -90,10 +90,15 @@ def api_questionnaire(request, service_id):
             'type': question['type'],
             'label': localized_label(question['labels']),
             'required': question['required'],
-            'options': [
-                {'value': item['value'], 'label': localized_label(item['labels'])}
-                for item in question.get('options', [])
-            ],
+            'options': (
+                [{'value': 'true', 'label': _('Да')},
+                 {'value': 'false', 'label': _('Нет')}]
+                if question['type'] == 'boolean'
+                else [
+                    {'value': item['value'], 'label': localized_label(item['labels'])}
+                    for item in question.get('options', [])
+                ]
+            ),
             'depends_on': condition,
         })
     return JsonResponse({'version': version.pk, 'questions': questions})

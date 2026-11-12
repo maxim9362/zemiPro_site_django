@@ -174,9 +174,7 @@
             if (question.type === 'single' || question.type === 'boolean') {
                 field = document.createElement('select');
                 field.append(new Option('—', ''));
-                const choices = question.type === 'boolean'
-                    ? [{value:'true',label:'Yes'}, {value:'false',label:'No'}]
-                    : question.options;
+                const choices = question.options;
                 choices.forEach(function (option) {
                     field.add(new Option(option.label, option.value));
                 });

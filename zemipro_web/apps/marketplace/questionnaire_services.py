@@ -4,6 +4,7 @@ from copy import deepcopy
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
+from django.utils.translation import gettext as _
 
 from .models import QuestionnaireVersion, ServiceQuestionnaire
 from .questionnaires import localized_label, validate_question_schema
@@ -45,7 +46,7 @@ def present_order_answers(snapshot):
             selected = answer if kind == 'multiple' else [answer]
             pretty = ', '.join(options.get(v, v) for v in selected)
         elif kind == 'boolean':
-            pretty = 'Да' if answer else 'Нет'
+            pretty = _('Да') if answer else _('Нет')
         else:
             pretty = str(answer)
         result.append({'label': localized_label(item['labels']), 'value': pretty})
