@@ -578,6 +578,6 @@
 
 - Scope: Stage 03 role-switch UI only. Existing switch button labels were new msgids absent from compiled English/Hebrew catalogues. Changed the two captions to already-translated `Кабинет клиента` / `Кабинет мастера`, plus a reversible switch icon and accessible `aria-label`, avoiding uncompiled translation changes.
 - Added a focused Django test verifying the actual switch control's English/Hebrew labels before and after changing cabinet. No changes to accounts/services/migrations, no data/permission changes.
-- Verification: **PENDING** fresh stage-03 branch CI after this small change. Previous Stage 03.1 CI at `7559f67d`: 169/169 Django, 45/45 Chromium, Ruff/seed/migrations PASS; no claim that this new diff is already verified.
-- Stage 03.1 remains `CODE_IMPLEMENTED / CI_RECHECK_PENDING` until workflow results are checked; Stage 03 overall still `IN_PROGRESS`. PR #8 and the pre-public Ashdod release gates remain unchanged.
+- Verification: **PASS** on exact code SHA `b6e1af05c14e29e4db164a021720b52bc782cc70`: [GitHub Actions #43180128121](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43180128121) **SUCCESS**. 170/170 Django, 45/45 Chromium, 12/12 Ashdod-only targeted, migration consistency/seed/Ruff PASS; targeted `marketplace.services` coverage 94.7%, not whole-site. The new role-switch EN/HE labels are verified.
+- Stage 03.1 status: `CODE_IMPLEMENTED / CI_VERIFIED`, ready for Stage 03.2. Stage 03 overall remains `IN_PROGRESS`; independent Codex review of complete Stage 03 stays pending. PR #8 remains Draft/NOT_MERGED, Stage 02 final Codex review deferred until after Stage 03 per owner; no production or public release.
 
