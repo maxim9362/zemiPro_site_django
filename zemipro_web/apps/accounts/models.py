@@ -96,7 +96,41 @@ class ClientProfile(models.Model):
 
 
 class WorkerProfile(models.Model):
-    """Профиль исполнителя (мастера)."""
+    """One professional/company card. Draft until explicit owner publication."""
+
+    class ProviderType(models.TextChoices):
+        INDIVIDUAL = 'individual', _('Частный мастер')
+        COMPANY = 'company', _('Компания')
+
+    class Availability(models.TextChoices):
+        AVAILABLE = 'available', _('Принимаю заказы')
+        LIMITED = 'limited', _('Ограниченная доступность')
+        UNAVAILABLE = 'unavailable', _('Пока не принимаю заказы')
+
+    provider_type = models.CharField(
+        max_length=10, choices=ProviderType.choices,
+        default=ProviderType.INDIVIDUAL, verbose_name=_('Тип исполнителя'),
+    )
+    display_name = models.CharField(
+        max_length=120, blank=True, default='',
+        verbose_name=_('Публичное имя или компания'),
+    )
+    spoken_languages = models.JSONField(
+        default=list, blank=True, verbose_name=_('Языки общения'),
+    )
+    pricing_details = models.CharField(
+        max_length=240, blank=True, default='',
+        verbose_name=_('Цены или принцип расчёта'),
+    )
+    availability = models.CharField(
+        max_length=12, choices=Availability.choices,
+        default=Availability.AVAILABLE, verbose_name=_('Доступность'),
+    )
+    working_hours = models.CharField(
+        max_length=200, blank=True, default='', verbose_name=_('График работы'),
+    )
+    is_published = models.BooleanField(default=False, verbose_name=_('Опубликован'))
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Опубликован с'))
 
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='worker_profile',

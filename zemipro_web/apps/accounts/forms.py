@@ -191,18 +191,18 @@ class ClientProfileForm(forms.ModelForm):
 
 
 class WorkerProfileForm(forms.ModelForm):
-    """Форма профиля мастера."""
+    """Save an owner-controlled draft; publishing requires separate validation."""
 
     city = LocalizedModelChoiceField(
         queryset=City.objects.filter(is_active=True),
         label=_('Город'),
-        empty_label=_('Выберите город'),
+        empty_label=_('Выберите город'), required=False,
     )
     skills = LocalizedModelMultipleChoiceField(
         queryset=Category.objects.filter(is_active=True).filter(
             Q(section__isnull=True) | Q(section__is_active=True)
         ),
-        label=_('Категории работ'),
+        label=_('Категории работ'), required=False,
         widget=forms.CheckboxSelectMultiple,
     )
 
@@ -217,11 +217,20 @@ class WorkerProfileForm(forms.ModelForm):
         label=_('Выполняю подходящие услуги онлайн'),
     )
 
+    spoken_languages = forms.MultipleChoiceField(
+        choices=(('ru', _('Русский')), ('en', _('Английский')),
+                 ('he', _('Иврит'))),
+        required=False, widget=forms.CheckboxSelectMultiple,
+        label=_('Языки общения'),
+    )
+
     class Meta:
         model = WorkerProfile
         fields = [
-            'city', 'contact', 'description', 'skills', 'service_cities',
-            'offers_remote', 'receive_notifications',
+            'provider_type', 'display_name', 'city', 'contact', 'description',
+            'skills', 'service_cities', 'offers_remote', 'spoken_languages',
+            'pricing_details', 'availability', 'working_hours',
+            'receive_notifications',
         ]
         labels = {
             'contact': _('Контакт для связи'),
@@ -243,6 +252,8 @@ class WorkerProfileForm(forms.ModelForm):
         cities = get_public_cities()
         self.fields['city'].queryset = cities
         self.fields['service_cities'].queryset = cities
+        if self.instance.pk is None:
+            self.fields['spoken_languages'].initial = ['ru']
 
     def clean(self):
         data = super().clean()
@@ -256,11 +267,14 @@ class WorkerProfileForm(forms.ModelForm):
                 )
         return data
 
+    def clean_display_name(self):
+        return self.cleaned_data.get('display_name', '').strip()
+
     def clean_description(self):
-        desc = self.cleaned_data.get('description', '')
-        if len(desc) < 20:
-            raise forms.ValidationError(_('Описание должно содержать минимум 20 символов.'))
-        return desc
+        return self.cleaned_data.get('description', '').strip()
+
+    def clean_pricing_details(self):
+        return self.cleaned_data.get('pricing_details', '').strip()
 
 
 class RatingCreateForm(forms.ModelForm):

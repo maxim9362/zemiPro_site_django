@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest
+from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.conf import settings
 from django.utils import translation
@@ -27,6 +28,7 @@ from .client_settings import save_client_settings, request_own_privacy_action
 from .services import (
     create_or_update_client_profile, get_client_profile,
     create_or_update_worker_profile, get_worker_profile, select_active_role,
+    set_worker_publication,
 )
 
 
@@ -66,29 +68,39 @@ def client_profile_view(request):
 
 @login_required
 def worker_profile_view(request):
+    if not request.user.is_active or request.user.is_blocked:
+        raise PermissionDenied
     profile = get_worker_profile(request.user)
-
+    form = WorkerProfileForm(
+        request.POST if request.method == 'POST' else None, instance=profile,
+    )
     if request.method == 'POST':
-        form = WorkerProfileForm(request.POST, instance=profile)
+        action = request.POST.get('action', 'save')
+        if action not in ('save', 'publish', 'unpublish'):
+            return HttpResponseBadRequest(_('Недопустимый запрос.'))
+        if action == 'unpublish':
+            set_worker_publication(request.user, False)
+            messages.success(request, _('Анкета снята с публикации.'))
+            return redirect('accounts:worker_profile')
         if form.is_valid():
-            create_or_update_worker_profile(request.user, form.cleaned_data)
-            messages.success(request, _('Профиль мастера сохранён.'))
-            return redirect('marketplace:worker_dashboard')
-    else:
-        initial = {}
-        if profile:
-            initial = {
-                'city': profile.city,
-                'contact': profile.contact,
-                'description': profile.description,
-                'skills': profile.skills.all(),
-                'service_cities': profile.service_cities.all(),
-                'offers_remote': profile.offers_remote,
-                'receive_notifications': profile.receive_notifications,
-            }
-        form = WorkerProfileForm(initial=initial)
-
-    return render(request, 'accounts/worker_profile.html', {'form': form, 'profile': profile})
+            try:
+                with transaction.atomic():
+                    profile = create_or_update_worker_profile(
+                        request.user, form.cleaned_data,
+                    )
+                    if action == 'publish':
+                        set_worker_publication(request.user, True)
+            except ValueError as exc:
+                form.add_error(None, str(exc))
+            else:
+                messages.success(
+                    request, _('Анкета опубликована.') if action == 'publish'
+                    else _('Анкета сохранена.'),
+                )
+                return redirect('accounts:worker_profile')
+    return render(request, 'accounts/worker_profile.html', {
+        'form': form, 'profile': profile,
+    })
 
 
 @login_required

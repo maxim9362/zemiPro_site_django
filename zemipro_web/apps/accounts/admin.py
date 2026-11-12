@@ -32,10 +32,13 @@ class ClientProfileAdmin(admin.ModelAdmin):
 @admin.register(WorkerProfile)
 class WorkerProfileAdmin(admin.ModelAdmin):
     list_display = (
-        'user', 'city', 'offers_remote', 'is_verified',
+        'user', 'display_name', 'provider_type', 'is_published',
+        'city', 'offers_remote', 'is_verified',
         'receive_notifications', 'created_at',
     )
-    list_filter = ('city', 'offers_remote', 'is_verified', 'receive_notifications')
+    list_filter = ('city', 'provider_type', 'is_published', 'offers_remote',
+                   'is_verified', 'receive_notifications')
+    readonly_fields = ('is_published', 'published_at')
     search_fields = ('user__username', 'user__email', 'contact', 'description')
     raw_id_fields = ('user', 'city')
     filter_horizontal = ('skills', 'service_cities')
