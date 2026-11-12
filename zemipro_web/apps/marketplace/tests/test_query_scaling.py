@@ -19,7 +19,9 @@ class QueryScalingTests(TestCase):
     def make_worker(self, number):
         user = make_user(f'perf-worker-{number}')
         profile = WorkerProfile.objects.create(
-            user=user, city=self.city, description='Synthetic bio'
+            user=user, city=self.city, display_name=user.username,
+            description='Synthetic published professional profile in CI.',
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
         )
         profile.skills.add(self.category)
         return profile

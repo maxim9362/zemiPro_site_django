@@ -51,11 +51,15 @@ class AshdodPilotPublicAccessTests(TestCase):
         cls.worker = WorkerProfile.objects.create(
             user=cls.worker_user, city=cls.ashdod,
             description='Synthetic worker for city-scope verification.',
+            display_name=cls.worker_user.username, pricing_details='Negotiable',
+            spoken_languages=['ru'], is_published=True,
         )
         cls.worker.skills.add(cls.category)
         cls.off_pilot_worker = WorkerProfile.objects.create(
             user=cls.other_worker, city=cls.other,
             description='Synthetic worker serving only a different city.',
+            display_name=cls.other_worker.username, pricing_details='Negotiable',
+            spoken_languages=['ru'], is_published=True,
         )
         cls.off_pilot_worker.skills.add(cls.category)
 

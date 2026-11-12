@@ -79,6 +79,8 @@ def worker_profile_view(request):
         if action not in ('save', 'publish', 'unpublish'):
             return HttpResponseBadRequest(_('Недопустимый запрос.'))
         if action == 'unpublish':
+            if profile is None:
+                return HttpResponseBadRequest(_('Сначала заполните профиль мастера.'))
             set_worker_publication(request.user, False)
             messages.success(request, _('Анкета снята с публикации.'))
             return redirect('accounts:worker_profile')

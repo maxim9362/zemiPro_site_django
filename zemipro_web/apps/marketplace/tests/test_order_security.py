@@ -23,15 +23,21 @@ class OrderSecurityTests(TestCase):
             username='staff', password='test-pass-4', is_staff=True
         )
         self.worker_profile = WorkerProfile.objects.create(
-            user=self.worker, city=self.city
+            user=self.worker, city=self.city, display_name=self.worker.username,
+            description='Synthetic published professional profile for CI.',
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
         )
         self.worker_profile.skills.add(self.category)
         self.other_worker_profile = WorkerProfile.objects.create(
-            user=self.other, city=self.city
+            user=self.other, city=self.city, display_name=self.other.username,
+            description='Synthetic published professional profile for CI.',
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
         )
         self.other_worker_profile.skills.add(self.category)
         self.owner_worker_profile = WorkerProfile.objects.create(
-            user=self.owner, city=self.city
+            user=self.owner, city=self.city, display_name=self.owner.username,
+            description='Synthetic published professional profile for CI.',
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
         )
         self.owner_worker_profile.skills.add(self.category)
         self.private_order = Order.objects.create(

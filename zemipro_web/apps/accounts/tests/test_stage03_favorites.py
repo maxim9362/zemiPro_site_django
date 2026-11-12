@@ -40,7 +40,9 @@ class FavoriteWorkerTests(TestCase):
         )
         self.worker = WorkerProfile.objects.create(
             user=self.worker_user, city=self.ashdod,
-            contact='HIDDEN-WORKER-CONTACT',
+            contact='HIDDEN-WORKER-CONTACT', display_name='favorite-worker',
+            description='Synthetic published professional profile for favorites.',
+            pricing_details='Negotiable', spoken_languages=['ru'], is_published=True,
         )
         self.worker.skills.add(self.category)
         self.foreign_worker = WorkerProfile.objects.create(
