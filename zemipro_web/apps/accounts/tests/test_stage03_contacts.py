@@ -80,6 +80,65 @@ class AccountSecurityTests(TestCase):
             with self.subTest(language=language), override(language):
                 self.assertEqual(gettext('Подтверждение контактов'), expected)
 
+    @override_settings(ZEMIPRO_CONTACT_DELIVERY_MODE='test-email')
+    def test_verified_email_login_and_unverified_duplicate_denied(self):
+        self.register()
+        user = get_user_model().objects.get(username='synthetic-registrant')
+        self.client.post(reverse('accounts:logout'))
+        unverified = self.client.post(reverse('accounts:login'), {
+            'username': 'synthetic.user@example.invalid',
+            'password': 'Synthetic-Password-9362!',
+        })
+        self.assertEqual(unverified.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+        self.client.force_login(user)
+        request_contact_verification(user, 'email')
+        code = re.search(r'\b\d{6}\b', mail.outbox[-1].body).group()
+        self.assertTrue(confirm_contact_verification(user, 'email', code))
+        get_user_model().objects.create_user(
+            username='unverified-duplicate', email=user.email,
+            password='Different-Strong-Password-9362!',
+        )
+        self.client.post(reverse('accounts:logout'))
+        fail = self.client.post(reverse('accounts:login'), {
+            'username': 'SYNTHETIC.USER@EXAMPLE.INVALID',
+            'password': 'Different-Strong-Password-9362!',
+        })
+        self.assertEqual(fail.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+        success = self.client.post(reverse('accounts:login'), {
+            'username': 'SYNTHETIC.USER@EXAMPLE.INVALID',
+            'password': 'Synthetic-Password-9362!',
+        })
+        self.assertRedirects(success, reverse('marketplace:client_dashboard'),
+                             fetch_redirect_response=False)
+        self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
+
+    def test_verified_phone_login_requires_the_original_confirmed_number(self):
+        self.register(email='')
+        user = get_user_model().objects.get(username='synthetic-registrant')
+        self.client.post(reverse('accounts:logout'))
+        denied = self.client.post(reverse('accounts:login'), {
+            'username': '050-123-4567', 'password': 'Synthetic-Password-9362!',
+        })
+        self.assertEqual(denied.status_code, 200)
+
+        self.client.force_login(user)
+        with patch('apps.accounts.verification.deliver_contact_code',
+                   return_value=True) as adapter:
+            self.assertTrue(request_contact_verification(user, 'phone'))
+        code = adapter.call_args.args[2]
+        self.assertTrue(confirm_contact_verification(user, 'phone', code))
+        self.client.post(reverse('accounts:logout'))
+        successful = self.client.post(reverse('accounts:login'), {
+            'username': '+972 50 123 4567',
+            'password': 'Synthetic-Password-9362!',
+        })
+        self.assertRedirects(successful, reverse('marketplace:client_dashboard'),
+                             fetch_redirect_response=False)
+        self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
+
     def test_login_blocked_user_denied_and_logout_post_only(self):
         user = get_user_model().objects.create_user(
             username='blocked', password='Synthetic-Password-9362!',

@@ -590,3 +590,9 @@
 - Added regression tests: normalization, missing/invalid contact rejection, login/CSRF/blocked users, one-use/expiry/guess limit, identity claim uniqueness, verified-only password reset with token redemption, no delivery/no token leakage and shared rate-limit. EN/HE catalogues were extended and compiled, but qualified native-editorial release signoff remains pending per owner-approved pre-public gates.
 - **Status at implementation commit:** `CODE_IMPLEMENTED / CI_PENDING / REAL_PROVIDER_RELEASE_GATE_OPEN`; isolated GitHub Actions evidence still to be checked. Stage 03 remains IN_PROGRESS; Stage 02 PR #8 remains Draft/NOT_MERGED, stage branches intact; no production or server changes.
 
+### Stage 03.2: verified email/phone login aliases
+
+- `REQ-ACC-002` verified after checking the normative spec: in addition to username/password, the login form resolves an **email or +972 phone only when the current contact matches the DB-unique `VerifiedContact` claim** and the account's matching verification timestamp is set. Unverified/duplicate contact strings do not select another user's identity; unknown identifiers fall back to ordinary username/password, preserving historical accounts. Blocked login remains denied.
+- Added tests: verified email login in mixed case, unverified duplicate with a different password cannot enter a verified account, local/international Israeli phone login requires confirmation first; existing username login preserved. New login field translated into EN/HE, compiled catalogs updated.
+- This is a strict verified-contact alias, not magic-link authentication; password is always required. Pending actual SMS/email delivery provider remains a pre-public Ashdod release gate. No independent identity-provider or new backend.
+

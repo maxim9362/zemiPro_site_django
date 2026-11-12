@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, UserCreationForm
+from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -56,8 +57,62 @@ class RegistrationForm(UserCreationForm):
         return user
 
 
+def resolve_login_identifier(value):
+    """Only a *verified* matching contact can serve as a login alias.
+
+    Unverified/different-user contacts cannot choose an account. The input
+    falls back to an ordinary username for backwards compatibility.
+    """
+    value = value.strip()
+    channel = None
+    candidate = ''
+    if '@' in value:
+        channel = 'email'
+        candidate = value.casefold()
+    else:
+        try:
+            candidate = normalize_israeli_phone(value)
+        except ValueError:
+            return value
+        channel = 'phone'
+    claim = VerifiedContact.objects.select_related('user').filter(
+        channel=channel, fingerprint=contact_fingerprint(channel, candidate),
+    ).first()
+    if claim is None:
+        return value
+    claimed_user = claim.user
+    verified = (
+        claimed_user.email_verified_at if channel == 'email'
+        else claimed_user.phone_verified_at
+    )
+    stored = (
+        (claimed_user.email or '').strip().casefold()
+        if channel == 'email' else claimed_user.phone
+    )
+    return claimed_user.get_username() if verified and stored == candidate else value
+
+
 class SafeAuthenticationForm(AuthenticationForm):
-    """A blocked user must not be able to start a new session."""
+    """Username, verified email or verified +972 phone; never unverified aliases."""
+
+    username = forms.CharField(
+        max_length=254, label=_('Имя пользователя, email или телефон'),
+    )
+
+    def clean(self):
+        username = self.cleaned_data.get('username')
+        password = self.cleaned_data.get('password')
+        if username is not None and password:
+            # Keep the original submitted identifier in cleaned_data so failed
+            # login forms cannot disclose the resolved account username.
+            self.user_cache = authenticate(
+                self.request, username=resolve_login_identifier(username),
+                password=password,
+            )
+            if self.user_cache is None:
+                raise self.get_invalid_login_error()
+            self.confirm_login_allowed(self.user_cache)
+        return self.cleaned_data
 
     def confirm_login_allowed(self, user):
         super().confirm_login_allowed(user)

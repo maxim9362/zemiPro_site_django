@@ -864,3 +864,6 @@ msgstr "If you did not request this reset, ignore this email."
 
 msgid "ZemiPro — восстановление пароля"
 msgstr "ZemiPro — password reset"
+
+msgid "Имя пользователя, email или телефон"
+msgstr "Username, email or phone number"
