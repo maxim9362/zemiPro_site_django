@@ -19,3 +19,9 @@ Services lock the affected `Order` row via `SELECT ... FOR UPDATE`, re-check per
 ## Verification and future gate
 
 Isolated PostgreSQL migrations/immutable-trigger tests, end-to-end HTTP owner rights and blocked/foreign paths, rollback, drafts pagination, edit/noop/duplicate idempotency, rerun questionnaire snapshots, old legacy price/address preservation, full Django suite, RU/EN/HE and Ashdod-only browser checks. Stage 04.6 still owns stricter concurrency/rate limits; 04.7 owns event delivery to notifications/analytics. Independent Codex Cloud and physical mobile review are separate gates after all 04.x.
+
+## Verified acceptance — 2026-11-12
+
+- Verified code SHA: `f325df96d707cd0cb6d3092f5289caabfd08fd13`. [Isolated CI #43293526168](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43293526168) **SUCCESS**; Django **318/318 PASS**, clean PostgreSQL 17.11 migration `0012`, `makemigrations --check`, Ruff, system checks, RU/EN/HE headless Chrome common smoke **45/45**, Ashdod-only **13/13**.
+- New PostgreSQL triggers protect both owner management events and private archived questionnaire snapshots against UPDATE/DELETE. History and source order survive duplicate/edit/withdraw/re-publish workflows; no raw PII stored in management-event logs.
+- Separate interactive browser E2E for new management forms, real-mobile acceptance, independent Codex Cloud and the one final Stage 04 PR remain pending. Deployment and live migrations are explicitly outside the scope.
