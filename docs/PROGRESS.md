@@ -693,3 +693,9 @@
 - Independent PostgreSQL 17 evidence on the combined tree: 69/69 focused security/migration tests, 244/244 full Django, Ruff/compile/checks/migration consistency, 43 clean migrations, repeatable seeds, persistence and synthetic backup/restore PASS; targeted `marketplace.services` coverage 91.0%; Chromium RU/EN/HE 180/180 with 54 screenshots. Physical devices and real SMTP/SMS remain NOT_RUN.
 - GitHub Actions on the forthcoming correction/documentation HEAD remain pending. Stage 03 is technically review-passed locally, not merged/deployed; all manual/legal/infrastructure release gates remain open.
 
+
+## 2026-11-12 — Stage 02 PR #8 MERGED; Stage 03 PR #9 target main
+
+- **Stage 02:** owner approved PR #8 merge; GitHub confirmed `MERGED` into `main` at `8950dd009a8d9b7b4534edef777674e04155d8ef`. Reviewed Stage 02 SHA `24df07f1` is the second parent and has the same exact Git tree as this merge commit. Only the code merge is accepted: Ashdod-only public launch gates remain OPEN.
+- **Stage 03:** PR #9 retargeted from `stage-02-catalog-localization` to `main`. The already reviewed Stage 03 code remains unchanged. A merge of the now-reviewed `main` into the Stage 03 feature branch is recorded in this documentation commit with parent links to Stage 03 `f61066e` and `main` `8950dd0` (no competing Stage 02 changes, tree equivalence verified).
+- **Revalidation:** because Docker staging GitHub workflow runs only for PRs targeting `main` and touching `zemipro_web/**`, a branch update triggers new GitHub PR CI and isolated Docker staging smoke. Both must complete SUCCESS on the rebased PR before merge readiness is confirmed. Prior Stage 03 Django CI #43208992486 SUCCESS; independent Codex `STAGE_03_CODE_REVIEW_PASS` remains, but owner merge permission still required. No Stage 03 PR merge, production changes, VPS/DNS or live database migration authorized.
