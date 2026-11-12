@@ -17,11 +17,11 @@ CREATE TRIGGER order_management_event_immutable
 BEFORE UPDATE OR DELETE ON marketplace_order_management_event
 FOR EACH ROW EXECUTE FUNCTION zemipro_order_management_event_immutable();
 CREATE OR REPLACE FUNCTION zemipro_order_answer_archive_immutable()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     RAISE EXCEPTION 'order questionnaire archive is append-only';
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 CREATE TRIGGER order_answer_archive_immutable
 BEFORE UPDATE OR DELETE ON marketplace_order_questionnaire_answer_archive
 FOR EACH ROW EXECUTE FUNCTION zemipro_order_answer_archive_immutable();
