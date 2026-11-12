@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import Case, Exists, IntegerField, OuterRef, Q, Value, When
 
 from apps.accounts.models import WorkerProfile
+from apps.locations.services import city_is_public, get_public_cities
 from .models import Category, Order, Response
 
 
@@ -20,6 +21,8 @@ def create_order(client, category, city, address, description, price='Догов
     """Создать новую заявку."""
     if client is None or not client.is_authenticated:
         raise ValueError('Для создания заявки требуется авторизация.')
+    if not city_is_public(city):
+        raise ValueError('Город пока не обслуживается.')
     order = Order.objects.create(
         client=client,
         category=category,
@@ -34,11 +37,13 @@ def create_order(client, category, city, address, description, price='Догов
 
 
 def workers_serving_city(queryset, city, *, category=None):
-    """Apply explicit service zones, legacy home-city fallback, and online opt-in.
+    """Apply explicit zones, home city fallback, and online opt-in.
 
-    EXISTS subqueries prevent duplicated profile rows and inflated rating counts
-    when a worker serves many cities or has multiple matching skills.
+    EXISTS subqueries prevent duplicate workers; no out-of-pilot geography is
+    exposed even by a crafted category/city query or remote-service flag.
     """
+    if not city_is_public(city):
+        return queryset.none()
     through = WorkerProfile.service_cities.through
     zones = through.objects.filter(workerprofile_id=OuterRef('pk'))
     serving = zones.filter(city_id=city.pk)
@@ -74,7 +79,8 @@ def get_available_orders_for_worker(worker_profile):
         return Order.objects.none()
 
     base_qs = Order.objects.select_related('category', 'city').filter(
-        status=Order.Status.NEW, category__in=skills, city__is_active=True,
+        status=Order.Status.NEW, category__in=skills,
+        city__in=get_public_cities(),
     ).exclude(client_id=worker_profile.user_id)
 
     # A worker without an explicit area inherits only the historical home city;
@@ -97,6 +103,9 @@ def create_response(order, worker_user, message=''):
     """Создать отклик мастера на заказ."""
     if not hasattr(worker_user, 'worker_profile'):
         raise ValueError('Пользователь не является мастером.')
+
+    if not city_is_public(order.city):
+        raise ValueError('Город пока не обслуживается.')
 
     if order.client_id == worker_user.pk:
         raise ValueError('Нельзя откликнуться на собственную заявку.')

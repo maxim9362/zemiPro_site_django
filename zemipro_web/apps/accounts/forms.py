@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 
 from apps.locations.models import City
+from apps.locations.services import get_public_cities
 from apps.marketplace.models import Category, Rating
 from .models import ClientProfile, User, WorkerProfile
 
@@ -26,6 +27,10 @@ class ClientProfileForm(forms.ModelForm):
         label=_('Город'),
         empty_label=_('Выберите город'),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['city'].queryset = get_public_cities()
 
     class Meta:
         model = ClientProfile
@@ -85,6 +90,12 @@ class WorkerProfileForm(forms.ModelForm):
                 'placeholder': _('Опишите ваш опыт, инструменты, особенности работы (минимум 20 символов)'),
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        cities = get_public_cities()
+        self.fields['city'].queryset = cities
+        self.fields['service_cities'].queryset = cities
 
     def clean(self):
         data = super().clean()

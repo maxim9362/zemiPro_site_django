@@ -11,7 +11,8 @@ from django.utils.translation import gettext as _
 from apps.accounts.forms import RatingCreateForm
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
-from apps.locations.models import City, CityAlias
+from apps.locations.models import CityAlias
+from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from apps.notifications.services import create_notification
 from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
 from .questionnaires import localized_label
@@ -142,7 +143,7 @@ def category_detail(request, slug):
             Q(section__isnull=True) | Q(section__is_active=True)
         ), slug=slug, is_active=True,
     )
-    cities = City.objects.filter(is_active=True).order_by('name_ru')
+    cities = get_public_cities().order_by('name_ru')
     selected_city = request.GET.get('city')
 
     workers = WorkerProfile.objects.filter(
@@ -153,11 +154,18 @@ def category_detail(request, slug):
     ).order_by(F('avg_rating').desc(nulls_last=True), 'pk')
 
     if selected_city:
-        target_city = City.objects.filter(is_active=True, slug=selected_city).first()
+        target_city = get_public_cities().filter(slug=selected_city).first()
         if target_city is None:
             workers = workers.none()
         else:
             workers = workers_serving_city(workers, target_city, category=category)
+    elif public_city_slug():
+        # Do not advertise workers serving only outside the first pilot city.
+        pilot_city = get_public_cities().first()
+        workers = (
+            workers_serving_city(workers, pilot_city, category=category)
+            if pilot_city is not None else workers.none()
+        )
 
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
@@ -190,7 +198,7 @@ def category_detail(request, slug):
 
 
 def cities_list(request):
-    cities = City.objects.filter(is_active=True).select_related(
+    cities = get_public_cities().select_related(
         'district'
     ).order_by('name_ru', 'pk')
     context = {'cities': cities}
@@ -215,7 +223,7 @@ def city_detail(request, slug):
     if is_prefixed:
         alias = CityAlias.objects.select_related('city').filter(slug=slug).first()
         if alias is not None:
-            if not alias.city.is_active:
+            if not city_is_public(alias.city):
                 raise Http404
             pathname = reverse(
                 'catalog_i18n:city_detail', kwargs={'slug': alias.city.slug},
@@ -223,7 +231,7 @@ def city_detail(request, slug):
             if request.GET:
                 pathname += '?' + request.GET.urlencode()
             return HttpResponsePermanentRedirect(pathname)
-    city = get_object_or_404(City, slug=slug, is_active=True)
+    city = get_object_or_404(get_public_cities(), slug=slug)
     categories = Category.objects.filter(is_active=True).filter(
         Q(section__isnull=True) | Q(section__is_active=True)
     ).order_by('sort_order', 'pk')
@@ -315,12 +323,16 @@ def service_detail(request, category_slug, service_slug):
 
 
 def worker_public_profile_view(request, pk):
-    profile = get_object_or_404(
-        WorkerProfile.objects.filter(
-            user__is_active=True, user__is_blocked=False
-        ).select_related('city', 'user').prefetch_related('skills', 'service_cities'),
-        pk=pk,
-    )
+    workers = WorkerProfile.objects.filter(
+        user__is_active=True, user__is_blocked=False
+    ).select_related('city', 'user').prefetch_related('skills', 'service_cities')
+    if public_city_slug():
+        pilot_city = get_public_cities().first()
+        workers = (
+            workers_serving_city(workers, pilot_city)
+            if pilot_city is not None else workers.none()
+        )
+    profile = get_object_or_404(workers, pk=pk)
     reviews = Rating.objects.filter(
         worker=profile.user
     ).select_related('client').order_by('-created_at')
@@ -639,7 +651,9 @@ def order_respond_view(request, pk):
         return redirect('accounts:worker_profile')
 
     order = get_object_or_404(
-        Order.objects.select_related('category', 'city'),
+        Order.objects.select_related('category', 'city').filter(
+            city__in=get_public_cities()
+        ),
         pk=pk, status=Order.Status.NEW,
     )
 

@@ -31,7 +31,16 @@ def inspect(page, lang, path, width):
         raise AssertionError(f'{lang}/{width}/{path}: overflow={metrics}')
     if not page.locator('.nav a').count():
         raise AssertionError(f'{lang}/{width}/{path}: no menu')
+    if path.endswith('/cities/'):
+        cards = page.locator('.cities-grid a.city-card')
+        if cards.count() != 1 or not cards.first.get_attribute('href').endswith('/cities/ashdod/'):
+            raise AssertionError(f'{lang}/{width}: expected only Ashdod public city')
     if path == '/orders/create/':
+        city_values = page.locator('select[name="city"] option').evaluate_all(
+            'options => options.filter(option => option.value).map(option => option.value)'
+        )
+        if len(city_values) != 1:
+            raise AssertionError(f'{lang}/{width}: order form exposes nonpilot cities')
         if not page.locator('#order-form').is_visible():
             raise AssertionError(f'{lang}/{width}: authenticated order form missing')
         phone_direction = page.locator('input[name="customer_phone"]').evaluate(

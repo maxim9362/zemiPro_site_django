@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from core.forms import LocalizedModelChoiceField
 
 from apps.locations.models import City
+from apps.locations.services import get_public_cities
 from .models import Category, Order, Response, Subcategory
 from .questionnaire_forms import attach_questions, normalize_question_answers
 
@@ -77,6 +78,9 @@ class OrderCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Set per instance: override_settings in pilot regression tests must work
+        # even though the model field was declared at module import time.
+        self.fields['city'].queryset = get_public_cities()
         if 'category' in self.data:
             try:
                 cat_id = int(self.data.get('category'))

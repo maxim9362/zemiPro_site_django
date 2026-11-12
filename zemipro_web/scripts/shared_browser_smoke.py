@@ -72,7 +72,16 @@ def assert_page(page: Page, lang: str, label: str, path: str, width: int) -> Non
 
     if label in {"login", "register", "order"} and not page.locator("form").count():
         raise AssertionError(f"{lang}/{width}/{label}: form missing")
+    if label == "cities":
+        cards = page.locator(".cities-grid a.city-card")
+        if cards.count() != 1 or not urlparse(cards.first.get_attribute("href")).path.endswith("/cities/ashdod/"):
+            raise AssertionError(f"{lang}/{width}: pilot city list is not Ashdod-only")
     if label == "order":
+        selected_cities = page.locator('select[name="city"] option').evaluate_all(
+            "options => options.filter(option => option.value).map(option => option.value)"
+        )
+        if len(selected_cities) != 1:
+            raise AssertionError(f"{lang}/{width}: order form must offer exactly Ashdod")
         if not page.locator("#order-form").is_visible():
             raise AssertionError(f"{lang}/{width}: authenticated order form missing")
         phone = page.locator('input[name="customer_phone"]')
