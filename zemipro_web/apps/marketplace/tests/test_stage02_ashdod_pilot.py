@@ -167,6 +167,46 @@ class AshdodPilotPublicAccessTests(TestCase):
         self.assertEqual(self.client.get(allowed).status_code, 200)
         self.assertEqual(self.client.get(unavailable).status_code, 404)
 
+    def test_remote_flag_cannot_publish_or_authorize_other_city_worker(self):
+        """Remote delivery must not bypass the Ashdod profile boundary."""
+        self.category.work_mode = 'both'
+        self.category.save(update_fields=['work_mode'])
+        self.off_pilot_worker.offers_remote = True
+        self.off_pilot_worker.save(update_fields=['offers_remote'])
+        self.off_pilot_worker.service_cities.add(self.ashdod)
+
+        category_url = reverse(
+            'marketplace:category_detail', args=[self.category.slug],
+        )
+        category_page = self.client.get(category_url)
+        self.assertNotIn(
+            self.off_pilot_worker,
+            category_page.context['page_obj'].object_list,
+        )
+        public_url = reverse(
+            'marketplace:worker_public_profile', args=[self.off_pilot_worker.pk],
+        )
+        self.assertEqual(self.client.get(public_url).status_code, 404)
+
+        order = make_order(
+            client=self.client_user, category=self.category, city=self.ashdod,
+        )
+        self.assertFalse(
+            get_available_orders_for_worker(self.off_pilot_worker).exists(),
+        )
+        self.client.force_login(self.other_worker)
+        respond_url = reverse('marketplace:order_respond', args=[order.pk])
+        self.assertEqual(self.client.get(respond_url).status_code, 404)
+        self.assertEqual(
+            self.client.post(respond_url, {'message': 'Forged remote response'}).status_code,
+            404,
+        )
+        with self.assertRaisesMessage(
+            ValueError, 'Профиль мастера находится вне пилотного города',
+        ):
+            create_response(order, self.other_worker, 'Direct remote response')
+        self.assertFalse(Response.objects.filter(order=order).exists())
+
     def test_forms_offer_only_ashdod_including_service_zones(self):
         for form in (ClientProfileForm(), WorkerProfileForm(), OrderCreateForm()):
             self.assertEqual(

@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Case, Exists, IntegerField, OuterRef, Q, Value, When
 
 from apps.accounts.models import WorkerProfile
-from apps.locations.services import city_is_public, get_public_cities
+from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from .models import Category, Order, Response
 
 
@@ -44,6 +44,10 @@ def workers_serving_city(queryset, city, *, category=None):
     """
     if not city_is_public(city):
         return queryset.none()
+    if public_city_slug():
+        # Remote work is a delivery mode, not a way to publish a historical
+        # profile whose home city is outside the owner-approved pilot.
+        queryset = queryset.filter(city=city)
     through = WorkerProfile.service_cities.through
     zones = through.objects.filter(workerprofile_id=OuterRef('pk'))
     serving = zones.filter(city_id=city.pk)
@@ -72,6 +76,8 @@ def workers_serving_city(queryset, city, *, category=None):
 
 def get_available_orders_for_worker(worker_profile):
     """New orders only in selected zones or eligible opted-in online skills."""
+    if public_city_slug() and not city_is_public(worker_profile.city):
+        return Order.objects.none()
     skills = worker_profile.skills.filter(is_active=True).filter(
         Q(section__isnull=True) | Q(section__is_active=True)
     )
@@ -103,6 +109,9 @@ def create_response(order, worker_user, message=''):
     """Создать отклик мастера на заказ."""
     if not hasattr(worker_user, 'worker_profile'):
         raise ValueError('Пользователь не является мастером.')
+
+    if public_city_slug() and not city_is_public(worker_user.worker_profile.city):
+        raise ValueError('Профиль мастера находится вне пилотного города.')
 
     if not city_is_public(order.city):
         raise ValueError('Город пока не обслуживается.')
