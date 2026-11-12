@@ -14,7 +14,7 @@ from apps.accounts.models import ClientProfile
 from apps.locations.models import City
 from apps.marketplace.models import (
     Category, Order, OrderManagementEvent, OrderQuestionnaireAnswer,
-    OrderQuestionnaireAnswerArchive, OrderStatusEvent, Response,
+    OrderQuestionnaireAnswerArchive, Response,
     ServiceQuestionnaire, Subcategory,
 )
 from apps.marketplace.order_lifecycle import transition_order_status
