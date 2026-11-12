@@ -15,7 +15,7 @@
     <div class="container">
         <form method="post" class="form" id="order-form">
             {% csrf_token %}
-            <p class="form__hint">{% trans 'Номер телефона и точный адрес не передаются мастерам автоматически. Для новой заявки рекомендуем пошаговую форму.' %}</p>
+            <p class="form__hint">{% trans 'Точный адрес и телефон не запрашиваются при создании заявки. Передать контакты выбранному мастеру можно позднее в приватном чате.' %}</p>
             <p><a href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Открыть пошаговую форму' %}</a></p>
             <input type="hidden" name="submission_key" id="submission-key">
 
@@ -36,13 +36,6 @@
                     {% endif %}
                 </div>
 
-                <div class="form__group">
-                    <label for="id_customer_phone" class="form__label">{% trans 'Телефон (необязательно)' %}</label>
-                    {{ form.customer_phone }}
-                    {% if form.customer_phone.errors %}
-                    <span class="form__error">{{ form.customer_phone.errors.0 }}</span>
-                    {% endif %}
-                </div>
             </div>
 
             <div class="form__row">
@@ -93,13 +86,6 @@
                     {% endif %}
                 </div>
 
-                <div class="form__group">
-                    <label for="id_address" class="form__label">{% trans 'Адрес (необязательно)' %}</label>
-                    {{ form.address }}
-                    {% if form.address.errors %}
-                    <span class="form__error">{{ form.address.errors.0 }}</span>
-                    {% endif %}
-                </div>
             </div>
 
             <div class="form__group">

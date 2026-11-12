@@ -52,6 +52,14 @@ class OrderOwnershipAndIdempotencyTests(TestCase):
             **kwargs,
         }
 
+    def test_legacy_html_does_not_ask_for_precise_contact_fields(self):
+        self.client.force_login(self.owner)
+        page = self.client.get(reverse('marketplace:order_create'))
+        self.assertEqual(page.status_code, 200)
+        self.assertNotContains(page, 'id_customer_phone')
+        self.assertNotContains(page, 'id_address')
+        self.assertContains(page, reverse('marketplace:order_wizard_start'))
+
     def test_legacy_post_replay_without_token_returns_same_order_and_event(self):
         self.client.force_login(self.owner)
         url = reverse('marketplace:order_create')
