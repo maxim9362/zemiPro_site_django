@@ -23,3 +23,11 @@
 ## Django Admin and legacy browser privacy regression
 
 The Order, Response and OrderQuestionnaireAnswer Django Admin views require a re-fetched active, unblocked and email-cleared staff identity with `moderation.review_complaints`. Generic model-view access alone does not grant raw order details, response messages, exact contacts or private questionnaire answers. The legacy HTML no longer asks for precise address or phone (while historical POST clients remain supported); both browser smoke scripts now assert their absence. Privacy guidance is localized from the existing RU/EN/HE wizard copy.
+
+## Final acceptance of 04.3
+
+[CI #43282687878](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43282687878) on commit `f8ac2cb99848a354ff74d3867e14013ee8dcd3b8`: **SUCCESS**. Full Django **294/294 PASS**; PostgreSQL 17 clean migrations through `marketplace.0010`; Ashdod-only **13/13**, Chrome mobile RU/EN/HE **45/45**, static checks/lint PASS. `apps.marketplace.services` scoped coverage **87.4%** (not project-wide).
+
+The old form no longer contains exact address or phone entry controls, both browser smoke suites check the new privacy contract, and the former historical migration test restores the current leaf rather than leaving other tests on 0008. Direct legacy POST remains backward compatible; reviewed owner-only access extends to Django Admin private order/response/questionnaire records.
+
+Status **CODE_IMPLEMENTED / CI_VERIFIED**. Stage-wide review, real-browser wizard interaction and final deployment gates still open. No production changes.
