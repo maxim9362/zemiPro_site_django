@@ -129,7 +129,7 @@ def set_worker_publication(user, publish):
     """Explicit owner publication switch; never accepts a supplied profile id."""
     owner = _locked_worker_owner(user)
     profile = WorkerProfile.objects.select_for_update().select_related(
-        'user', 'city',
+        'user',
     ).filter(user=owner).first()
     if profile is None:
         raise ValueError(_('Сначала заполните профиль мастера.'))

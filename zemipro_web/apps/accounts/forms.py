@@ -254,6 +254,9 @@ class WorkerProfileForm(forms.ModelForm):
         self.fields['service_cities'].queryset = cities
         if self.instance.pk is None:
             self.fields['spoken_languages'].initial = ['ru']
+        # Backward-compatible edit of Stage 02 profiles via older POST payloads.
+        self.fields['provider_type'].required = False
+        self.fields['availability'].required = False
 
     def clean(self):
         data = super().clean()
@@ -266,6 +269,14 @@ class WorkerProfileForm(forms.ModelForm):
                     _('Для онлайн-работы выберите хотя бы одну услугу с онлайн-форматом.')
                 )
         return data
+
+    def clean_provider_type(self):
+        return (self.cleaned_data.get('provider_type')
+                or self.instance.provider_type or WorkerProfile.ProviderType.INDIVIDUAL)
+
+    def clean_availability(self):
+        return (self.cleaned_data.get('availability')
+                or self.instance.availability or WorkerProfile.Availability.AVAILABLE)
 
     def clean_display_name(self):
         return self.cleaned_data.get('display_name', '').strip()
