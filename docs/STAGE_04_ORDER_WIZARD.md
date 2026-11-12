@@ -31,3 +31,9 @@ Persisted payload is private `Order.wizard_data = {'steps': {'1': {...}, ... '7'
 
 - Run targeted `test_stage04_wizard` and then full GitHub Django CI (clean PostgreSQL migrations, model consistency, Ruff/compile, RU/EN/HE Chromium mobile, Ashdod pilot tests).
 - Stage 04.4 still owns image uploads, secure file validation/storage, formal price and appointment/location fields. Stage 04.3 owns the final convergence of legacy and wizard routes and creating-owner idempotency for all entrypoints. No existing historical rows, user records or live data may be modified by these additions.
+
+## Verified code and remaining browser gate
+
+- [Django CI #43278024400](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43278024400) SUCCESS on code `77a7e2b082e0055599063a3d14a0adced0d28914`: 279/279 Django, 13/13 Ashdod-only, clean PostgreSQL 17 migrations, compile/Ruff/model check, 45/45 headless Chrome checks for **pre-existing** mobile catalog/login workflows.
+- Stage 04.2 tests assert wizard responses and language-dependent HTML/RTL for 3 × 3 category-language combinations. **A dedicated interactive Chrome run on the new wizard route** (mobile keyboard/navigation, steps 1–8, JS-dependent service options, conditional questions) remains required before full Stage 04 acceptance.
+- Photos, formal location/price/date columns and protected attachment delivery remain Stage 04.4 scope; do not publicly advertise these as available. The current page tells customers photo uploads are not yet available, without displaying internal stage numbers.
