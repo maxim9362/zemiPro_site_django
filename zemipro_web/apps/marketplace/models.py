@@ -490,6 +490,96 @@ class OrderWriteQuota(models.Model):
 
 
 
+class OrderDomainEvent(models.Model):
+    """Immutable, PII-free order event captured in the mutation transaction."""
+
+    class Kind(models.TextChoices):
+        CREATED = 'order_created', 'Создание заявки'
+        PUBLISHED = 'order_published', 'Публикация заявки'
+        UPDATED = 'order_updated', 'Изменение условий'
+        CANCELLED = 'order_cancelled', 'Отмена заявки'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='domain_events',
+    )
+    kind = models.CharField(max_length=24, choices=Kind.choices)
+    category = models.ForeignKey(Category, on_delete=models.PROTECT)
+    city = models.ForeignKey('locations.City', on_delete=models.PROTECT)
+    source_key = models.UUIDField(editable=False)
+    event_key = models.UUIDField(unique=True, editable=False)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_domain_event'
+        ordering = ['occurred_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'kind', 'source_key'],
+                name='order_domain_source_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['kind', 'occurred_at'], name='order_domain_kind_time_idx',
+            ),
+        ]
+
+
+class OrderEventDelivery(models.Model):
+    """Idempotent in-app notifications and local analytics consumer receipt."""
+
+    class Consumer(models.TextChoices):
+        NOTIFICATIONS = 'notifications', 'Внутренние уведомления'
+        ANALYTICS = 'analytics', 'Внутренняя аналитика'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает'
+        DONE = 'done', 'Обработано'
+
+    event = models.ForeignKey(
+        OrderDomainEvent, on_delete=models.PROTECT, related_name='deliveries',
+    )
+    consumer = models.CharField(max_length=16, choices=Consumer.choices)
+    status = models.CharField(
+        max_length=8, choices=Status.choices, default=Status.PENDING,
+    )
+    attempts = models.PositiveIntegerField(default=0)
+    last_error_code = models.CharField(max_length=32, blank=True, default='')
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_order_event_delivery'
+        ordering = ['event_id', 'consumer']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['event', 'consumer'], name='order_delivery_consumer_unique',
+            ),
+        ]
+
+
+class OrderAnalyticsFact(models.Model):
+    """One coarse-grained fact per event, without content or contacts."""
+
+    event = models.OneToOneField(
+        OrderDomainEvent, on_delete=models.PROTECT,
+        related_name='analytics_fact',
+    )
+    kind = models.CharField(max_length=24, choices=OrderDomainEvent.Kind.choices)
+    category = models.ForeignKey(Category, on_delete=models.PROTECT)
+    city = models.ForeignKey('locations.City', on_delete=models.PROTECT)
+    occurred_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'marketplace_order_analytics_fact'
+        indexes = [
+            models.Index(
+                fields=['kind', 'occurred_at'], name='order_fact_kind_time_idx',
+            ),
+        ]
+
+
+
+
 class Response(models.Model):
     """Отклик исполнителя на заказ."""
 

@@ -17,6 +17,7 @@ from .wizard_forms import validate_approximate_area
 from .wizard_services import ensure_wizard_owner
 from .wizard_ui import wizard_copy
 from .order_quota import consume_order_quota
+from .order_events import emit_order_event
 
 
 def _operation_key(value):
@@ -216,12 +217,13 @@ def edit_published_order(*, order_id, actor, data, operation_key):
     order.save(update_fields=list(set(changed + ['updated_at'])))
     # No description, address, phone, neighborhood text, price values, or
     # private questionnaire answers are copied to the audit event.
-    OrderManagementEvent.objects.create(
+    source = OrderManagementEvent.objects.create(
         order=order, actor_id=actor.pk,
         action=OrderManagementEvent.Action.EDITED,
         changed_fields=[x for x in changed if x != 'wizard_data'],
         operation_key=op,
     )
+    emit_order_event(order, 'order_updated', source.operation_key)
     return order, True
 
 
@@ -298,11 +300,12 @@ def duplicate_order(*, order_id, actor, operation_key):
         description='', price='Договорная',
         wizard_data={'steps': steps, 'prefill': _duplicate_prefill(source)},
     )
-    OrderStatusEvent.objects.create(
+    creation = OrderStatusEvent.objects.create(
         order=clone, actor_id=actor.pk,
         previous_status='', new_status=Order.Status.DRAFT,
         reason=OrderStatusEvent.Reason.CREATED,
     )
+    emit_order_event(clone, 'order_created', creation.operation_key)
     OrderManagementEvent.objects.create(
         order=source, actor_id=actor.pk,
         action=OrderManagementEvent.Action.DUPLICATED,

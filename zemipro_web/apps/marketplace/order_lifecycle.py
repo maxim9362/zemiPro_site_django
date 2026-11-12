@@ -8,6 +8,7 @@ from apps.accounts.models import User
 from apps.locations.services import city_is_public
 from .models import Order, OrderStatusEvent
 from .order_quota import consume_order_quota
+from .order_events import emit_order_event
 
 
 ALLOWED_ORDER_TRANSITIONS = {
@@ -90,9 +91,13 @@ def transition_order_status(order, target_status, *, actor, operation_key=None,
         previous = locked.status
         locked.status = target_status
         locked.save(update_fields=['status', 'updated_at'])
-        OrderStatusEvent.objects.create(
+        source = OrderStatusEvent.objects.create(
             order=locked, actor_id=actor.pk,
             previous_status=previous, new_status=target_status,
             reason=reason, operation_key=operation_key or uuid.uuid4(),
         )
+        if target_status == Order.Status.PUBLISHED:
+            emit_order_event(locked, 'order_published', source.operation_key)
+        elif target_status == Order.Status.CANCELLED:
+            emit_order_event(locked, 'order_cancelled', source.operation_key)
         return locked

@@ -18,6 +18,7 @@ from .order_lifecycle import transition_order_status
 from .wizard_forms import active_categories, active_services
 from .wizard_ui import wizard_copy
 from .order_quota import consume_order_quota
+from .order_events import emit_order_event
 
 
 def ensure_wizard_owner(user):
@@ -116,11 +117,12 @@ def start_order_wizard(*, actor, form, token):
                     status=Order.Status.DRAFT, wizard_token=key,
                     wizard_data={'steps': {'1': values}},
                 )
-                OrderStatusEvent.objects.create(
+                source = OrderStatusEvent.objects.create(
                     order=order, actor_id=actor.pk, previous_status='',
                     new_status=Order.Status.DRAFT,
                     reason=OrderStatusEvent.Reason.CREATED,
                 )
+                emit_order_event(order, 'order_created', source.operation_key)
         except IntegrityError:
             existing = Order.objects.select_for_update().get(wizard_token=key)
             if existing.client_id != actor.pk:

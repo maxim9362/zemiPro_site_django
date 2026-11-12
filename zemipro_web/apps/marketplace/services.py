@@ -6,6 +6,7 @@ from apps.locations.services import city_is_public, get_public_cities, public_ci
 from .models import Category, Order, OrderStatusEvent, Response
 from .order_lifecycle import transition_order_status
 from .order_quota import consume_order_quota
+from .order_events import emit_order_event
 
 
 def can_view_private_order_details(user, order):
@@ -152,10 +153,12 @@ def create_order(
                 customer_name=customer_name, customer_phone=customer_phone,
                 wizard_token=key, submission_digest=digest,
             )
-            OrderStatusEvent.objects.create(
+            source = OrderStatusEvent.objects.create(
                 order=order, actor_id=client.pk, previous_status='',
                 new_status=order.status, reason=OrderStatusEvent.Reason.CREATED,
             )
+            emit_order_event(order, 'order_created', source.operation_key)
+            emit_order_event(order, 'order_published', source.operation_key)
             if questionnaire_version is not None:
                 from .models import OrderQuestionnaireAnswer
                 OrderQuestionnaireAnswer.objects.create(

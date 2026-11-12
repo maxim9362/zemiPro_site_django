@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from django.utils.translation import gettext as _
+from django.utils.translation import get_language, gettext as _
 
 
 class Notification(models.Model):
@@ -8,6 +8,7 @@ class Notification(models.Model):
 
     class Type(models.TextChoices):
         ORDER_CREATED = 'order_created', 'Заявка создана'
+        ORDER_UPDATED = 'order_updated', 'Условия заявки изменены'
         NEW_RESPONSE = 'new_response', 'Новый отклик'
         RESPONSE_ACCEPTED = 'response_accepted', 'Вас выбрали'
         RESPONSE_REJECTED = 'response_rejected', 'Выбран другой мастер'
@@ -36,6 +37,10 @@ class Notification(models.Model):
         null=True, blank=True, related_name='notifications',
         verbose_name='Связанный отклик'
     )
+    order_event = models.ForeignKey(
+        'marketplace.OrderDomainEvent', on_delete=models.PROTECT,
+        null=True, blank=True, editable=False, related_name='notifications',
+    )
     is_read = models.BooleanField(default=False, verbose_name='Прочитано')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создано')
     read_at = models.DateTimeField(null=True, blank=True, verbose_name='Прочитано в')
@@ -45,6 +50,12 @@ class Notification(models.Model):
         verbose_name_plural = 'Уведомления'
         db_table = 'notifications_notification'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order_event', 'recipient'],
+                name='notif_order_event_recipient_unique',
+            ),
+        ]
         indexes = [
             models.Index(fields=['recipient', 'is_read'], name='notif_recipient_read_idx'),
             models.Index(fields=['recipient', '-created_at'], name='notif_recipient_created_idx'),
@@ -57,6 +68,13 @@ class Notification(models.Model):
         """Localize known system events at display time, not at write time."""
         if self.notification_type == self.Type.SYSTEM:
             return _(self.title)
+        if self.notification_type == self.Type.ORDER_UPDATED:
+            language = (get_language() or 'ru').split('-')[0]
+            return {
+                'ru': 'Условия заявки изменены',
+                'en': 'Request details updated',
+                'he': 'פרטי הבקשה עודכנו',
+            }.get(language, 'Условия заявки изменены')
         title_map = {
             self.Type.ORDER_CREATED: 'Заявка создана',
             self.Type.NEW_RESPONSE: 'Новый отклик',
@@ -73,6 +91,14 @@ class Notification(models.Model):
         """Reconstruct only predefined notifications without changing stored text."""
         if not self.related_order_id:
             return self.message
+        if self.notification_type == self.Type.ORDER_UPDATED:
+            language = (get_language() or 'ru').split('-')[0]
+            message = {
+                'ru': 'Условия заявки №{number} изменены.',
+                'en': 'The details of request #{number} have changed.',
+                'he': 'פרטי הבקשה מס׳ {number} עודכנו.',
+            }.get(language, 'Условия заявки №{number} изменены.')
+            return message.format(number=self.related_order_id)
         templates = {
             self.Type.ORDER_CREATED: 'Ваша заявка №%(number)s успешно создана. Мастера смогут откликнуться на неё.',
             self.Type.NEW_RESPONSE: 'Мастер откликнулся на вашу заявку №%(number)s.',

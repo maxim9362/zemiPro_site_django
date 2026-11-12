@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -44,6 +46,7 @@ from .wizard_services import (
 )
 from .wizard_ui import wizard_copy
 from .order_quota import OrderQuotaExceeded
+from .order_events import deliver_order_events_for_order
 from .order_management import (
     OrderEditForm, duplicate_order, edit_published_order,
     management_timeline, withdraw_order,
@@ -56,6 +59,17 @@ from apps.accounts.portfolio import private_portfolio_storage
 from .models import OrderAttachment
 
 ITEMS_PER_PAGE = 10
+LOGGER = logging.getLogger('zemipro')
+
+
+def _flush_order_events(order):
+    """Notification failure must not undo a committed successful order action."""
+    try:
+        deliver_order_events_for_order(order)
+    except Exception:
+        # The receipts remain pending and replayable. No payloads or paths
+        # from the event, request or exception enter the structured log.
+        LOGGER.warning('order_event_local_delivery_deferred')
 
 
 def _order_quota_response(error):
@@ -447,14 +461,7 @@ def order_create_view(request):
         except ValueError as error:
             form.add_error(None, str(error))
         else:
-            if created:
-                create_notification(
-                    recipient=request.user,
-                    title='Заявка создана',
-                    message=f'Ваша заявка №{order.pk} успешно создана.',
-                    notification_type='order_created',
-                    related_order=order,
-                )
+            _flush_order_events(order)
             return redirect('marketplace:order_detail', pk=order.pk)
     return render(request, 'pages/order_create.html', {
         'form': form, 'seo_noindex': True,
@@ -578,12 +585,7 @@ def order_wizard_edit_view(request, pk):
                     published, created = publish_order_wizard(
                         order_id=order.pk, actor=request.user,
                     )
-                    if created:
-                        create_notification(
-                            recipient=request.user, title='Заявка создана',
-                            message=f'Ваша заявка №{published.pk} опубликована.',
-                            notification_type='order_created', related_order=published,
-                        )
+                    _flush_order_events(published)
                     return redirect('marketplace:order_detail', pk=published.pk)
                 saved = save_order_wizard_step(
                     order_id=order.pk, actor=request.user,
@@ -690,6 +692,7 @@ def order_management_edit_view(request, pk):
             else:
                 if changed:
                     messages.success(request, wizard_copy()['edit_saved'])
+                _flush_order_events(order)
                 return redirect('marketplace:order_detail', pk=order.pk)
     else:
         form = OrderEditForm(order=order)
@@ -734,6 +737,7 @@ def order_management_duplicate_view(request, pk):
     except ValueError as exc:
         messages.error(request, str(exc))
         return redirect('marketplace:order_detail', pk=pk)
+    _flush_order_events(clone)
     return redirect('marketplace:order_wizard_edit', pk=clone.pk)
 
 
@@ -934,29 +938,12 @@ def order_cancel_view(request, pk):
         ),
     )
 
-    responding_workers = list(
-        Response.objects.filter(order=order).values_list('worker_id', flat=True)
-    )
-
     try:
         cancel_order(order, actor=request.user)
     except OrderQuotaExceeded as error:
         return _order_quota_response(error)
 
-    from apps.accounts.models import User
-    for worker_id in responding_workers:
-        try:
-            worker_user = User.objects.get(pk=worker_id)
-            create_notification(
-                recipient=worker_user,
-                title='Заявка отменена',
-                message=f'Заявка №{order.pk}, на которую вы откликались, была отменена клиентом.',
-                notification_type='order_cancelled',
-                related_order=order,
-            )
-        except User.DoesNotExist:
-            continue
-
+    _flush_order_events(order)
     messages.success(request, _('Заявка отменена.'))
     return redirect('marketplace:order_detail', pk=pk)
 
