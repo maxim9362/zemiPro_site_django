@@ -73,6 +73,11 @@ class PrivacyRequestAdmin(admin.ModelAdmin):
     fields = readonly_fields
     actions = ('mark_processing', 'reject_request')
 
+    def has_review_privacy_requests_permission(self, request):
+        return request.user.is_staff and request.user.has_perm(
+            'moderation.review_privacy_requests',
+        )
+
     def get_actions(self, request):
         actions = super().get_actions(request)
         if not request.user.has_perm('moderation.review_privacy_requests'):
@@ -80,7 +85,7 @@ class PrivacyRequestAdmin(admin.ModelAdmin):
             actions.pop('reject_request', None)
         return actions
 
-    @admin.action(description='Передать на ручное рассмотрение')
+    @admin.action(permissions=['review_privacy_requests'], description='Передать на ручное рассмотрение')
     def mark_processing(self, request, queryset):
         count = 0
         for item in queryset.filter(status=PrivacyRequest.Status.PENDING):
@@ -88,7 +93,7 @@ class PrivacyRequestAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f'Принято на рассмотрение: {count}')
 
-    @admin.action(description='Отклонить запрос')
+    @admin.action(permissions=['review_privacy_requests'], description='Отклонить запрос')
     def reject_request(self, request, queryset):
         count = 0
         for item in queryset.filter(status=PrivacyRequest.Status.PENDING):

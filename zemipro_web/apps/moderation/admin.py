@@ -32,6 +32,16 @@ class ComplaintAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def has_review_complaints_permission(self, request):
+        return request.user.is_staff and request.user.has_perm(
+            'moderation.review_complaints',
+        )
+
+    def has_moderate_accounts_permission(self, request):
+        return request.user.is_staff and request.user.has_perm(
+            'moderation.moderate_accounts',
+        )
+
     def get_actions(self, request):
         actions = super().get_actions(request)
         if not request.user.has_perm('moderation.review_complaints'):
@@ -42,7 +52,7 @@ class ComplaintAdmin(admin.ModelAdmin):
             actions.pop('action_unblock_target', None)
         return actions
 
-    @admin.action(description='Рассмотреть жалобы')
+    @admin.action(permissions=['review_complaints'], description='Рассмотреть жалобы')
     def action_resolve(self, request, queryset):
         count = 0
         for complaint in queryset.filter(status=Complaint.Status.PENDING):
@@ -50,7 +60,7 @@ class ComplaintAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f'Рассмотрено жалоб: {count}')
 
-    @admin.action(description='Отклонить жалобы')
+    @admin.action(permissions=['review_complaints'], description='Отклонить жалобы')
     def action_dismiss(self, request, queryset):
         count = 0
         for complaint in queryset.filter(status=Complaint.Status.PENDING):
@@ -58,7 +68,7 @@ class ComplaintAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f'Отклонено жалоб: {count}')
 
-    @admin.action(description='Заблокировать пользователей')
+    @admin.action(permissions=['moderate_accounts'], description='Заблокировать пользователей')
     def action_block_target(self, request, queryset):
         count = 0
         for complaint in queryset.filter(target_user__isnull=False):
@@ -67,7 +77,7 @@ class ComplaintAdmin(admin.ModelAdmin):
                 count += 1
         self.message_user(request, f'Заблокировано пользователей: {count}')
 
-    @admin.action(description='Разблокировать пользователей')
+    @admin.action(permissions=['moderate_accounts'], description='Разблокировать пользователей')
     def action_unblock_target(self, request, queryset):
         count = 0
         for complaint in queryset.filter(target_user__isnull=False):
