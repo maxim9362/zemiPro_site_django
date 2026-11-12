@@ -10,7 +10,7 @@ import ipaddress
 
 from django.conf import settings
 from django.db import DatabaseError, connection
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.middleware.locale import LocaleMiddleware
 from django.utils import translation
 from django.utils.cache import patch_vary_headers
@@ -122,6 +122,24 @@ class SensitivePostThrottleMiddleware(MiddlewareMixin):
         if count > limit:
             response = HttpResponse('Too many attempts', status=429)
             response['Retry-After'] = str(window)
+            response['Cache-Control'] = 'private, no-store'
+            return response
+        return None
+
+
+class BlockedAccountMiddleware(MiddlewareMixin):
+    """Reject already-authenticated blocked sessions at every private endpoint.
+
+    Django authentication itself rejects is_active=False; this additionally
+    handles an is_blocked=True account whose session has not yet expired.
+    Public catalog access remains available after signing out.
+    """
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        user = request.user
+        if (user.is_authenticated and user.is_blocked
+                and request.path_info != '/accounts/logout/'):
+            response = HttpResponseForbidden('Аккаунт недоступен.')
             response['Cache-Control'] = 'private, no-store'
             return response
         return None

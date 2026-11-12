@@ -23,6 +23,10 @@ def _validate_public_profile_cities(form_data):
 
 def create_client_profile(user, city=None, contact=''):
     """Создать профиль заказчика для пользователя."""
+    if not user.is_authenticated or not User.objects.filter(
+        pk=user.pk, is_active=True, is_blocked=False,
+    ).exists():
+        raise PermissionDenied('Аккаунт недоступен.')
     _validate_public_profile_cities({'city': city})
     profile, created = ClientProfile.objects.get_or_create(
         user=user,
@@ -34,6 +38,10 @@ def create_client_profile(user, city=None, contact=''):
 @transaction.atomic
 def create_or_update_client_profile(user, form_data):
     """Создать или обновить профиль клиента."""
+    if not user.is_authenticated or not User.objects.filter(
+        pk=user.pk, is_active=True, is_blocked=False,
+    ).exists():
+        raise PermissionDenied('Аккаунт недоступен.')
     _validate_public_profile_cities(form_data)
     profile, created = ClientProfile.objects.get_or_create(user=user)
     profile.city = form_data.get('city', profile.city)

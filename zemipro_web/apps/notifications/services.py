@@ -6,7 +6,7 @@ from .models import Notification
 def create_notification(recipient, title, message, notification_type='system',
                         related_order=None, related_response=None):
     """Создать уведомление. Если recipient пустой — ничего не делать."""
-    if not recipient:
+    if not recipient or not recipient.is_active or recipient.is_blocked:
         return None
     return Notification.objects.create(
         recipient=recipient,
@@ -25,7 +25,7 @@ def get_user_notifications(user):
 
 def get_unread_count(user):
     """Количество непрочитанных уведомлений."""
-    if not user or not user.is_authenticated:
+    if not user or not user.is_authenticated or not user.is_active or user.is_blocked:
         return 0
     return Notification.objects.filter(recipient=user, is_read=False).count()
 
