@@ -2,7 +2,9 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.conf import settings
+from django.utils import translation
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST, require_http_methods
@@ -14,11 +16,14 @@ from .forms import (
     RequestContactVerificationForm, ConfirmContactVerificationForm,
     SafeAuthenticationForm, VerifiedPasswordResetForm,
     PhoneRecoveryRequestForm, PhoneRecoveryConfirmForm,
+    ClientSettingsForm,
 )
 from .verification import (
     request_contact_verification, confirm_contact_verification,
     request_phone_password_recovery, confirm_phone_password_recovery,
 )
+from .models import PrivacyRequest
+from .client_settings import save_client_settings, request_own_privacy_action
 from .services import (
     create_or_update_client_profile, get_client_profile,
     create_or_update_worker_profile, get_worker_profile, select_active_role,
@@ -193,3 +198,51 @@ def phone_recovery_confirm_view(request):
                 return redirect('accounts:login')
             messages.error(request, _('Неверный или просроченный код.'))
     return render(request, 'accounts/phone_recovery_confirm.html', {'form': form})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def client_settings_view(request):
+    """Only the signed-in user's account/profile/settings; no user-id parameter."""
+    if request.user.is_blocked or not request.user.is_active:
+        raise PermissionDenied
+    profile = get_client_profile(request.user)
+    form = ClientSettingsForm(
+        request.POST if request.method == 'POST' else None,
+        user=request.user, profile=profile,
+    )
+    if request.method == 'POST' and form.is_valid():
+        try:
+            save_client_settings(request.user, form.cleaned_data)
+        except ValueError:
+            form.add_error(None, _('Проверьте данные профиля.'))
+        else:
+            messages.success(request, _('Настройки сохранены.'))
+            response = redirect('accounts:client_settings')
+            language = request.user.preferred_language
+            translation.activate(language)
+            response.set_cookie(
+                settings.LANGUAGE_COOKIE_NAME, language,
+                max_age=settings.LANGUAGE_COOKIE_AGE,
+                secure=settings.SESSION_COOKIE_SECURE,
+                samesite='Lax',
+            )
+            return response
+    return render(request, 'accounts/client_settings.html', {
+        'form': form,
+        'privacy_requests': PrivacyRequest.objects.filter(
+            user=request.user,
+        )[:20],
+    })
+
+
+@login_required
+@require_POST
+def client_privacy_request_view(request):
+    """Queue export/erasure request for human review; no automatic deletion."""
+    try:
+        request_own_privacy_action(request.user, request.POST.get('kind'))
+    except ValueError:
+        return HttpResponseBadRequest(_('Недопустимый запрос.'))
+    messages.success(request, _('Запрос принят на рассмотрение.'))
+    return redirect('accounts:client_settings')

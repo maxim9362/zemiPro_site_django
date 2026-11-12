@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User, ClientProfile, WorkerProfile
+from .models import User, ClientProfile, WorkerProfile, PrivacyRequest
 
 
 @admin.register(User)
@@ -39,3 +39,18 @@ class WorkerProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'user__email', 'contact', 'description')
     raw_id_fields = ('user', 'city')
     filter_horizontal = ('skills', 'service_cities')
+
+
+@admin.register(PrivacyRequest)
+class PrivacyRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'kind', 'status', 'created_at', 'reviewed_at')
+    list_filter = ('kind', 'status')
+    search_fields = ('user__username',)
+    readonly_fields = ('user', 'kind', 'created_at')
+    fields = ('user', 'kind', 'status', 'created_at', 'reviewed_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

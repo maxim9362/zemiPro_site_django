@@ -9,6 +9,10 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from apps.accounts.forms import RatingCreateForm
+from apps.accounts.models import FavoriteWorker
+from apps.accounts.client_favorites import (
+    own_visible_favorites, toggle_own_favorite,
+)
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
 from apps.locations.models import CityAlias
@@ -345,7 +349,28 @@ def worker_public_profile_view(request, pk):
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),
         'review_count': review_count,
+        'is_favorite': (
+            request.user.is_authenticated
+            and FavoriteWorker.objects.filter(
+                client=request.user, worker=profile,
+            ).exists()
+        ),
     })
+
+
+@login_required
+def toggle_favorite_worker_view(request, pk):
+    """Add/remove the authenticated user's private favorite via POST only."""
+    if request.method != 'POST':
+        raise Http404
+    worker = get_object_or_404(
+        WorkerProfile.objects.select_related('user'), pk=pk,
+    )
+    try:
+        toggle_own_favorite(request.user, worker)
+    except ValueError:
+        raise Http404 from None
+    return redirect('marketplace:worker_public_profile', pk=pk)
 
 
 @login_required
@@ -481,6 +506,7 @@ def client_dashboard_view(request):
         'completed_orders': completed_orders,
         'cancelled_orders': cancelled_orders,
         'orders_with_responses': orders_with_responses,
+        'favorite_workers': own_visible_favorites(request.user)[:12],
     })
 
 @login_required

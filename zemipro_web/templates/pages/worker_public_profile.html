@@ -51,6 +51,16 @@
             </div>
         </div>
 
+        {% if user.is_authenticated and user.pk != profile.user_id %}
+        <form method="post" action="{% url 'marketplace:toggle_favorite_worker' pk=profile.pk %}">
+            {% csrf_token %}
+            {% if is_favorite %}
+            <button type="submit" class="btn btn--secondary">{% trans 'Убрать из избранного' %}</button>
+            {% else %}
+            <button type="submit" class="btn btn--secondary">{% trans 'Добавить в избранное' %}</button>
+            {% endif %}
+        </form>
+        {% endif %}
         {% if user.is_authenticated %}
         <div style="margin-top: 16px; text-align: right;">
             <a href="{% url 'moderation:complaint_create' %}?user={{ profile.user.pk }}" style="font-size: 0.8125rem; color: var(--color-text-light);">

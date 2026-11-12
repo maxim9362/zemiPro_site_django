@@ -891,3 +891,78 @@ msgstr "Enter recovery code"
 
 msgid "Введите имя пользователя, телефон, полученный код и новый пароль."
 msgstr "Enter username, phone number, received code and a new password."
+
+msgid "Имя"
+msgstr "First name"
+
+msgid "Фамилия"
+msgstr "Last name"
+
+msgid "Предпочитаемый язык"
+msgstr "Preferred language"
+
+msgid "Получать дополнительные уведомления"
+msgstr "Receive optional updates"
+
+msgid "Оставьте хотя бы один способ восстановления доступа."
+msgstr "Keep at least one account recovery method."
+
+msgid "Проверьте данные профиля."
+msgstr "Check your profile details."
+
+msgid "Настройки сохранены."
+msgstr "Settings saved."
+
+msgid "Личные данные и приватность"
+msgstr "Personal data and privacy"
+
+msgid "Данные доступны только владельцу аккаунта."
+msgstr "These details are visible only to the account owner."
+
+msgid "При смене email или телефона потребуется повторное подтверждение. Системные уведомления о заказах остаются в личном кабинете."
+msgstr "Changing your email or phone requires verification again. Important order notifications remain in your account."
+
+msgid "Сохранить настройки"
+msgstr "Save settings"
+
+msgid "Запросы по персональным данным"
+msgstr "Personal data requests"
+
+msgid "Запросы рассматриваются вручную. Отправка запроса не удаляет аккаунт или историю заказов автоматически."
+msgstr "Requests are reviewed manually. Submitting a request does not automatically erase your account or order history."
+
+msgid "Запросить экспорт данных"
+msgstr "Request data export"
+
+msgid "Запросить удаление данных"
+msgstr "Request data deletion"
+
+msgid "Недопустимый запрос."
+msgstr "Invalid request."
+
+msgid "Запрос принят на рассмотрение."
+msgstr "Your request was submitted for review."
+
+msgid "Избранные мастера"
+msgstr "Saved professionals"
+
+msgid "Добавить в избранное"
+msgstr "Save professional"
+
+msgid "Убрать из избранного"
+msgstr "Remove from saved"
+
+msgid "Экспорт данных"
+msgstr "Data export"
+
+msgid "Удаление данных"
+msgstr "Data deletion"
+
+msgid "Ожидает обработки"
+msgstr "Pending review"
+
+msgid "На рассмотрении"
+msgstr "Under review"
+
+msgid "Отклонён"
+msgstr "Rejected"

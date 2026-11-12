@@ -27,8 +27,23 @@
             <p><strong>{% trans 'Город:' %}</strong> {{ profile.city.localized_name }}</p>
             <p><strong>{% trans 'Контакт:' %}</strong> {{ profile.contact }}</p>
             <a href="{% url 'accounts:client_profile' %}" class="btn btn--secondary">{% trans 'Редактировать профиль' %}</a>
+            <a href="{% url 'accounts:client_settings' %}" class="btn btn--secondary">{% trans 'Личные данные и приватность' %}</a>
             <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary" style="margin-inline-start: 8px;">{% trans 'Создать заявку' %}</a>
         </div>
+
+        {% if favorite_workers %}
+        <div class="dashboard__section">
+            <h2>{% trans 'Избранные мастера' %}</h2>
+            <ul>
+            {% for favorite in favorite_workers %}
+                <li>
+                    <a href="{% url 'marketplace:worker_public_profile' pk=favorite.worker.pk %}">{{ favorite.worker.user }}</a>
+                    — {{ favorite.worker.city.localized_name }}
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
 
         {% if active_orders %}
         <div class="dashboard__section">

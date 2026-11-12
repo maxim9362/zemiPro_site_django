@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class User(AbstractUser):
@@ -34,6 +35,10 @@ class User(AbstractUser):
     )
     email_verified_at = models.DateTimeField(null=True, blank=True)
     phone_verified_at = models.DateTimeField(null=True, blank=True)
+    preferred_language = models.CharField(
+        max_length=2, choices=[('ru', 'Русский'), ('en', 'English'), ('he', 'עברית')],
+        default='ru', verbose_name='Предпочитаемый язык',
+    )
     is_blocked = models.BooleanField(
         default=False, verbose_name='Заблокирован'
     )
@@ -74,6 +79,9 @@ class ClientProfile(models.Model):
     contact = models.CharField(
         max_length=100, blank=True,
         verbose_name='Контакт для связи'
+    )
+    receive_optional_updates = models.BooleanField(
+        default=True, verbose_name='Дополнительные уведомления',
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлён')
@@ -206,3 +214,57 @@ class ContactDeliveryEvent(models.Model):
 
     class Meta:
         db_table = 'accounts_contact_delivery_event'
+
+class PrivacyRequest(models.Model):
+    """Owner-initiated request, NEVER an automatic cascade-deletion command."""
+
+    class Kind(models.TextChoices):
+        EXPORT = 'export', _('Экспорт данных')
+        DELETE = 'delete', _('Удаление данных')
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', _('Ожидает обработки')
+        PROCESSING = 'processing', _('На рассмотрении')
+        COMPLETED = 'completed', _('Выполнен')
+        REJECTED = 'rejected', _('Отклонён')
+
+    user = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name='privacy_requests',
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.PENDING,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'accounts_privacy_request'
+        ordering = ['-created_at', '-pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'kind'],
+                condition=models.Q(status='pending'),
+                name='accounts_unique_pending_privacy_request',
+            ),
+        ]
+
+class FavoriteWorker(models.Model):
+    """Private customer bookmark; not a public recommendation or endorsement."""
+
+    client = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='favorite_workers',
+    )
+    worker = models.ForeignKey(
+        WorkerProfile, on_delete=models.CASCADE, related_name='favorited_by',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'accounts_favorite_worker'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['client', 'worker'],
+                name='accounts_unique_client_favorite_worker',
+            ),
+        ]

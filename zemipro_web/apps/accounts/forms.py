@@ -317,3 +317,76 @@ class PhoneRecoveryConfirmForm(PhoneRecoveryRequestForm):
         if not code.isascii() or not code.isdigit():
             self.add_error('code', _('Введите шестизначный код.'))
         return data
+
+class ClientSettingsForm(forms.Form):
+    """Edit only own User + ClientProfile data; no role/permission fields."""
+
+    first_name = forms.CharField(
+        max_length=150, required=False, label=_('Имя'),
+    )
+    last_name = forms.CharField(
+        max_length=150, required=False, label=_('Фамилия'),
+    )
+    email = forms.EmailField(
+        max_length=254, required=False, label=_('Email'),
+    )
+    phone = forms.CharField(
+        max_length=20, required=False, label=_('Телефон'),
+    )
+    preferred_language = forms.ChoiceField(
+        choices=(('ru', 'Русский'), ('en', 'English'), ('he', 'עברית')),
+        label=_('Предпочитаемый язык'),
+    )
+    city = LocalizedModelChoiceField(
+        queryset=City.objects.none(), required=False,
+        label=_('Город'), empty_label=_('Выберите город'),
+    )
+    contact = forms.CharField(
+        max_length=100, required=False, label=_('Контакт для связи'),
+    )
+    receive_optional_updates = forms.BooleanField(
+        required=False,
+        label=_('Получать дополнительные уведомления'),
+    )
+
+    def __init__(self, *args, user, profile, **kwargs):
+        if (not args or args[0] is None) and 'initial' not in kwargs:
+            kwargs['initial'] = {
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'phone': user.phone,
+                'preferred_language': user.preferred_language,
+                'city': profile.city if profile else None,
+                'contact': profile.contact if profile else '',
+                'receive_optional_updates': (
+                    profile.receive_optional_updates if profile else True
+                ),
+            }
+        super().__init__(*args, **kwargs)
+        self.owner = user
+        self.fields['city'].queryset = get_public_cities()
+
+    def clean_email(self):
+        return self.cleaned_data.get('email', '').strip().casefold()
+
+    def clean_phone(self):
+        raw = self.cleaned_data.get('phone', '').strip()
+        if not raw:
+            return ''
+        try:
+            return normalize_israeli_phone(raw)
+        except ValueError as exc:
+            raise ValidationError(_('Некорректный израильский номер телефона.')) from exc
+
+    def clean(self):
+        result = super().clean()
+        if (
+            'email' in result and 'phone' in result
+            and not result.get('email') and not result.get('phone')
+            and (self.owner.email or self.owner.phone)
+        ):
+            raise ValidationError(
+                _('Оставьте хотя бы один способ восстановления доступа.')
+            )
+        return result
