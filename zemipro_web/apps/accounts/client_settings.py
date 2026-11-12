@@ -6,7 +6,6 @@ from apps.locations.services import city_is_public
 from .models import (
     ClientProfile, ContactChallenge, PrivacyRequest, User, VerifiedContact,
 )
-from .verification import contact_fingerprint
 
 
 def _active_owner(user):
