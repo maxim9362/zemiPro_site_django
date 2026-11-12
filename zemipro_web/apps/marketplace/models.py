@@ -398,6 +398,43 @@ class OrderStatusEvent(models.Model):
         ]
 
 
+class OrderManagementEvent(models.Model):
+    """Immutable record of owner actions, containing field NAMES only."""
+
+    class Action(models.TextChoices):
+        EDITED = 'edited', 'Условия изменены'
+        DUPLICATED = 'duplicated', 'Создана копия'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='management_events',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT,
+        related_name='order_management_actions',
+    )
+    action = models.CharField(max_length=16, choices=Action.choices)
+    changed_fields = models.JSONField(default=list, blank=True)
+    target_order = models.ForeignKey(
+        Order, null=True, blank=True, on_delete=models.PROTECT,
+        related_name='duplicate_source_events',
+    )
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_management_event'
+        ordering = ['occurred_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'operation_key'],
+                name='order_mgmt_unique_operation',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['order', 'occurred_at'], name='order_mgmt_time_idx'),
+        ]
+
+
 class OrderQuestionnaireAnswerArchive(models.Model):
     """Private immutable copy of a questionnaire before re-publication."""
 
