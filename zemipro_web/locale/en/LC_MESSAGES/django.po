@@ -750,3 +750,27 @@ msgstr "Report sent. Thank you!"
 
 msgid "Новая жалоба"
 msgstr "New report"
+
+msgid "Уточняющие вопросы"
+msgstr "Service-specific questions"
+
+msgid "Ответы на вопросы услуги"
+msgstr "Service question answers"
+
+msgid "Да"
+msgstr "Yes"
+
+msgid "Нет"
+msgstr "No"
+
+msgid "Анкета услуги больше недоступна."
+msgstr "This questionnaire is no longer available."
+
+msgid "Анкета изменилась. Обновите страницу и ответьте на актуальные вопросы."
+msgstr "The questionnaire has changed. Reload the page and answer the current questions."
+
+msgid "Ответ на этот вопрос обязателен."
+msgstr "An answer to this question is required."
+
+msgid "Подуслуга не относится к выбранной категории."
+msgstr "This service does not belong to the selected category."
