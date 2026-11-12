@@ -84,7 +84,7 @@ class OrderWizardFlowTests(TestCase):
             {
                 'questionnaire_version': str(self.version.pk),
                 'q_issue': 'pipe', 'q_urgent': 'false',
-            } if index == 0 else {'questionnaire_version': ''},
+            } if index == 0 else {'questionnaire_version': ''}
         )
         steps = {
             2: values,
@@ -117,6 +117,7 @@ class OrderWizardFlowTests(TestCase):
         for index in range(3):
             for lang in ('ru', 'en', 'he'):
                 with self.subTest(service=index, language=lang), override(lang):
+                    self.client.defaults['HTTP_ACCEPT_LANGUAGE'] = lang
                     order, _ = self.begin(index)
                     self.finish_steps(order, index)
                     page = self.client.get(
