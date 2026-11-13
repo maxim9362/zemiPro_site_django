@@ -1,10 +1,12 @@
 """Stage 05.4: synthetic invitation state, authorization and lifecycle tests."""
 from datetime import timedelta
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, close_old_connections, connections, transaction
 
 from apps.accounts.models import WorkerProfile
 from apps.locations.models import City
@@ -173,3 +175,54 @@ class InvitationTests(TestCase):
         self.assertEqual(OrderInvitation.objects.count(), 1)
         self.client.force_login(self.stranger)
         self.assertEqual(self.client.post(url, {'order_id': self.order.pk}).status_code, 404)
+
+
+@override_settings(ZEMIPRO_PILOT_CITY_SLUG='ashdod')
+class ConcurrentInvitationTests(TransactionTestCase):
+    """Two independent PostgreSQL connections must not create duplicate invitations."""
+
+    def setUp(self):
+        self.city = City.objects.create(slug='ashdod', name_ru='Ашдод')
+        self.category = Category.objects.create(
+            slug='invite-race-category', name_ru='Ремонт', work_mode='onsite',
+        )
+        self.service = Subcategory.objects.create(
+            category=self.category, slug='invite-race-service',
+            name_ru='Замена', work_mode='onsite',
+        )
+        self.owner = make_user('invite-race-owner')
+        worker_user = make_user('invite-race-worker')
+        self.worker = WorkerProfile.objects.create(
+            user=worker_user, city=self.city, is_published=True,
+            display_name='Race worker',
+            description='Synthetic published worker used in racing test.',
+            spoken_languages=['ru'], pricing_details='Negotiable',
+        )
+        self.worker.skills.add(self.category)
+        self.worker.services.add(self.service)
+        self.order = make_order(
+            client=self.owner, category=self.category, subcategory=self.service,
+            city=self.city, work_mode='onsite',
+        )
+
+    def test_parallel_identical_invitation_is_one_row_one_notification(self):
+        barrier = Barrier(2)
+
+        def send(_):
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                invitation, created = create_invitation(
+                    actor=self.owner, order_id=self.order.pk,
+                    worker_id=self.worker.pk,
+                )
+                return invitation.pk, created
+            finally:
+                connections.close_all()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(send, range(2)))
+        self.assertEqual(results[0][0], results[1][0])
+        self.assertCountEqual([result[1] for result in results], [True, False])
+        self.assertEqual(OrderInvitation.objects.count(), 1)
+        self.assertEqual(self.worker.user.notifications.count(), 1)
