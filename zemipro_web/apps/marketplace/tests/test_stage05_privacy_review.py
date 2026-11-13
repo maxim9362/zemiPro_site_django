@@ -157,6 +157,9 @@ class Stage05ReviewPrivacyTests(TestCase):
         }, instance=self.worker)
         self.assertFalse(form.is_valid())
         self.assertIn('display_name', form.errors)
+        # ModelForm validation may update its instance in memory even when
+        # invalid; assess the persisted profile, not the mutated object.
+        self.worker.refresh_from_db()
         self.assertIsNotNone(publication_issue(self.worker))
         with self.assertRaises(ValueError):
             set_worker_publication(self.worker_user, True)

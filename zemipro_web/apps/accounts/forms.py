@@ -302,10 +302,25 @@ class WorkerProfileForm(forms.ModelForm):
         return value
 
     def clean_description(self):
-        return self.cleaned_data.get('description', '').strip()
+        value = self.cleaned_data.get('description', '').strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
 
     def clean_pricing_details(self):
-        return self.cleaned_data.get('pricing_details', '').strip()
+        value = self.cleaned_data.get('pricing_details', '').strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
+
+    def clean_working_hours(self):
+        value = self.cleaned_data.get('working_hours', '').strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
 
 
 
