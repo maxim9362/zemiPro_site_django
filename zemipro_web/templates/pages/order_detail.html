@@ -24,7 +24,7 @@
         <div class="order-card">
             <div class="order-card__header">
                 <span class="order-card__status order-card__status--{{ order.status }}">
-                    {% trans order.get_status_display %}
+                    {{ order.localized_status }}
                 </span>
                 <span class="order-card__category">
                     {{ order.category.emoji }} {{ order.category.localized_name }}

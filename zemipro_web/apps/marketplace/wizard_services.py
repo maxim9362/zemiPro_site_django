@@ -249,6 +249,105 @@ def wizard_summary(order):
     ]
 
 
+def validate_wizard_status_publication(order):
+    """Required invariant for ANY service-layer draft → published transition.
+
+    The canonical wizard materializes structured fields and the questionnaire
+    snapshot before requesting a status transition. Direct calls may not skip
+    those checks or publish a partially saved draft.
+    """
+    data = (order.wizard_data or {}).get('steps', {})
+    if _next_step(data) != 8 or not order.wizard_token:
+        raise ValueError(wizard_copy()['incomplete'])
+    try:
+        selection = data['1']
+        place = data['3']
+        schedule = data['4']
+        price = data['5']
+        question = data['2']
+        description = data['6']['description']
+        contact = data['7']
+        if (
+            not active_categories().filter(pk=selection['category_id']).exists()
+            or not active_services(selection['category_id']).filter(
+                pk=selection['subcategory_id'],
+            ).exists()
+        ):
+            raise ValueError(wizard_copy()['no_service'])
+        if (order.category_id != selection['category_id']
+                or order.subcategory_id != selection['subcategory_id']
+                or order.city_id != place['city_id']
+                or not get_public_cities().filter(pk=place['city_id']).exists()
+                or not city_is_public(order.city)):
+            raise ValueError(wizard_copy()['incomplete'])
+        service = Subcategory.objects.get(pk=order.subcategory_id)
+        mode = place['mode']
+        if (mode not in ('onsite', 'online')
+                or (service.work_mode != 'both' and mode != service.work_mode)
+                or order.work_mode != mode
+                or order.approximate_area != place['area']):
+            raise ValueError(wizard_copy()['incomplete'])
+        from .wizard_forms import validate_approximate_area
+        validate_approximate_area(place['area'])
+        preferred = (
+            date.fromisoformat(schedule['preferred_date'])
+            if schedule['preferred_date'] else None
+        )
+        if (preferred and preferred < timezone.localdate()) or (
+            order.preferred_date != preferred
+            or schedule['urgency'] not in ('normal', 'soon', 'urgent')
+            or order.urgency != schedule['urgency']
+        ):
+            raise ValueError(wizard_copy()['incomplete'])
+        kind = price['price_type']
+        if kind not in ('fixed', 'range', 'negotiable'):
+            raise ValueError(wizard_copy()['incomplete'])
+        if order.price_kind != kind or order.price != _budget_label(price):
+            raise ValueError(wizard_copy()['incomplete'])
+        lo = Decimal(price['amount_min']) if price['amount_min'] else None
+        hi = Decimal(price['amount_max']) if price['amount_max'] else None
+        if (
+            (kind == 'negotiable' and (lo is not None or hi is not None))
+            or (kind == 'fixed' and (lo is None or hi is not None))
+            or (kind == 'range' and (lo is None or hi is None or hi < lo))
+            or (lo is not None and lo < 0)
+            or (hi is not None and hi < 0)
+            or order.amount_min_ils != lo
+            or order.amount_max_ils != hi
+        ):
+            raise ValueError(wizard_copy()['incomplete'])
+        if (order.description != description
+                or (not description.strip() and not question['answers'])
+                or not contact['chat_only']
+                or order.customer_name != contact['display_name']):
+            raise ValueError(wizard_copy()['incomplete'])
+        current = ServiceQuestionnaire.objects.filter(
+            service_id=service.pk,
+        ).first()
+        version_id = current.published_version_id if current else None
+        if question['version_id'] != version_id:
+            raise ValueError(wizard_copy()['changed'])
+        snapshot = OrderQuestionnaireAnswer.objects.filter(order=order).first()
+        if version_id is None:
+            if question['answers'] or snapshot is not None:
+                raise ValueError(wizard_copy()['incomplete'])
+        else:
+            if (snapshot is None or snapshot.version_id != version_id
+                    or snapshot.answers != question['answers']):
+                raise ValueError(wizard_copy()['incomplete'])
+            from .wizard_forms import QuestionsStepForm
+            bound = {'questionnaire_version': str(version_id)}
+            for key, value in question['answers'].items():
+                if isinstance(value, bool):
+                    value = 'true' if value else 'false'
+                bound['q_' + key] = value
+            form = QuestionsStepForm(data=bound, service_id=service.pk)
+            if not form.is_valid() or form.questionnaire_answers != question['answers']:
+                raise ValueError(wizard_copy()['incomplete'])
+    except (KeyError, TypeError, AttributeError, ArithmeticError, OverflowError) as exc:
+        raise ValueError(wizard_copy()['incomplete']) from exc
+
+
 def publish_order_wizard(*, order_id, actor):
     """Verify all saved steps before atomically publishing exactly once."""
     ensure_wizard_owner(actor)
@@ -317,13 +416,13 @@ def publish_order_wizard(*, order_id, actor):
         order.description = steps['6']['description']
         order.customer_name = steps['7']['display_name']
         # Private phone/address are shared voluntarily in Stage 07 chat only.
-        order.customer_phone = ''
-        order.address = ''
+        # Never overwrite legacy private contacts on re-publication.
+        # Fresh and duplicated drafts already have empty contact fields.
         order.save(update_fields=[
             'category', 'subcategory', 'city', 'price', 'price_kind',
             'amount_min_ils', 'amount_max_ils', 'preferred_date', 'urgency',
             'work_mode', 'approximate_area', 'description',
-            'customer_name', 'customer_phone', 'address', 'updated_at',
+            'customer_name', 'updated_at',
         ])
         saved_answer = OrderQuestionnaireAnswer.objects.select_for_update().filter(
             order=order,

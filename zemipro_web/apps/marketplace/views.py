@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Avg, Count, F, Prefetch, Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
@@ -930,21 +931,32 @@ def order_cancel_view(request, pk):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(
-        Order, pk=pk, client=request.user, status__in=(
+    # Serialize status evaluation with the transition. A competitor can
+    # finish/cancel the same order after an initial GET but before our POST.
+    changed = False
+    with transaction.atomic():
+        order = get_object_or_404(
+            Order.objects.select_for_update(), pk=pk, client=request.user,
+        )
+        allowed = (
             Order.Status.DRAFT, Order.Status.PUBLISHED,
             Order.Status.IN_DISCUSSION, Order.Status.ASSIGNED,
             Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
-        ),
-    )
-
-    try:
-        cancel_order(order, actor=request.user)
-    except OrderQuotaExceeded as error:
-        return _order_quota_response(error)
-
-    _flush_order_events(order)
-    messages.success(request, _('Заявка отменена.'))
+        )
+        if order.status in allowed:
+            try:
+                cancel_order(order, actor=request.user)
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
+            except ValueError:
+                messages.error(request, _('Заявку нельзя отменить в текущем статусе.'))
+            else:
+                changed = True
+        elif order.status != Order.Status.CANCELLED:
+            messages.error(request, _('Заявку нельзя отменить в текущем статусе.'))
+    if changed:
+        _flush_order_events(order)
+        messages.success(request, _('Заявка отменена.'))
     return redirect('marketplace:order_detail', pk=pk)
 
 
@@ -953,22 +965,31 @@ def order_complete_view(request, pk):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.IN_PROGRESS)
-    try:
-        complete_order(order, actor=request.user)
-    except OrderQuotaExceeded as error:
-        return _order_quota_response(error)
-
-    if order.worker:
-        create_notification(
-            recipient=order.worker,
-            title='Заявка завершена',
-            message=f'Клиент отметил заявку №{order.pk} как выполненную.',
-            notification_type='order_completed',
-            related_order=order,
+    # The notification is committed in the SAME transaction as the first
+    # successful state transition, while the row lock prevents double sends.
+    with transaction.atomic():
+        order = get_object_or_404(
+            Order.objects.select_for_update(), pk=pk, client=request.user,
         )
-
-    messages.success(request, _('Заявка отмечена как выполненная!'))
+        if order.status == Order.Status.IN_PROGRESS:
+            try:
+                complete_order(order, actor=request.user)
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
+            except ValueError:
+                messages.error(request, _('Заявку нельзя завершить в текущем статусе.'))
+            else:
+                if order.worker_id:
+                    create_notification(
+                        recipient=order.worker,
+                        title='Заявка завершена',
+                        message=f'Клиент отметил заявку №{order.pk} как выполненную.',
+                        notification_type='order_completed',
+                        related_order=order,
+                    )
+                messages.success(request, _('Заявка отмечена как выполненная!'))
+        elif order.status != Order.Status.COMPLETED:
+            messages.error(request, _('Заявку нельзя завершить в текущем статусе.'))
     return redirect('marketplace:order_detail', pk=pk)
 
 

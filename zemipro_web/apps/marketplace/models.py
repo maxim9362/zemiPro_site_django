@@ -306,6 +306,11 @@ class Order(models.Model):
             ),
         ]
 
+    @property
+    def localized_status(self):
+        from .wizard_ui import localized_order_status
+        return localized_order_status(self.status)
+
     def __str__(self):
         return f'Заказ #{self.pk} — {self.category.name_ru} ({self.get_status_display()})'
 

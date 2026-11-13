@@ -85,7 +85,7 @@
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
                         <span class="order-card__status order-card__status--{{ resp.order.status }}">
-                            {% trans resp.order.get_status_display %}
+                            {{ resp.order.localized_status }}
                         </span>
                         <span class="order-card__category">{{ resp.order.category.emoji }} {{ resp.order.category.localized_name }}</span>
                     </div>

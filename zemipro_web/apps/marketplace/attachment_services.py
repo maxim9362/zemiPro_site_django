@@ -9,7 +9,7 @@ import re
 
 from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -18,7 +18,7 @@ from apps.accounts.portfolio import (
     PortfolioError, private_portfolio_storage, sanitize_portfolio_image,
 )
 
-from .models import Order, OrderAttachment
+from .models import Order, OrderAttachment, OrderStatusEvent
 from .wizard_services import ensure_wizard_owner
 from .order_quota import consume_order_quota
 
@@ -125,14 +125,29 @@ def visible_order_photos(order, user):
             return qs
         if stored.is_staff and stored.has_perm('moderation.review_complaints'):
             return qs
-        if (order.status != Order.Status.DRAFT
-                and order.worker_id == stored.pk):
-            return qs.filter(visibility__in=(
-                OrderAttachment.Visibility.PUBLIC, OrderAttachment.Visibility.ASSIGNEE,
-            ))
-    if order.status == Order.Status.DRAFT:
-        # Even a previously public-consented photo stays closed until publish.
+    # A past consent is NOT proof that a request was ever published. Withdrawn,
+    # cancelled and expired orders do not expose photos, regardless of consent.
+    visible_states = (
+        Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION,
+        Order.Status.ASSIGNED, Order.Status.IN_PROGRESS,
+        Order.Status.COMPLETED, Order.Status.DISPUTED,
+    )
+    if order.status not in visible_states:
         return qs.none()
+    if not OrderStatusEvent.objects.filter(
+        order_id=order.pk, new_status=Order.Status.PUBLISHED,
+    ).exists():
+        return qs.none()
+    if stored and order.worker_id == stored.pk:
+        return qs.filter(visibility__in=(
+            OrderAttachment.Visibility.PUBLIC, OrderAttachment.Visibility.ASSIGNEE,
+        )).filter(
+            # A public image must still be explicitly consented, even if
+            # a malformed legacy database row is encountered.
+            models.Q(visibility=OrderAttachment.Visibility.ASSIGNEE)
+            | models.Q(visibility=OrderAttachment.Visibility.PUBLIC,
+                       public_consent_at__isnull=False),
+        )
     return qs.filter(
         visibility=OrderAttachment.Visibility.PUBLIC,
         public_consent_at__isnull=False,

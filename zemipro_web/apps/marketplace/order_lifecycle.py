@@ -84,6 +84,11 @@ def transition_order_status(order, target_status, *, actor, operation_key=None,
                 raise ValueError('Нельзя снимать заявку с публикации после откликов.')
         if target_status == Order.Status.PUBLISHED and not city_is_public(locked.city):
             raise ValueError('Город пока не обслуживается.')
+        if (locked.status == Order.Status.DRAFT
+                and target_status == Order.Status.PUBLISHED
+                and locked.wizard_token is not None):
+            from .wizard_services import validate_wizard_status_publication
+            validate_wizard_status_publication(locked)
         if target_status == Order.Status.ASSIGNED and locked.worker_id is None:
             raise ValueError('Нельзя назначить заявку без исполнителя.')
 

@@ -135,6 +135,46 @@ COPY = {
 }
 
 
+# Stable status codes are translated at render time instead of relying on
+# compiled PO catalogues that may not yet contain the new lifecycle values.
+STATUS_LABELS = {
+    'ru': {
+        'draft': 'Черновик', 'published': 'Опубликован',
+        'in_discussion': 'Обсуждение', 'assigned': 'Исполнитель выбран',
+        'in_progress': 'В процессе', 'completed': 'Выполнен',
+        'cancelled': 'Отменён', 'expired': 'Истёк срок', 'disputed': 'Спор',
+    },
+    'en': {
+        'draft': 'Draft', 'published': 'Published',
+        'in_discussion': 'In discussion', 'assigned': 'Professional selected',
+        'in_progress': 'In progress', 'completed': 'Completed',
+        'cancelled': 'Cancelled', 'expired': 'Expired', 'disputed': 'Disputed',
+    },
+    'he': {
+        'draft': 'טיוטה', 'published': 'פורסמה',
+        'in_discussion': 'בדיון', 'assigned': 'נבחר בעל מקצוע',
+        'in_progress': 'בתהליך', 'completed': 'הושלמה',
+        'cancelled': 'בוטלה', 'expired': 'פג תוקף', 'disputed': 'במחלוקת',
+    },
+}
+
+ACTION_LABELS = {
+    'ru': {'edited': 'Условия изменены', 'duplicated': 'Создана копия'},
+    'en': {'edited': 'Terms updated', 'duplicated': 'Copy created'},
+    'he': {'edited': 'פרטי הבקשה עודכנו', 'duplicated': 'נוצר עותק'},
+}
+
+
+def localized_order_status(status):
+    lang = (get_language() or 'ru').split('-')[0]
+    return STATUS_LABELS.get(lang, STATUS_LABELS['ru']).get(status, status)
+
+
+def localized_order_action(action):
+    lang = (get_language() or 'ru').split('-')[0]
+    return ACTION_LABELS.get(lang, ACTION_LABELS['ru']).get(action, action)
+
+
 def wizard_copy():
     lang = (get_language() or 'ru').split('-')[0]
     return COPY.get(lang, COPY['ru'])

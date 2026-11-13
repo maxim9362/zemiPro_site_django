@@ -69,9 +69,9 @@
             </div>
             {% if draft_orders.has_other_pages %}
             <nav class="pagination" aria-label="{{ management_copy.drafts }}">
-                {% if draft_orders.has_previous %}<a href="?draft_page={{ draft_orders.previous_page_number }}">{{ management_copy.back }}</a>{% endif %}
+                {% if draft_orders.has_previous %}<a href="?draft_page={{ draft_orders.previous_page_number }}&amp;active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">{{ management_copy.back }}</a>{% endif %}
                 <span>{{ draft_orders.number }} / {{ draft_orders.paginator.num_pages }}</span>
-                {% if draft_orders.has_next %}<a href="?draft_page={{ draft_orders.next_page_number }}">{{ management_copy.next }}</a>{% endif %}
+                {% if draft_orders.has_next %}<a href="?draft_page={{ draft_orders.next_page_number }}&amp;active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">{{ management_copy.next }}</a>{% endif %}
             </nav>
             {% endif %}
         </section>
@@ -84,7 +84,7 @@
                 {% for item in orders_with_responses %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--{{ item.order.status }}">{% trans item.order.get_status_display %}</span>
+                        <span class="order-card__status order-card__status--{{ item.order.status }}">{{ item.order.localized_status }}</span>
                         <span class="order-card__category">{{ item.order.category.emoji }} {{ item.order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
@@ -101,11 +101,11 @@
             {% if active_orders.has_other_pages %}
             <nav class="pagination" aria-label="{% trans 'Страницы активных заявок' %}">
                 {% if active_orders.has_previous %}
-                <a href="?active_page={{ active_orders.previous_page_number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">← {% trans 'Назад' %}</a>
+                <a href="?active_page={{ active_orders.previous_page_number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}&amp;draft_page={{ draft_orders.number }}">← {% trans 'Назад' %}</a>
                 {% endif %}
                 <span>{% trans 'Страница' %} {{ active_orders.number }} {% trans 'из' %} {{ active_orders.paginator.num_pages }}</span>
                 {% if active_orders.has_next %}
-                <a href="?active_page={{ active_orders.next_page_number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">{% trans 'Вперёд' %} →</a>
+                <a href="?active_page={{ active_orders.next_page_number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}&amp;draft_page={{ draft_orders.number }}">{% trans 'Вперёд' %} →</a>
                 {% endif %}
             </nav>
             {% endif %}
@@ -119,7 +119,7 @@
                 {% for order in in_progress_orders %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--{{ order.status }}">{% trans order.get_status_display %}</span>
+                        <span class="order-card__status order-card__status--{{ order.status }}">{{ order.localized_status }}</span>
                         <span class="order-card__category">{{ order.category.emoji }} {{ order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
@@ -138,11 +138,11 @@
             {% if in_progress_orders.has_other_pages %}
             <nav class="pagination" aria-label="{% trans 'Страницы заявок в процессе' %}">
                 {% if in_progress_orders.has_previous %}
-                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.previous_page_number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">← {% trans 'Назад' %}</a>
+                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.previous_page_number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}&amp;draft_page={{ draft_orders.number }}">← {% trans 'Назад' %}</a>
                 {% endif %}
                 <span>{% trans 'Страница' %} {{ in_progress_orders.number }} {% trans 'из' %} {{ in_progress_orders.paginator.num_pages }}</span>
                 {% if in_progress_orders.has_next %}
-                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.next_page_number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}">{% trans 'Вперёд' %} →</a>
+                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.next_page_number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.number }}&amp;draft_page={{ draft_orders.number }}">{% trans 'Вперёд' %} →</a>
                 {% endif %}
             </nav>
             {% endif %}
@@ -156,7 +156,7 @@
                 {% for order in completed_orders %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--completed">{% trans 'Выполнен' %}</span>
+                        <span class="order-card__status order-card__status--completed">{{ order.localized_status }}</span>
                         <span class="order-card__category">{{ order.category.emoji }} {{ order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
@@ -172,11 +172,11 @@
             {% if completed_orders.has_other_pages %}
             <nav class="pagination" aria-label="{% trans 'Страницы завершённых заявок' %}">
                 {% if completed_orders.has_previous %}
-                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.previous_page_number }}&amp;cancelled_page={{ cancelled_orders.number }}">← {% trans 'Назад' %}</a>
+                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.previous_page_number }}&amp;cancelled_page={{ cancelled_orders.number }}&amp;draft_page={{ draft_orders.number }}">← {% trans 'Назад' %}</a>
                 {% endif %}
                 <span>{% trans 'Страница' %} {{ completed_orders.number }} {% trans 'из' %} {{ completed_orders.paginator.num_pages }}</span>
                 {% if completed_orders.has_next %}
-                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.next_page_number }}&amp;cancelled_page={{ cancelled_orders.number }}">{% trans 'Вперёд' %} →</a>
+                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.next_page_number }}&amp;cancelled_page={{ cancelled_orders.number }}&amp;draft_page={{ draft_orders.number }}">{% trans 'Вперёд' %} →</a>
                 {% endif %}
             </nav>
             {% endif %}
@@ -190,7 +190,7 @@
                 {% for order in cancelled_orders %}
                 <div class="order-card-sm">
                     <div class="order-card-sm__header">
-                        <span class="order-card__status order-card__status--{{ order.status }}">{% trans order.get_status_display %}</span>
+                        <span class="order-card__status order-card__status--{{ order.status }}">{{ order.localized_status }}</span>
                         <span class="order-card__category">{{ order.category.emoji }} {{ order.category.localized_name }}</span>
                     </div>
                     <div class="order-card-sm__body">
@@ -206,11 +206,11 @@
             {% if cancelled_orders.has_other_pages %}
             <nav class="pagination" aria-label="{% trans 'Страницы отменённых заявок' %}">
                 {% if cancelled_orders.has_previous %}
-                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.previous_page_number }}">← {% trans 'Назад' %}</a>
+                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.previous_page_number }}&amp;draft_page={{ draft_orders.number }}">← {% trans 'Назад' %}</a>
                 {% endif %}
                 <span>{% trans 'Страница' %} {{ cancelled_orders.number }} {% trans 'из' %} {{ cancelled_orders.paginator.num_pages }}</span>
                 {% if cancelled_orders.has_next %}
-                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.next_page_number }}">{% trans 'Вперёд' %} →</a>
+                <a href="?active_page={{ active_orders.number }}&amp;progress_page={{ in_progress_orders.number }}&amp;completed_page={{ completed_orders.number }}&amp;cancelled_page={{ cancelled_orders.next_page_number }}&amp;draft_page={{ draft_orders.number }}">{% trans 'Вперёд' %} →</a>
                 {% endif %}
             </nav>
             {% endif %}

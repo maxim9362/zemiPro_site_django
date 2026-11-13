@@ -15,7 +15,7 @@ from .models import (
 from .order_lifecycle import transition_order_status
 from .wizard_forms import validate_approximate_area
 from .wizard_services import ensure_wizard_owner
-from .wizard_ui import wizard_copy
+from .wizard_ui import wizard_copy, localized_order_action, localized_order_status
 from .order_quota import consume_order_quota
 from .order_events import emit_order_event
 
@@ -348,12 +348,12 @@ def management_timeline(order):
     """Merged deterministic owner-only lifecycle and management history."""
     events = [
         {'when': e.occurred_at, 'id': e.pk, 'kind': 'status',
-         'summary': e.get_new_status_display(), 'changed': ()}
+         'summary': localized_order_status(e.new_status), 'changed': ()}
         for e in order.status_events.all()
     ]
     events += [
         {'when': e.occurred_at, 'id': e.pk, 'kind': 'management',
-         'summary': e.get_action_display(), 'changed': e.changed_fields}
+         'summary': localized_order_action(e.action), 'changed': e.changed_fields}
         for e in order.management_events.all()
     ]
     return sorted(events, key=lambda e: (e['when'], e['kind'], e['id']))
