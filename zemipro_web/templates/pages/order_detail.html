@@ -24,7 +24,7 @@
         <div class="order-card">
             <div class="order-card__header">
                 <span class="order-card__status order-card__status--{{ order.status }}">
-                    {% trans order.get_status_display %}
+                    {{ order.localized_status }}
                 </span>
                 <span class="order-card__category">
                     {{ order.category.emoji }} {{ order.category.localized_name }}
@@ -58,6 +58,15 @@
                 <div class="order-card__field">
                     <strong>{% trans 'Бюджет:' %}</strong> {% trans order.price %}
                 </div>
+                {% if structured_info %}
+                {% for label, value in structured_info %}
+                    {% if value %}
+                    <div class="order-card__field">
+                        <strong>{{ label }}:</strong> <bdi dir="auto">{{ value }}</bdi>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                {% endif %}
 
                 {% if can_view_private_details and private_question_answers %}
                 <div class="order-card__field">
@@ -82,12 +91,51 @@
                     <strong>{% trans 'Контакт клиента:' %}</strong> <bdi dir="ltr">{{ order.customer_phone }}</bdi>
                 </div>
                 {% endif %}
+                {% if order_photos %}
+                <div class="order-card__field">
+                    <strong>{% trans 'Фотографии заявки' %}</strong>
+                    <ul class="zw-photo-list" style="display:flex;flex-wrap:wrap;gap:12px;list-style:none;padding:0;">
+                        {% for photo in order_photos %}
+                        <li style="max-width:130px;">
+                            <a href="{% url 'marketplace:order_attachment_image' pk=photo.pk %}">
+                                <img width="120" height="90" style="object-fit:cover;max-width:100%;"
+                                     src="{% url 'marketplace:order_attachment_image' pk=photo.pk %}"
+                                     alt="{% trans 'Фотография заявки' %}" loading="lazy">
+                            </a>
+                            {% if photo_is_owner %}
+                            <form method="post" action="{% url 'marketplace:order_attachment_delete' pk=photo.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--secondary">{% trans 'Удалить фотографию' %}</button>
+                            </form>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
             </div>
 
             <div class="order-card__footer">
                 {# Кнопки для владельца заявки #}
                 {% if is_owner %}
-                    {% if order.status == 'new' %}
+
+                    {% if can_edit_order %}
+                        <a class="btn btn--secondary" href="{% url 'marketplace:order_management_edit' pk=order.pk %}">{{ management_copy.edit }}</a>
+                    {% endif %}
+                    {% if can_withdraw_order %}
+                        <form method="post" action="{% url 'marketplace:order_management_withdraw' pk=order.pk %}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="operation_key" value="{{ operation_withdraw }}">
+                            <button type="submit" class="btn btn--secondary">{{ management_copy.withdraw }}</button>
+                        </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'marketplace:order_management_duplicate' pk=order.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="operation_key" value="{{ operation_duplicate }}">
+                        <button type="submit" class="btn btn--secondary">{{ management_copy.duplicate }}</button>
+                    </form>
+
+                    {% if can_cancel_order %}
                     <form method="post" action="{% url 'marketplace:order_cancel' pk=order.pk %}" style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn--danger" onclick="return confirm('{% trans 'Отменить заявку?' %}')">
@@ -121,7 +169,7 @@
                 {% endif %}
 
                 {# Кнопки для мастера #}
-                {% if not is_owner and order.status == 'new' and has_worker_profile and not worker_response %}
+                {% if not is_owner and order.status == 'published' and has_worker_profile and not worker_response %}
                 <a href="{% url 'marketplace:order_respond' pk=order.pk %}" class="btn btn--primary">
                     {% trans 'Откликнуться' %}
                 </a>
@@ -132,8 +180,8 @@
                 {% endif %}
 
                 {# Ссылка для зарегистрированных пользователей без профиля мастера #}
-                {% if not is_owner and not has_worker_profile and order.status == 'new' %}
-                <a href="{% url 'marketplace:order_create' %}" class="btn btn--primary">
+                {% if not is_owner and not has_worker_profile and order.status == 'published' %}
+                <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">
                     {% trans 'Создать ещё одну заявку' %}
                 </a>
                 {% endif %}
@@ -149,6 +197,24 @@
                 {% endif %}
             </div>
         </div>
+
+
+        {% if is_owner and order_history %}
+        <section class="order-card" style="margin-top:24px;max-width:700px;margin-inline:auto;">
+            <div class="order-card__header"><h2>{{ management_copy.history }}</h2></div>
+            <ol style="list-style:decimal;padding-inline-start:28px;">
+                {% for event in order_history %}
+                <li>
+                    <time datetime="{{ event.when|date:'c' }}">{{ event.when|date:"d.m.Y H:i" }}</time>
+                    — {{ event.summary }}
+                    {% if event.changed %}
+                    <span class="form__hint">({{ management_copy.conditions_changed }})</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+        </section>
+        {% endif %}
 
         {# Блок откликов для владельца заявки #}
         {% if is_owner and responses %}
@@ -170,7 +236,7 @@
                     {% endif %}
                     <p style="font-size: 0.8125rem; color: var(--color-text-light);">{% trans 'Отклик:' %} {{ resp.created_at|date:"d.m.Y H:i" }}</p>
 
-                    {% if order.status == 'new' and resp.status == 'pending' %}
+                    {% if order.status == 'published' and resp.status == 'pending' %}
                     <form method="post" action="{% url 'marketplace:order_accept_response' order_id=order.pk response_id=resp.pk %}" style="margin-top: 8px;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn--primary btn--sm" onclick="return confirm('{% trans 'Выбрать этого мастера?' %}')">

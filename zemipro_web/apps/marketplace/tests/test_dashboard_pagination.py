@@ -17,7 +17,7 @@ class ClientDashboardPaginationTests(TestCase):
         cls.worker = make_user('paging-worker')
         ClientProfile.objects.create(user=cls.owner, city=cls.city)
         for status, quantity in (
-            (Order.Status.NEW, 14),
+            (Order.Status.PUBLISHED, 14),
             (Order.Status.IN_PROGRESS, 12),
             (Order.Status.COMPLETED, 11),
             (Order.Status.CANCELLED, 11),
@@ -76,7 +76,7 @@ class ClientDashboardPaginationTests(TestCase):
 
     def test_response_counts_remain_aggregated_on_visible_active_page(self):
         newest = Order.objects.filter(
-            client=self.owner, status=Order.Status.NEW,
+            client=self.owner, status=Order.Status.PUBLISHED,
         ).order_by('-created_at', '-pk').first()
         Response.objects.create(order=newest, worker=self.worker)
         response = self.client.get(self.url)

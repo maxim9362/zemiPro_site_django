@@ -1,11 +1,15 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Avg, Count, F, Prefetch, Q
-from django.http import Http404, JsonResponse, HttpResponsePermanentRedirect
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, HttpResponsePermanentRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
+from django.views.decorators.http import require_GET, require_POST
 from django.utils.translation import gettext as _
 
 from apps.accounts.forms import RatingCreateForm
@@ -27,12 +31,57 @@ from .models import (
     ServiceQuestionnaire, OrderQuestionnaireAnswer,
 )
 from .services import (
-    get_available_orders_for_worker, create_response,
+    get_available_orders_for_worker, create_response, create_order,
     accept_response, complete_order, cancel_order,
     can_view_private_order_details, workers_serving_city,
 )
 
+from django.views.decorators.cache import never_cache
+import uuid
+
+from .wizard_forms import STEP_FORMS, ServiceStepForm, QuestionsStepForm
+from .wizard_services import (
+    ensure_wizard_owner, get_owner_wizard, publish_order_wizard,
+    save_order_wizard_step, start_order_wizard, wizard_initial,
+    wizard_max_step, wizard_summary,
+)
+from .wizard_ui import wizard_copy
+from .order_quota import OrderQuotaExceeded
+from .order_events import deliver_order_events_for_order
+from .order_management import (
+    OrderEditForm, duplicate_order, edit_published_order,
+    management_timeline, withdraw_order,
+)
+from .attachment_services import (
+    OrderPhotoError, can_read_order_photo, delete_order_photo,
+    order_attachment_key, visible_order_photos,
+)
+from apps.accounts.portfolio import private_portfolio_storage
+from .models import OrderAttachment
+
 ITEMS_PER_PAGE = 10
+LOGGER = logging.getLogger('zemipro')
+
+
+def _flush_order_events(order):
+    """Notification failure must not undo a committed successful order action."""
+    try:
+        deliver_order_events_for_order(order)
+    except Exception:
+        # The receipts remain pending and replayable. No payloads or paths
+        # from the event, request or exception enter the structured log.
+        LOGGER.warning('order_event_local_delivery_deferred')
+
+
+def _order_quota_response(error):
+    """Return a non-PII 429 rather than masking a durable quota as success."""
+    response = HttpResponse(
+        wizard_copy()['throttled'], status=429,
+        content_type='text/plain; charset=utf-8',
+    )
+    response['Retry-After'] = str(error.retry_after)
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 def home(request):
@@ -371,41 +420,329 @@ def toggle_favorite_worker_view(request, pk):
 
 
 @login_required
+@never_cache
 def order_create_view(request):
-    initial = {}
-    if request.user.is_authenticated:
+    """Retain legacy POST compatibility but route writes through owner service.
+
+    New CTAs open the wizard; the old GET remains for integrations.
+    Legacy writes use the same centralized owner and replay checks.
+    """
+    if request.method not in ('GET', 'POST'):
+        raise Http404
+    ensure_wizard_owner(request.user)
+    if request.method == 'GET':
         profile = get_client_profile(request.user)
-        if profile:
-            initial = {'city': profile.city}
-
-    if request.method == 'POST':
-        form = OrderCreateForm(request.POST)
-        if form.is_valid():
-            order = form.save(commit=False)
-            order.client = request.user
-            with transaction.atomic():
-                order.save()
-                if form.active_questionnaire_version is not None:
-                    OrderQuestionnaireAnswer.objects.create(
-                        order=order,
-                        version=form.active_questionnaire_version,
-                        schema_snapshot=form.active_questionnaire_version.schema,
-                        answers=form.questionnaire_answers,
-                    )
-
-            create_notification(
-                recipient=request.user,
-                title='Заявка создана',
-                message=f'Ваша заявка №{order.pk} успешно создана. Мастера смогут откликнуться на неё.',
-                notification_type='order_created',
-                related_order=order,
+        initial = {'city': profile.city} if profile else {}
+        return render(request, 'pages/order_create.html', {
+            'form': OrderCreateForm(initial=initial), 'seo_noindex': True,
+            'order_contact_privacy': wizard_copy()['privacy'],
+            'wizard_link_label': wizard_copy()['heading'],
+        })
+    form = OrderCreateForm(request.POST)
+    if form.is_valid():
+        values = form.cleaned_data
+        try:
+            order, created = create_order(
+                client=request.user,
+                category=values['category'],
+                subcategory=values['subcategory'],
+                city=values['city'],
+                address=values.get('address') or '',
+                description=values['description'],
+                price=values['price'],
+                customer_name=values.get('customer_name') or '',
+                customer_phone=values.get('customer_phone') or '',
+                questionnaire_version=form.active_questionnaire_version,
+                questionnaire_answers=form.questionnaire_answers,
+                submission_key=request.POST.get('submission_key'),
+                return_created=True,
             )
-
+        except OrderQuotaExceeded as error:
+            return _order_quota_response(error)
+        except ValueError as error:
+            form.add_error(None, str(error))
+        else:
+            _flush_order_events(order)
             return redirect('marketplace:order_detail', pk=order.pk)
-    else:
-        form = OrderCreateForm(initial=initial)
+    return render(request, 'pages/order_create.html', {
+        'form': form, 'seo_noindex': True,
+        'order_contact_privacy': wizard_copy()['privacy'],
+        'wizard_link_label': wizard_copy()['heading'],
+    })
 
-    return render(request, 'pages/order_create.html', {'form': form})
+
+
+def _wizard_render(request, *, step, form, order=None, token='', drafts=None):
+    t = wizard_copy()
+    return render(request, 'pages/order_wizard.html', {
+        'copy': t, 'form': form, 'step': step, 'order': order,
+        'previous_step': max(1, step - 1),
+        'wizard_steps': [
+            {'number': number, 'title': t['step' + str(number)]}
+            for number in range(1, 9)
+        ],
+        'token': token, 'drafts': drafts or [],
+        'wizard_title': t['step' + str(step)],
+        'is_new_wizard': order is None,
+        'summary_rows': wizard_summary(order) if order and step == 8 else [],
+        'saved_photos': list(visible_order_photos(order, request.user))
+        if order and step in (6, 8) else [],
+        'questionnaire_questions': (
+            form.questionnaire_questions if step == 2 else []
+        ),
+        'has_questions': (
+            bool(form.active_questionnaire_version) if step == 2 else False
+        ),
+        'seo_noindex': True,
+    })
+
+
+def _wizard_form_for_step(order, step, data=None):
+    kwargs = {} if data is None else {'data': data}
+    if step == 2:
+        return QuestionsStepForm(
+            service_id=order.subcategory_id,
+            stored_answers=wizard_initial(order, 2), **kwargs,
+        )
+    if step == 3:
+        return STEP_FORMS[step](
+            service=order.subcategory,
+            initial=wizard_initial(order, step), **kwargs,
+        )
+    return STEP_FORMS[step](initial=wizard_initial(order, step), **kwargs)
+
+
+@login_required
+@never_cache
+def order_wizard_start_view(request):
+    """Default visible entry point; older POST /orders/create/ remains compatible."""
+    ensure_wizard_owner(request.user)
+    if request.method == 'POST':
+        if request.POST.get('action') != 'start':
+            raise Http404
+        form = ServiceStepForm(request.POST)
+        token = request.POST.get('token', '')
+        if form.is_valid():
+            # Per-session token prevents accidental repeat creation across taps.
+            if token != request.session.get('order_wizard_token'):
+                raise Http404
+            try:
+                order = start_order_wizard(
+                    actor=request.user, form=form, token=token,
+                )
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
+            except ValueError as error:
+                form.add_error(None, str(error))
+            else:
+                request.session.pop('order_wizard_token', None)
+                return redirect('marketplace:order_wizard_edit', pk=order.pk)
+    else:
+        token = str(uuid.uuid4())
+        request.session['order_wizard_token'] = token
+        form = ServiceStepForm()
+    drafts = Order.objects.filter(
+        client=request.user, status=Order.Status.DRAFT,
+        wizard_token__isnull=False,
+    ).select_related('subcategory').order_by('-updated_at', '-pk')[:10]
+    return _wizard_render(
+        request, step=1, form=form,
+        token=request.session.get('order_wizard_token', ''),
+        drafts=drafts,
+    )
+
+
+@login_required
+@never_cache
+def order_wizard_edit_view(request, pk):
+    """Resume any saved step but never expose draft state across owners."""
+    ensure_wizard_owner(request.user)
+    order = get_owner_wizard(pk, request.user)
+    if order is None:
+        raise Http404
+    if order.status == Order.Status.PUBLISHED:
+        return redirect('marketplace:order_detail', pk=order.pk)
+    if order.status != Order.Status.DRAFT:
+        raise Http404
+
+    latest = wizard_max_step(order)
+    try:
+        step = int(request.GET.get('step', latest))
+    except (TypeError, ValueError):
+        raise Http404 from None
+    if not 1 <= step <= 8:
+        raise Http404
+    if step > latest:
+        return redirect(
+            reverse('marketplace:order_wizard_edit', args=[pk]) + f'?step={latest}'
+        )
+    if request.method == 'POST':
+        if request.POST.get('action') != ('publish' if step == 8 else 'next'):
+            raise Http404
+        form = _wizard_form_for_step(order, step, request.POST)
+        if form.is_valid():
+            try:
+                if step == 8:
+                    published, created = publish_order_wizard(
+                        order_id=order.pk, actor=request.user,
+                        confirmation_form=form,
+                    )
+                    _flush_order_events(published)
+                    return redirect('marketplace:order_detail', pk=published.pk)
+                saved = save_order_wizard_step(
+                    order_id=order.pk, actor=request.user,
+                    step=step, form=form,
+                    uploads=request.FILES.getlist('photos') if step == 6 else (),
+                    photo_visibility=(
+                        request.POST.get('photo_visibility', 'private')
+                        if step == 6 else 'private'
+                    ),
+                    public_consent=(
+                        request.POST.get('public_photo_consent') == 'on'
+                        if step == 6 else False
+                    ),
+                )
+                next_step = min(step + 1, wizard_max_step(saved))
+                return redirect(
+                    reverse('marketplace:order_wizard_edit', args=[pk])
+                    + f'?step={next_step}'
+                )
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
+            except ValueError as error:
+                form.add_error(None, str(error))
+        # Re-render bound fields and errors without losing the draft.
+    else:
+        form = _wizard_form_for_step(order, step)
+    return _wizard_render(request, step=step, form=form, order=order)
+
+
+
+@require_GET
+@never_cache
+def order_attachment_image_view(request, pk):
+    """Stream a normalized JPEG only to explicitly entitled viewers."""
+    photo = get_object_or_404(
+        OrderAttachment.objects.select_related('order'), pk=pk,
+    )
+    if not can_read_order_photo(photo, request.user):
+        raise Http404
+    try:
+        key = order_attachment_key(photo)
+        source = private_portfolio_storage().open(key, 'rb')
+    except (OrderPhotoError, OSError, FileNotFoundError):
+        raise Http404 from None
+    response = FileResponse(
+        source, content_type='image/jpeg', as_attachment=False,
+        filename='order-photo.jpg',
+    )
+    response['Cache-Control'] = 'private, no-store, max-age=0'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Content-Security-Policy'] = "default-src 'none'; sandbox"
+    response['X-Robots-Tag'] = 'noindex, nofollow, noarchive'
+    return response
+
+
+@login_required
+@require_POST
+@never_cache
+def order_attachment_delete_view(request, pk):
+    """Revoke previously granted image access without waiting for stage 04.5."""
+    try:
+        order = delete_order_photo(photo_id=pk, actor=request.user)
+    except (OrderPhotoError, PermissionDenied):
+        raise Http404 from None
+    if order.status == Order.Status.DRAFT:
+        return redirect(
+            reverse('marketplace:order_wizard_edit', args=[order.pk]) + '?step=6'
+        )
+    return redirect('marketplace:order_detail', pk=order.pk)
+
+
+
+
+@login_required
+@never_cache
+def order_management_edit_view(request, pk):
+    """Edit all safe conditions pre-assignment; require POST for mutations."""
+    order = get_object_or_404(
+        Order.objects.select_related('category', 'subcategory'), pk=pk,
+        client=request.user,
+    )
+    ensure_wizard_owner(request.user)
+    if request.method not in ('GET', 'POST'):
+        raise Http404
+    if order.worker_id or order.status not in (
+        Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION,
+    ):
+        raise Http404
+    if request.method == 'POST':
+        try:
+            result, changed = edit_published_order(
+                order_id=order.pk, actor=request.user, data=request.POST,
+                operation_key=request.POST.get('operation_key'),
+            )
+        except OrderQuotaExceeded as error:
+            return _order_quota_response(error)
+        except ValueError as exc:
+            form = OrderEditForm(request.POST, order=order)
+            form.is_valid()
+            form.add_error(None, str(exc))
+        else:
+            if isinstance(result, OrderEditForm):
+                form = result
+            else:
+                if changed:
+                    messages.success(request, wizard_copy()['edit_saved'])
+                _flush_order_events(order)
+                return redirect('marketplace:order_detail', pk=order.pk)
+    else:
+        form = OrderEditForm(order=order)
+    return render(request, 'pages/order_management_edit.html', {
+        'form': form, 'order': order, 'copy': wizard_copy(),
+        'operation_key': (request.POST.get('operation_key')
+                          if request.method == 'POST' else uuid.uuid4()),
+        'seo_noindex': True,
+    })
+
+
+@login_required
+@require_POST
+@never_cache
+def order_management_withdraw_view(request, pk):
+    get_object_or_404(Order, pk=pk, client=request.user)
+    try:
+        order, _ = withdraw_order(
+            order_id=pk, actor=request.user,
+            operation_key=request.POST.get('operation_key'),
+        )
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect('marketplace:order_detail', pk=pk)
+    return redirect('marketplace:order_wizard_edit', pk=order.pk)
+
+
+@login_required
+@require_POST
+@never_cache
+def order_management_duplicate_view(request, pk):
+    get_object_or_404(Order, pk=pk, client=request.user)
+    try:
+        clone, _ = duplicate_order(
+            order_id=pk, actor=request.user,
+            operation_key=request.POST.get('operation_key'),
+        )
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect('marketplace:order_detail', pk=pk)
+    _flush_order_events(clone)
+    return redirect('marketplace:order_wizard_edit', pk=clone.pk)
+
+
 
 
 @login_required
@@ -414,6 +751,10 @@ def order_detail_view(request, pk):
         Order.objects.select_related('category', 'subcategory', 'city', 'client', 'worker'),
         pk=pk,
     )
+    if order.status == Order.Status.DRAFT:
+        if order.client_id != request.user.pk or not order.wizard_token:
+            raise Http404
+        return redirect('marketplace:order_wizard_edit', pk=order.pk)
     worker_response = None
     has_worker_profile = False
     is_owner = False
@@ -454,6 +795,28 @@ def order_detail_view(request, pk):
         'responses': responses,
         'existing_rating': existing_rating,
         'can_view_private_details': can_read_private,
+        'order_photos': list(visible_order_photos(order, request.user)),
+        'structured_info': [
+            (wizard_copy()['area'], order.approximate_area),
+            (wizard_copy()['mode'], wizard_copy().get(order.work_mode, '')),
+            (wizard_copy()['date'], order.preferred_date),
+            (wizard_copy()['urgency'], wizard_copy().get(order.urgency, '')),
+        ] if order.price_kind != Order.PriceKind.LEGACY else [],
+        'photo_is_owner': is_owner,
+        'can_edit_order': is_owner and order.worker_id is None
+            and order.status in (Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION),
+        'can_withdraw_order': is_owner and order.worker_id is None
+            and order.status in (Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION)
+            and not Response.objects.filter(order=order).exists(),
+        'can_cancel_order': is_owner and order.status in (
+            Order.Status.DRAFT, Order.Status.PUBLISHED,
+            Order.Status.IN_DISCUSSION, Order.Status.ASSIGNED,
+            Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
+        ),
+        'order_history': management_timeline(order) if is_owner else [],
+        'management_copy': wizard_copy(),
+        'operation_withdraw': uuid.uuid4(),
+        'operation_duplicate': uuid.uuid4(),
     })
 
 
@@ -469,15 +832,24 @@ def client_dashboard_view(request):
         client=request.user
     ).select_related('category', 'city', 'worker').order_by('-created_at', '-pk')
 
+    draft_orders = Paginator(
+        my_orders.filter(status=Order.Status.DRAFT),
+        ITEMS_PER_PAGE,
+    ).get_page(request.GET.get('draft_page'))
+
     active_orders = Paginator(
-        my_orders.filter(status=Order.Status.NEW).annotate(
+        my_orders.filter(status__in=(
+            Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION,
+        )).annotate(
             response_count=Count('responses')
         ),
         ITEMS_PER_PAGE,
     ).get_page(request.GET.get('active_page'))
 
     in_progress_orders = Paginator(
-        my_orders.filter(status=Order.Status.IN_PROGRESS),
+        my_orders.filter(status__in=(
+            Order.Status.ASSIGNED, Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
+        )),
         ITEMS_PER_PAGE,
     ).get_page(request.GET.get('progress_page'))
 
@@ -487,7 +859,7 @@ def client_dashboard_view(request):
     ).get_page(request.GET.get('completed_page'))
 
     cancelled_orders = Paginator(
-        my_orders.filter(status=Order.Status.CANCELLED),
+        my_orders.filter(status__in=(Order.Status.CANCELLED, Order.Status.EXPIRED)),
         ITEMS_PER_PAGE,
     ).get_page(request.GET.get('cancelled_page'))
 
@@ -498,6 +870,8 @@ def client_dashboard_view(request):
 
     return render(request, 'pages/client_dashboard.html', {
         'profile': profile,
+        'draft_orders': draft_orders,
+        'management_copy': wizard_copy(),
         'active_orders': active_orders,
         'in_progress_orders': in_progress_orders,
         'completed_orders': completed_orders,
@@ -511,7 +885,7 @@ def order_accept_response_view(request, order_id, response_id):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=order_id, client=request.user, status=Order.Status.NEW)
+    order = get_object_or_404(Order, pk=order_id, client=request.user, status=Order.Status.PUBLISHED)
     response = get_object_or_404(Response, pk=response_id, order=order)
 
     rejected_workers = list(
@@ -519,7 +893,9 @@ def order_accept_response_view(request, order_id, response_id):
     )
 
     try:
-        response = accept_response(response)
+        response = accept_response(response, actor=request.user)
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
     except ValueError as error:
         messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
@@ -556,29 +932,32 @@ def order_cancel_view(request, pk):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.NEW)
-
-    responding_workers = list(
-        Response.objects.filter(order=order).values_list('worker_id', flat=True)
-    )
-
-    cancel_order(order)
-
-    from apps.accounts.models import User
-    for worker_id in responding_workers:
-        try:
-            worker_user = User.objects.get(pk=worker_id)
-            create_notification(
-                recipient=worker_user,
-                title='Заявка отменена',
-                message=f'Заявка №{order.pk}, на которую вы откликались, была отменена клиентом.',
-                notification_type='order_cancelled',
-                related_order=order,
-            )
-        except User.DoesNotExist:
-            continue
-
-    messages.success(request, _('Заявка отменена.'))
+    # Serialize status evaluation with the transition. A competitor can
+    # finish/cancel the same order after an initial GET but before our POST.
+    changed = False
+    with transaction.atomic():
+        order = get_object_or_404(
+            Order.objects.select_for_update(), pk=pk, client=request.user,
+        )
+        allowed = (
+            Order.Status.DRAFT, Order.Status.PUBLISHED,
+            Order.Status.IN_DISCUSSION, Order.Status.ASSIGNED,
+            Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
+        )
+        if order.status in allowed:
+            try:
+                cancel_order(order, actor=request.user)
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
+            except ValueError:
+                messages.error(request, wizard_copy()['cancel_conflict'])
+            else:
+                changed = True
+        elif order.status != Order.Status.CANCELLED:
+            messages.error(request, wizard_copy()['cancel_conflict'])
+    if changed:
+        _flush_order_events(order)
+        messages.success(request, _('Заявка отменена.'))
     return redirect('marketplace:order_detail', pk=pk)
 
 
@@ -587,19 +966,31 @@ def order_complete_view(request, pk):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=pk, client=request.user, status=Order.Status.IN_PROGRESS)
-    complete_order(order)
-
-    if order.worker:
-        create_notification(
-            recipient=order.worker,
-            title='Заявка завершена',
-            message=f'Клиент отметил заявку №{order.pk} как выполненную.',
-            notification_type='order_completed',
-            related_order=order,
+    # The notification is committed in the SAME transaction as the first
+    # successful state transition, while the row lock prevents double sends.
+    with transaction.atomic():
+        order = get_object_or_404(
+            Order.objects.select_for_update(), pk=pk, client=request.user,
         )
-
-    messages.success(request, _('Заявка отмечена как выполненная!'))
+        if order.status == Order.Status.IN_PROGRESS:
+            try:
+                complete_order(order, actor=request.user)
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
+            except ValueError:
+                messages.error(request, wizard_copy()['complete_conflict'])
+            else:
+                if order.worker_id:
+                    create_notification(
+                        recipient=order.worker,
+                        title='Заявка завершена',
+                        message=f'Клиент отметил заявку №{order.pk} как выполненную.',
+                        notification_type='order_completed',
+                        related_order=order,
+                    )
+                messages.success(request, _('Заявка отмечена как выполненная!'))
+        elif order.status != Order.Status.COMPLETED:
+            messages.error(request, wizard_copy()['complete_conflict'])
     return redirect('marketplace:order_detail', pk=pk)
 
 
@@ -681,7 +1072,7 @@ def order_respond_view(request, pk):
         Order.objects.select_related('category', 'city').filter(
             city__in=get_public_cities()
         ),
-        pk=pk, status=Order.Status.NEW,
+        pk=pk, status=Order.Status.PUBLISHED,
     )
 
     if order.client_id == request.user.pk:
@@ -714,6 +1105,8 @@ def order_respond_view(request, pk):
 
                 messages.success(request, _('Отклик отправлен!'))
                 return redirect('marketplace:order_detail', pk=pk)
+            except OrderQuotaExceeded as error:
+                return _order_quota_response(error)
             except ValueError as e:
                 messages.error(request, _(str(e)))
     else:

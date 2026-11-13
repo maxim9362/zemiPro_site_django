@@ -45,19 +45,19 @@ class ServiceWorkflowTests(TestCase):
             description='Synthetic test booking for a service',
         )
         self.assertEqual(order.client_id, self.owner.pk)
-        self.assertEqual(order.status, Order.Status.NEW)
+        self.assertEqual(order.status, Order.Status.PUBLISHED)
 
         response = create_response(order, self.worker, 'Synthetic availability')
         self.assertEqual(response.status, Response.Status.PENDING)
 
-        accepted = accept_response(response)
+        accepted = accept_response(response, actor=self.owner)
         order.refresh_from_db()
         accepted.refresh_from_db()
         self.assertEqual(order.status, Order.Status.IN_PROGRESS)
         self.assertEqual(order.worker_id, self.worker.pk)
         self.assertEqual(accepted.status, Response.Status.ACCEPTED)
 
-        complete_order(order)
+        complete_order(order, actor=self.owner)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.COMPLETED)
 
@@ -94,22 +94,23 @@ class ServiceWorkflowTests(TestCase):
             create_response(order, self.worker, 'Duplicate synthetic response')
         self.assertEqual(Response.objects.filter(order=order).count(), 1)
 
-    def test_assigned_worker_owner_and_staff_can_view_private_order(self):
+    def test_only_owner_and_authorized_moderator_can_view_private_order(self):
         order = make_order(
             client=self.owner, worker=self.worker,
             category=self.category, city=self.city,
         )
-        for user in (self.owner, self.worker, self.staff):
+        for user in (self.owner, self.staff):
             with self.subTest(username=user.username):
                 self.assertTrue(can_view_private_order_details(user, order))
-        self.assertFalse(can_view_private_order_details(self.unrelated, order))
-        self.assertFalse(can_view_private_order_details(AnonymousUser(), order))
+        # Merely assigning a worker is not voluntary sharing in private chat.
+        for user in (self.worker, self.unrelated, AnonymousUser()):
+            self.assertFalse(can_view_private_order_details(user, order))
 
     def test_cancel_order_persists_cancelled_status(self):
         order = make_order(
             client=self.owner, category=self.category, city=self.city
         )
-        cancel_order(order)
+        cancel_order(order, actor=self.owner)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.CANCELLED)
 

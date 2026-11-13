@@ -21,7 +21,7 @@ class OrderCreateForm(forms.ModelForm):
         }),
     )
     customer_phone = forms.CharField(
-        max_length=30,
+        max_length=30, required=False,
         label=_('Телефон'),
         widget=forms.TextInput(attrs={
             'placeholder': '+972-XX-XXX-XXXX',
@@ -46,7 +46,7 @@ class OrderCreateForm(forms.ModelForm):
         empty_label=_('Выберите город'),
     )
     address = forms.CharField(
-        max_length=255,
+        max_length=255, required=False,
         label=_('Адрес'),
         widget=forms.TextInput(attrs={
             'placeholder': _('Адрес'),
@@ -127,7 +127,7 @@ class OrderCreateForm(forms.ModelForm):
 
     def clean_customer_phone(self):
         phone = self.cleaned_data.get('customer_phone', '')
-        if len(phone) < 7:
+        if phone and len(phone) < 7:
             raise forms.ValidationError(_('Введите корректный номер телефона (минимум 7 символов).'))
         return phone
 

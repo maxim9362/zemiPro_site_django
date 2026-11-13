@@ -15,6 +15,9 @@
     <div class="container">
         <form method="post" class="form" id="order-form">
             {% csrf_token %}
+            <p class="form__hint">{{ order_contact_privacy }}</p>
+            <p><a href="{% url 'marketplace:order_wizard_start' %}">{{ wizard_link_label }}</a></p>
+            <input type="hidden" name="submission_key" id="submission-key">
 
             {% if form.non_field_errors %}
             <div class="form__errors">
@@ -33,13 +36,6 @@
                     {% endif %}
                 </div>
 
-                <div class="form__group">
-                    <label for="id_customer_phone" class="form__label">{% trans 'Телефон *' %}</label>
-                    {{ form.customer_phone }}
-                    {% if form.customer_phone.errors %}
-                    <span class="form__error">{{ form.customer_phone.errors.0 }}</span>
-                    {% endif %}
-                </div>
             </div>
 
             <div class="form__row">
@@ -90,13 +86,6 @@
                     {% endif %}
                 </div>
 
-                <div class="form__group">
-                    <label for="id_address" class="form__label">{% trans 'Адрес *' %}</label>
-                    {{ form.address }}
-                    {% if form.address.errors %}
-                    <span class="form__error">{{ form.address.errors.0 }}</span>
-                    {% endif %}
-                </div>
             </div>
 
             <div class="form__group">
@@ -125,6 +114,11 @@
 {% trans '— Загрузка... —' as loading_label %}
 <script>
 (function () {
+    const submissionKey = document.getElementById('submission-key');
+    if (submissionKey && window.crypto && window.crypto.randomUUID) {
+        // Replaying this tab's POST sends the same UUID.
+        submissionKey.value = window.crypto.randomUUID();
+    }
     const category = document.getElementById('id_category');
     const subcategory = document.getElementById('id_subcategory');
     if (!category || !subcategory) return;

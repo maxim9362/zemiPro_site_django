@@ -19,7 +19,7 @@
             <nav class="nav">
                 <a href="{% if catalog_localized %}{% url 'catalog_i18n:categories_list' %}{% else %}{% url 'marketplace:categories_list' %}{% endif %}">{% trans 'Категории' %}</a>
                 <a href="{% if catalog_localized %}{% url 'catalog_i18n:cities_list' %}{% else %}{% url 'marketplace:cities_list' %}{% endif %}">{% trans 'Города' %}</a>
-                <a href="{% url 'marketplace:order_create' %}">{% trans 'Создать заявку' %}</a>
+                <a href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
                 {% if user.is_authenticated %}
                 <a href="{% url 'marketplace:client_dashboard' %}">{% trans 'Кабинет клиента' %}</a>
                 <a href="{% url 'marketplace:worker_dashboard' %}">{% trans 'Кабинет мастера' %}</a>

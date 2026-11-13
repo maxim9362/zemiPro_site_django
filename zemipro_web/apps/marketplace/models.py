@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -161,10 +163,15 @@ class Order(models.Model):
     """Заявка на услугу от заказчика."""
 
     class Status(models.TextChoices):
-        NEW = 'new', 'В обработке'
+        DRAFT = 'draft', 'Черновик'
+        PUBLISHED = 'published', 'Опубликован'
+        IN_DISCUSSION = 'in_discussion', 'Обсуждение'
+        ASSIGNED = 'assigned', 'Исполнитель выбран'
         IN_PROGRESS = 'in_progress', 'В процессе'
         COMPLETED = 'completed', 'Выполнен'
         CANCELLED = 'cancelled', 'Отменён'
+        EXPIRED = 'expired', 'Истёк срок'
+        DISPUTED = 'disputed', 'Спор'
 
     client = models.ForeignKey(
         'accounts.User', on_delete=models.PROTECT,
@@ -204,9 +211,60 @@ class Order(models.Model):
         verbose_name='Цена'
     )
     status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.NEW,
+        max_length=20, choices=Status.choices, default=Status.PUBLISHED,
         db_index=True, verbose_name='Статус'
     )
+    legacy_status = models.CharField(
+        max_length=20, null=True, blank=True, editable=False,
+        verbose_name='Исходный исторический статус',
+    )
+    wizard_data = models.JSONField(
+        default=dict, blank=True, editable=False,
+        verbose_name='Приватные данные мастера создания заявки',
+    )
+    wizard_token = models.UUIDField(
+        null=True, blank=True, unique=True, editable=False,
+        verbose_name='Ключ защиты от повторного создания черновика',
+    )
+    submission_digest = models.CharField(
+        max_length=64, blank=True, default='', db_index=True, editable=False,
+        verbose_name='Защищённый отпечаток подачи заявки',
+    )
+    class PriceKind(models.TextChoices):
+        LEGACY = 'legacy', 'Историческая цена'
+        FIXED = 'fixed', 'Фиксированная'
+        RANGE = 'range', 'Диапазон'
+        NEGOTIABLE = 'negotiable', 'Договорная'
+
+    class WorkMode(models.TextChoices):
+        LEGACY = 'legacy', 'Не указан'
+        ONSITE = 'onsite', 'На месте'
+        ONLINE = 'online', 'Онлайн'
+
+    class Urgency(models.TextChoices):
+        LEGACY = 'legacy', 'Не указана'
+        NORMAL = 'normal', 'Обычная'
+        SOON = 'soon', 'В ближайшие дни'
+        URGENT = 'urgent', 'Срочно'
+
+    price_kind = models.CharField(
+        max_length=12, choices=PriceKind.choices, default=PriceKind.LEGACY,
+    )
+    amount_min_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, blank=True, null=True,
+    )
+    amount_max_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, blank=True, null=True,
+    )
+    preferred_date = models.DateField(blank=True, null=True)
+    urgency = models.CharField(
+        max_length=8, choices=Urgency.choices, default=Urgency.LEGACY,
+    )
+    work_mode = models.CharField(
+        max_length=8, choices=WorkMode.choices, default=WorkMode.LEGACY,
+    )
+    approximate_area = models.CharField(max_length=80, blank=True, default='')
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлена')
 
@@ -222,13 +280,309 @@ class Order(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(status__in=['new', 'in_progress', 'completed', 'cancelled']),
+                condition=models.Q(status__in=[
+                    'draft', 'published', 'in_discussion', 'assigned',
+                    'in_progress', 'completed', 'cancelled', 'expired', 'disputed',
+                ]),
                 name='order_status_allowed',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        price_kind__in=['legacy', 'negotiable'],
+                        amount_min_ils__isnull=True, amount_max_ils__isnull=True,
+                    )
+                    | models.Q(
+                        price_kind='fixed', amount_min_ils__gte=0,
+                        amount_min_ils__isnull=False, amount_max_ils__isnull=True,
+                    )
+                    | models.Q(
+                        price_kind='range', amount_min_ils__gte=0,
+                        amount_min_ils__isnull=False, amount_max_ils__isnull=False,
+                        amount_max_ils__gte=models.F('amount_min_ils'),
+                    )
+                ),
+                name='order_structured_price_valid',
+            ),
+        ]
+
+    @property
+    def localized_status(self):
+        from .wizard_ui import localized_order_status
+        return localized_order_status(self.status)
+
+    def __str__(self):
+        return f'Заказ #{self.pk} — {self.category.name_ru} ({self.get_status_display()})'
+
+
+
+class OrderAttachment(models.Model):
+    """Server-gated, metadata-free JPEG; source image never stored publicly."""
+
+    class Visibility(models.TextChoices):
+        PRIVATE = 'private', 'Только заказчик'
+        ASSIGNEE = 'assignee', 'Выбранный исполнитель'
+        PUBLIC = 'public', 'Публично (по согласию)'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='attachments',
+    )
+    uploaded_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT,
+        related_name='order_photo_uploads',
+    )
+    file_key = models.CharField(max_length=120, unique=True, editable=False)
+    visibility = models.CharField(
+        max_length=9, choices=Visibility.choices, default=Visibility.PRIVATE,
+    )
+    content_sha256 = models.CharField(max_length=64, editable=False)
+    byte_size = models.PositiveIntegerField()
+    public_consent_at = models.DateTimeField(null=True, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_attachment'
+        ordering = ('created_at', 'pk')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'content_sha256', 'visibility'],
+                name='order_photo_unique_content_scope',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(visibility__in=['private', 'assignee', 'public'])
+                    & (models.Q(visibility='public', public_consent_at__isnull=False)
+                       | ~models.Q(visibility='public'))
+                ),
+                name='order_photo_visibility_allowed',
             ),
         ]
 
     def __str__(self):
-        return f'Заказ #{self.pk} — {self.category.name_ru} ({self.get_status_display()})'
+        return f'Фото #{self.pk} заказа #{self.order_id}'
+
+
+class OrderStatusEvent(models.Model):
+    """Append-only, non-PII history of significant lifecycle changes."""
+
+    class Reason(models.TextChoices):
+        CREATED = 'created', 'Создание'
+        TRANSITION = 'transition', 'Смена статуса'
+        WORKER_ASSIGNED = 'worker_assigned', 'Выбор мастера'
+        WORK_STARTED = 'work_started', 'Начало работы'
+        LEGACY_MIGRATION = 'legacy_migration', 'Историческая миграция'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='status_events',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='order_status_actions',
+    )
+    previous_status = models.CharField(max_length=20, blank=True, default='')
+    new_status = models.CharField(max_length=20, choices=Order.Status.choices)
+    reason = models.CharField(
+        max_length=32, choices=Reason.choices, default=Reason.TRANSITION,
+    )
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_status_event'
+        verbose_name = 'Событие статуса заявки'
+        verbose_name_plural = 'События статусов заявок'
+        ordering = ['-occurred_at', '-pk']
+        indexes = [
+            models.Index(fields=['order', '-occurred_at'], name='order_event_time_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'operation_key'],
+                name='order_event_unique_operation',
+            ),
+        ]
+
+
+class OrderManagementEvent(models.Model):
+    """Immutable record of owner actions, containing field NAMES only."""
+
+    class Action(models.TextChoices):
+        EDITED = 'edited', 'Условия изменены'
+        DUPLICATED = 'duplicated', 'Создана копия'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='management_events',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT,
+        related_name='order_management_actions',
+    )
+    action = models.CharField(max_length=16, choices=Action.choices)
+    changed_fields = models.JSONField(default=list, blank=True)
+    target_order = models.ForeignKey(
+        Order, null=True, blank=True, on_delete=models.PROTECT,
+        related_name='duplicate_source_events',
+    )
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_management_event'
+        ordering = ['occurred_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'operation_key'],
+                name='order_mgmt_unique_operation',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['order', 'occurred_at'], name='order_mgmt_time_idx'),
+        ]
+
+
+class OrderQuestionnaireAnswerArchive(models.Model):
+    """Private immutable copy of a questionnaire before re-publication."""
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT,
+        related_name='questionnaire_answer_archives',
+    )
+    version = models.ForeignKey(
+        'QuestionnaireVersion', on_delete=models.PROTECT,
+        related_name='archived_order_answers',
+    )
+    schema_snapshot = models.JSONField(default=list)
+    answers = models.JSONField(default=dict)
+    archived_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_questionnaire_answer_archive'
+        ordering = ['archived_at', 'pk']
+
+
+
+
+class OrderWriteQuota(models.Model):
+    """Durable per-account fixed window for order mutations across web workers."""
+
+    class Kind(models.TextChoices):
+        CREATE = 'create', 'Создания заявок'
+        WIZARD = 'wizard', 'Сохранения шагов'
+        EDIT = 'edit', 'Редактирование условий'
+        RESPONSE = 'response', 'Отклики исполнителей'
+        PHOTO = 'photo', 'Новые фотографии'
+        STATE = 'state', 'Переходы статусов'
+
+    owner = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='order_write_quotas',
+    )
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    bucket_start = models.DateTimeField()
+    used = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'marketplace_order_write_quota'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['owner', 'kind', 'bucket_start'],
+                name='order_quota_owner_kind_window_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['bucket_start'], name='order_quota_window_idx'),
+        ]
+
+
+
+
+class OrderDomainEvent(models.Model):
+    """Immutable, PII-free order event captured in the mutation transaction."""
+
+    class Kind(models.TextChoices):
+        CREATED = 'order_created', 'Создание заявки'
+        PUBLISHED = 'order_published', 'Публикация заявки'
+        UPDATED = 'order_updated', 'Изменение условий'
+        CANCELLED = 'order_cancelled', 'Отмена заявки'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='domain_events',
+    )
+    kind = models.CharField(max_length=24, choices=Kind.choices)
+    category = models.ForeignKey(Category, on_delete=models.PROTECT)
+    city = models.ForeignKey('locations.City', on_delete=models.PROTECT)
+    source_key = models.UUIDField(editable=False)
+    event_key = models.UUIDField(unique=True, editable=False)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_domain_event'
+        ordering = ['occurred_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'kind', 'source_key'],
+                name='order_domain_source_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['kind', 'occurred_at'], name='order_domain_kind_time_idx',
+            ),
+        ]
+
+
+class OrderEventDelivery(models.Model):
+    """Idempotent in-app notifications and local analytics consumer receipt."""
+
+    class Consumer(models.TextChoices):
+        NOTIFICATIONS = 'notifications', 'Внутренние уведомления'
+        ANALYTICS = 'analytics', 'Внутренняя аналитика'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает'
+        DONE = 'done', 'Обработано'
+
+    event = models.ForeignKey(
+        OrderDomainEvent, on_delete=models.PROTECT, related_name='deliveries',
+    )
+    consumer = models.CharField(max_length=16, choices=Consumer.choices)
+    status = models.CharField(
+        max_length=8, choices=Status.choices, default=Status.PENDING,
+    )
+    attempts = models.PositiveIntegerField(default=0)
+    last_error_code = models.CharField(max_length=32, blank=True, default='')
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_order_event_delivery'
+        ordering = ['event_id', 'consumer']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['event', 'consumer'], name='order_delivery_consumer_unique',
+            ),
+        ]
+
+
+class OrderAnalyticsFact(models.Model):
+    """One coarse-grained fact per event, without content or contacts."""
+
+    event = models.OneToOneField(
+        OrderDomainEvent, on_delete=models.PROTECT,
+        related_name='analytics_fact',
+    )
+    kind = models.CharField(max_length=24, choices=OrderDomainEvent.Kind.choices)
+    category = models.ForeignKey(Category, on_delete=models.PROTECT)
+    city = models.ForeignKey('locations.City', on_delete=models.PROTECT)
+    occurred_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'marketplace_order_analytics_fact'
+        indexes = [
+            models.Index(
+                fields=['kind', 'occurred_at'], name='order_fact_kind_time_idx',
+            ),
+        ]
+
+
 
 
 class Response(models.Model):

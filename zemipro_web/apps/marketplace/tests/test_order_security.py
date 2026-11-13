@@ -131,10 +131,10 @@ class OrderSecurityTests(TestCase):
         self.assertNotContains(response, self.private_order.customer_phone)
         self.assertNotContains(response, self.private_order.customer_name)
 
-    def test_private_details_visible_to_owner_assignee_and_authorized_staff(self):
+    def test_private_details_only_owner_or_authorized_moderator(self):
         url = reverse('marketplace:order_detail', args=[self.private_order.pk])
 
-        for user in (self.owner, self.worker, self.staff):
+        for user in (self.owner, self.staff):
             with self.subTest(user=user.username):
                 self.client.force_login(user)
                 response = self.client.get(url)
@@ -142,6 +142,14 @@ class OrderSecurityTests(TestCase):
                 self.assertContains(response, self.private_order.address)
                 self.assertContains(response, self.private_order.customer_phone)
                 self.assertContains(response, self.private_order.description)
+
+        self.client.force_login(self.worker)
+        assigned = self.client.get(url)
+        self.assertEqual(assigned.status_code, 200)
+        self.assertNotContains(assigned, self.private_order.address)
+        self.assertNotContains(assigned, self.private_order.customer_phone)
+        self.assertNotContains(assigned, self.private_order.description)
+        self.assertNotContains(assigned, self.private_order.customer_name)
 
     def test_unprivileged_staff_sees_only_safe_order_fields(self):
         self.client.force_login(self.unprivileged_staff)
@@ -167,7 +175,7 @@ class OrderSecurityTests(TestCase):
         response = self.client.post(cancel_url)
         self.assertEqual(response.status_code, 404)
         order.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.NEW)
+        self.assertEqual(order.status, Order.Status.PUBLISHED)
 
         self.client.force_login(self.owner)
         response = self.client.post(cancel_url)
@@ -211,7 +219,7 @@ class OrderSecurityTests(TestCase):
         self.assertEqual(review.status_code, 404)
         pending_order.refresh_from_db()
         self.private_order.refresh_from_db()
-        self.assertEqual(pending_order.status, Order.Status.NEW)
+        self.assertEqual(pending_order.status, Order.Status.PUBLISHED)
         self.assertEqual(self.private_order.status, Order.Status.IN_PROGRESS)
 
     def test_potential_worker_pages_do_not_disclose_address_before_assignment(self):
