@@ -1,0 +1,51 @@
+{% if agreement_current %}
+<section class="order-card" style="margin-block:24px;max-width:920px;margin-inline:auto;">
+    <div class="order-card__header">
+        <h2>{{ offer_copy.agreement }} v{{ agreement_current.number }}</h2>
+    </div>
+    <div class="order-card__body">
+        <p><strong>{{ offer_copy.price }}:</strong> <bdi dir="auto">{{ agreement_price }}</bdi></p>
+        <p><strong>{{ offer_copy.timeline }}:</strong> <bdi dir="auto">{{ agreement_current.estimated_timeline|default:"—" }}</bdi></p>
+        <p><strong>{{ offer_copy.terms }}:</strong> <span dir="auto">{{ agreement_current.terms|default:"—" }}</span></p>
+        <p><strong>{{ offer_copy.confirmed }}:</strong>
+            {{ agreement_current.decision.decided_at|date:"d.m.Y H:i" }}
+        </p>
+        {% if can_change_agreement %}
+        <a class="btn btn--secondary" href="{% url 'marketplace:agreement_propose' pk=order.pk %}">
+            {{ offer_copy.change_agreement }}
+        </a>
+        {% endif %}
+        {% if agreement_pending %}
+        <div style="border:1px solid var(--color-border);border-radius:8px;margin-top:16px;padding:12px;">
+            <strong>{{ offer_copy.pending_agreement }} v{{ agreement_pending.number }}</strong>
+            <p dir="auto">{{ agreement_pending.terms }}</p>
+            {% if agreement_pending.proposed_by_id != user.pk and can_change_agreement %}
+                {% for action, label in agreement_actions %}
+                <form method="post" action="{% url 'marketplace:agreement_decide' pk=agreement_pending.pk action=action %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="operation_key" value="{{ operation_duplicate }}">
+                    <button type="submit" class="btn btn--secondary">{{ label }}</button>
+                </form>
+                {% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
+        <details style="margin-top:16px;">
+            <summary>{{ offer_copy.agreement_history }}</summary>
+            <ol style="padding-inline-start:24px">
+                {% for entry in agreement_history %}
+                <li>
+                    <strong>v{{ entry.number }}</strong>
+                    {{ entry.proposer }} · {{ entry.proposed_at|date:"d.m.Y H:i" }}
+                    — {{ entry.decision }}
+                    {% if entry.decided_at %}{{ entry.decided_at|date:"d.m.Y H:i" }}{% endif %}
+                    <p><bdi dir="auto">{{ entry.price }}</bdi>,
+                        <span dir="auto">{{ entry.estimated_timeline }}</span></p>
+                    <p dir="auto">{{ entry.terms }}</p>
+                </li>
+                {% endfor %}
+            </ol>
+        </details>
+    </div>
+</section>
+{% endif %}
