@@ -80,7 +80,9 @@ def bootstrap():
                 'estimated_timeline': 'Two days', 'terms': 'Synthetic offer terms',
             },
         )
-    return order.pk, credentials
+    from apps.marketplace.models import Response
+    offer_pk = Response.objects.get(order=order, worker=accounts['worker1']).pk
+    return order.pk, offer_pk, credentials
 
 
 def login(page, credentials):
@@ -96,7 +98,7 @@ def login(page, credentials):
     )
 
 
-def inspect(page, *, lang, role, width, order_pk):
+def inspect(page, *, lang, role, width, order_pk, offer_pk):
     page.set_viewport_size({'width': width, 'height': 844})
     page.goto(BASE + f'/orders/{order_pk}/', wait_until='networkidle')
     html = page.locator('html')
@@ -130,13 +132,13 @@ def inspect(page, *, lang, role, width, order_pk):
             path=str(OUT / f'comparison-{lang}.png'), full_page=True,
         )
     if role != 'owner' and width == 390:
-        page.goto(BASE + f'/orders/{order_pk}/respond/', wait_until='networkidle')
+        page.goto(BASE + f'/offers/{offer_pk}/edit/', wait_until='networkidle')
         if page.locator('input[name="amount_min_ils"]').count() != 1:
             raise AssertionError('Typed offer form is missing')
 
 
 def main():
-    order_pk, credentials = bootstrap()
+    order_pk, offer_pk, credentials = bootstrap()
     count = 0
     with sync_playwright() as driver:
         opts = {'headless': True}
@@ -159,7 +161,7 @@ def main():
                     for width in WIDTHS:
                         inspect(
                             page, lang=lang, role=role,
-                            width=width, order_pk=order_pk,
+                            width=width, order_pk=order_pk, offer_pk=offer_pk,
                         )
                         count += 1
                     ctx.close()
