@@ -46,7 +46,7 @@ from .models import (
     ServiceQuestionnaire, OrderQuestionnaireAnswer,
 )
 from .services import (
-    get_available_orders_for_worker, create_response, create_order,
+    get_available_orders_for_worker, create_order,
     accept_response, complete_order, cancel_order,
     can_view_private_order_details, workers_serving_city,
 )

@@ -492,6 +492,8 @@ def accept_response(response, *, actor):
             order.pk, Order.Status.ASSIGNED, actor=actor,
             reason=OrderStatusEvent.Reason.WORKER_ASSIGNED,
         )
+        from .agreement_services import create_initial_agreement
+        create_initial_agreement(order, selected, actor=actor)
         selected.order = order
         selected._assignment_created = True
         selected._rejected_worker_ids = tuple(rejected_ids)

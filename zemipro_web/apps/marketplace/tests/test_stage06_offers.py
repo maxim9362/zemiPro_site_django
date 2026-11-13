@@ -2,7 +2,7 @@
 import uuid
 from decimal import Decimal
 
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
 
 from apps.marketplace.models import Response, ResponseRevision
@@ -84,7 +84,7 @@ class OfferRevisionTests(TestCase):
                 data=self.details, message='Stale',
                 expected_revision=1, operation_key=uuid.uuid4(),
             )
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValidationError):
             edited.revisions.first().save()
         self.assertEqual(ResponseRevision.objects.count(), 2)
 

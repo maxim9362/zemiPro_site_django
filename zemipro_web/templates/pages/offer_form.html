@@ -15,6 +15,9 @@
                 {% if response %}
                 <input type="hidden" name="expected_revision" value="{{ response.revision }}">
                 {% endif %}
+                {% if base_version %}
+                <input type="hidden" name="base_version" value="{{ base_version }}">
+                {% endif %}
                 {% if form.non_field_errors %}
                     <div class="form__errors">{{ form.non_field_errors }}</div>
                 {% endif %}
