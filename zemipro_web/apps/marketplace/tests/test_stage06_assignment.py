@@ -1,7 +1,6 @@
 """New assignment contract: one winner, no implicit work and no replay spam."""
 from django.test import TestCase
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
 
 from apps.marketplace.models import Order, Response
 from apps.marketplace.services import accept_response
