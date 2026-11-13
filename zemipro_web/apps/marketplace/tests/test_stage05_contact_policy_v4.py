@@ -120,8 +120,12 @@ class ContactPolicyV4Tests(TestCase):
         self.assertEqual(searchable_public_text(safe), safe)
         self.assertFalse(contains_public_contact(safe))
         hours = 'Sunday–Thursday, 09:00–17:00'
-        self.assertFalse(contains_public_contact(hours))
-        self.assertIn('09:00-17:00', redact_public_contact(hours))
+        self.assertTrue(contains_public_contact(hours))
+        self.assertFalse(contains_public_contact(hours, allow_work_hours=True))
+        self.assertIn('09:00-17:00', redact_public_contact(
+            hours, allow_work_hours=True,
+        ))
+        self.assertEqual(redact_public_contact('09:00-17:00'), '[…]')
         self.assertTrue(contains_public_contact('Telephone 050:7654321'))
         for word in ('Repair', 'Synthetic', 'Pipe repair version 2.0'):
             self.assertFalse(contact_shaped_query(word))

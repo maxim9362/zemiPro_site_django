@@ -91,9 +91,9 @@ def publication_issue(profile):
     if (contains_public_contact(profile.display_name)
             or '@' in profile.display_name):
         return directory_copy()['privacy_name']
-    if any(contains_public_contact(value) for value in (
-        profile.description, profile.pricing_details, profile.working_hours,
-    )):
+    if (any(contains_public_contact(value) for value in (
+        profile.description, profile.pricing_details,
+    )) or contains_public_contact(profile.working_hours, allow_work_hours=True)):
         return directory_copy()['privacy_text']
     if not profile.city_id or not city_is_public(profile.city):
         return _('Выберите обслуживаемый город.')

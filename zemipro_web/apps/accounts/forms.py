@@ -317,7 +317,7 @@ class WorkerProfileForm(forms.ModelForm):
 
     def clean_working_hours(self):
         value = self.cleaned_data.get('working_hours', '').strip()
-        if contains_public_contact(value):
+        if contains_public_contact(value, allow_work_hours=True):
             from apps.marketplace.directory_ui import directory_copy
             raise forms.ValidationError(directory_copy()['privacy_text'])
         return value

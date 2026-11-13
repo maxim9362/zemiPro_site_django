@@ -70,7 +70,7 @@
                 <div class="order-card__field"><strong>{% trans 'Заявленная стартовая цена:' %}</strong> {{ profile.starting_price_ils }} ₪</div>
                 {% endif %}
                 <div class="order-card__field"><strong>{% trans 'Доступность' %}:</strong> {{ profile.get_availability_display }}</div>
-                {% if profile.working_hours %}<div class="order-card__field"><strong>{% trans 'График работы' %}:</strong> {{ profile.working_hours|public_text }}</div>{% endif %}
+                {% if profile.working_hours %}<div class="order-card__field"><strong>{% trans 'График работы' %}:</strong> {{ profile.working_hours|public_hours }}</div>{% endif %}
                 {% if avg_rating > 0 %}
                 <div class="order-card__field">
                     <strong>{% trans 'Рейтинг:' %}</strong> {{ avg_rating }}/5 ({{ review_count }} {% trans 'отзывов' %})

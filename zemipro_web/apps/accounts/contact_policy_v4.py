@@ -86,13 +86,13 @@ _PHONE_QUERY = re.compile(r'(?<!\w)\+?\d(?:[^\w]{0,5}\d){4,18}(?!\w)')
 _HOURS = re.compile(r'(?:[01]\d|2[0-3]):[0-5]\d\s*-\s*(?:[01]\d|2[0-3]):[0-5]\d')
 
 
-def redact_public_contact(value):
-    """Do not publish entire contact/URI tokens or searchable fragments."""
+def redact_public_contact(value, *, allow_work_hours=False):
+    """Protect public text; allow only valid time ranges in the hours field."""
     result = normalize_public_text(value)
     for pattern in (_EMAIL, _URI, _DOMAIN, _HANDLE):
         result = pattern.sub(MARKER, result)
     result = _PHONE.sub(
-        lambda match: match.group() if _HOURS.fullmatch(match.group())
+        lambda match: match.group() if allow_work_hours and _HOURS.fullmatch(match.group())
         else MARKER,
         result,
     )
@@ -109,8 +109,8 @@ def searchable_public_name(value):
     return searchable_public_text(value)[:120]
 
 
-def contains_public_contact(value):
-    return MARKER in redact_public_contact(value)
+def contains_public_contact(value, *, allow_work_hours=False):
+    return MARKER in redact_public_contact(value, allow_work_hours=allow_work_hours)
 
 
 def contact_shaped_query(value):
