@@ -1241,17 +1241,17 @@ def order_work_action_view(request, pk, action):
     )
     try:
         if action == 'start':
-            updated_order, changed = start_work(
+            order, changed = start_work(
                 order_id=order.pk, actor=request.user,
                 operation_key=request.POST.get('operation_key'),
             )
         elif action == 'result':
-            updated_order, changed = submit_work_result(
+            order, changed = submit_work_result(
                 order_id=order.pk, actor=request.user,
                 operation_key=request.POST.get('operation_key'),
             )
         else:
-            updated_order, changed = report_work_problem(
+            order, changed = report_work_problem(
                 order_id=order.pk, actor=request.user,
                 problem_code=request.POST.get('problem_code'),
                 operation_key=request.POST.get('operation_key'),
