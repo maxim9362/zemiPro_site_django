@@ -12,6 +12,11 @@ from .client_favorites import public_worker_queryset
 def record_worker_view(user, worker):
     if not getattr(user, 'is_authenticated', False) or user.pk == worker.user_id:
         return False
+    # Most users opt out: skip row locks and writes for the default.
+    if not ClientProfile.objects.filter(
+        user_id=user.pk, track_worker_views=True,
+    ).exists():
+        return False
     owner = User.objects.select_for_update().filter(
         pk=user.pk, is_active=True, is_blocked=False,
         email_verification_required=False,

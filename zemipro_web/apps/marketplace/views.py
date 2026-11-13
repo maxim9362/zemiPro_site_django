@@ -132,6 +132,17 @@ def worker_directory_view(request):
             if value:
                 preserved[name] = value
     safe_query = urlencode(preserved)
+    # Never index user-generated/filter URLs automatically. Localized
+    # canonical + hreflang come from the existing Stage 02 catalog policy.
+    seo = catalog_context(request, 'worker_directory', indexable=False)
+    if not seo.get('catalog_localized'):
+        seo['seo_canonical'] = request.build_absolute_uri(
+            reverse('marketplace:worker_directory')
+        )
+    if form.errors:
+        for field_name in form.errors:
+            if field_name in form.fields:
+                form.fields[field_name].widget.attrs['aria-invalid'] = 'true'
     return render(request, 'pages/worker_directory.html', {
         'form': form,
         'page_obj': page,
@@ -140,11 +151,9 @@ def worker_directory_view(request):
         'language_switch_next': request.path + (
             '?' + safe_query if safe_query else ''
         ),
-        'catalog_localized': bool(
-            request.resolver_match
-            and request.resolver_match.namespace == 'catalog_i18n'
-        ),
-        # Until the separate SEO quality gate (05.6), filter pages are noindex.
+        **seo,
+        # No unapproved mass indexing of directory pages, including empty
+        # results, deep pagination and filtered combinations.
         'seo_noindex': True,
     })
 
@@ -459,7 +468,7 @@ def worker_public_profile_view(request, pk):
     avg_rating = review_stats['avg'] or 0
     review_count = review_stats['count']
 
-    return render(request, 'pages/worker_public_profile.html', {
+    response = render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
         'public_photos': profile.portfolio_photos.filter(is_public=True),
         'reviews': reviews[:10],
@@ -478,6 +487,9 @@ def worker_public_profile_view(request, pk):
             ).exists()
         ),
     })
+    # The favorite/opt-in experience is per-user; never cache publicly.
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 
