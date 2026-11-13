@@ -207,6 +207,8 @@
         </div>
 
 
+        {% include 'pages/_agreement_card.html' %}
+
         {% if is_owner and order_history %}
         <section class="order-card" style="margin-top:24px;max-width:700px;margin-inline:auto;">
             <div class="order-card__header"><h2>{{ management_copy.history }}</h2></div>

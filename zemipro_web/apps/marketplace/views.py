@@ -41,6 +41,7 @@ from .forms import OrderCreateForm, ResponseCreateForm
 from .offer_services import submit_offer
 from .offer_presentation import owner_offer_cards
 from .offer_ui import offer_copy
+from .agreement_presentation import private_agreement_context
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating, OrderInvitation,
     ServiceQuestionnaire, OrderQuestionnaireAnswer,
@@ -993,6 +994,7 @@ def order_detail_view(request, pk):
         'responses': responses,
         'offer_cards': owner_offer_cards(order, responses) if is_owner else [],
         'offer_copy': offer_copy(),
+        **private_agreement_context(order, request.user),
         'existing_rating': existing_rating,
         'can_view_private_details': can_read_private,
         'order_photos': list(visible_order_photos(order, request.user)),
