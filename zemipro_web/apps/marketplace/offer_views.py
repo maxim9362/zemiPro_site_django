@@ -145,7 +145,7 @@ def agreement_decide_view(request, pk, action):
         from .views import _order_quota_response
         return _order_quota_response(exc)
     except ValueError:
-        messages.error(request, copy['action_error'])
+        messages.error(request, offer_copy()['action_error'])
         # Never leak an unowned order ID on failed decisions.
         return redirect('marketplace:client_dashboard')
     return redirect('marketplace:order_detail', pk=decision.agreement.order_id)
