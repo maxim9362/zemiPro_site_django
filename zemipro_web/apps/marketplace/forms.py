@@ -143,14 +143,36 @@ class ResponseCreateForm(forms.ModelForm):
 
     class Meta:
         model = Response
-        fields = ['message']
+        fields = [
+            'message', 'price_kind', 'amount_min_ils', 'amount_max_ils',
+            'pricing_method', 'estimated_timeline', 'terms',
+        ]
         widgets = {
             'message': forms.Textarea(attrs={
-                'rows': 4,
-                'placeholder': _('Напишите короткое сообщение клиенту: когда сможете приехать, опыт, ориентировочная цена.'),
-                'maxlength': 1000,
+                'rows': 4, 'maxlength': 1000, 'dir': 'auto',
             }),
+            'terms': forms.Textarea(attrs={
+                'rows': 4, 'maxlength': 1500, 'dir': 'auto',
+            }),
+            'pricing_method': forms.TextInput(attrs={'maxlength': 240, 'dir': 'auto'}),
+            'estimated_timeline': forms.TextInput(attrs={'maxlength': 160, 'dir': 'auto'}),
         }
-        labels = {
-            'message': _('Сообщение клиенту'),
-        }
+
+    def clean(self):
+        data = super().clean()
+        if self.errors:
+            return data
+        from .offer_services import normalize_offer
+        try:
+            normalize_offer(data)
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc)) from exc
+        if len(data.get('message') or '') > 1000:
+            raise forms.ValidationError('Слишком длинное сообщение.')
+        return data
+
+    def clean_terms(self):
+        terms = self.cleaned_data.get('terms', '')
+        if len(terms) > 1500:
+            raise forms.ValidationError('Максимум 1500 символов.')
+        return terms

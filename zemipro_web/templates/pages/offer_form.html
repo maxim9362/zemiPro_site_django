@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ offer_copy.edit }} — ZemiPro{% endblock %}
+{% block content %}
+<section class="page-header"><div class="container">
+    <h1>{{ page_title }}</h1>
+</div></section>
+<section class="order-detail"><div class="container">
+    <div class="order-card" style="max-width:720px;margin-inline:auto;">
+        <div class="order-card__body">
+            <form method="post" class="form" dir="auto">
+                {% csrf_token %}
+                <input type="hidden" name="operation_key" value="{{ operation_key }}">
+                {% if response %}
+                <input type="hidden" name="expected_revision" value="{{ response.revision }}">
+                {% endif %}
+                {% if form.non_field_errors %}
+                    <div class="form__errors">{{ form.non_field_errors }}</div>
+                {% endif %}
+                {% for field in form %}
+                    <div class="form__group">
+                        <label for="{{ field.id_for_label }}" class="form__label">
+                            {% if field.name == 'message' %}{{ offer_copy.message }}
+                            {% elif field.name == 'price_kind' %}{{ offer_copy.price }}
+                            {% elif field.name == 'amount_min_ils' %}{{ offer_copy.amount_min }}
+                            {% elif field.name == 'amount_max_ils' %}{{ offer_copy.amount_max }}
+                            {% elif field.name == 'pricing_method' %}{{ offer_copy.method }}
+                            {% elif field.name == 'estimated_timeline' %}{{ offer_copy.timeline }}
+                            {% elif field.name == 'terms' %}{{ offer_copy.terms }}
+                            {% else %}{{ field.label }}{% endif %}
+                        </label>
+                        {{ field }}
+                        {% for error in field.errors %}<span class="form__error">{{ error }}</span>{% endfor %}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn btn--primary">{{ submit_label }}</button>
+                <a class="btn btn--secondary" href="{% url 'marketplace:order_detail' pk=order.pk %}">
+                    {{ offer_copy.back }}
+                </a>
+            </form>
+        </div>
+    </div>
+</div></section>
+{% endblock %}

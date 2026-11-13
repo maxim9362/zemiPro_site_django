@@ -1007,3 +1007,9 @@
 - Ветка: `stage-06-offers-assignment` от `82aea1b`; PR #12 подтверждён MERGED, merge SHA `82aea1b374c15f2715fe4326c7472f1f2a2f993f`. Stage 05 не означает DEPLOYED; отдельные production-гейты открыты.
 - `06.1 IMPLEMENTED / CI_PENDING`: сохранены legacy pending/cancelled и уникальность (order,worker), добавлены фиксированная цена/диапазон/метод, сроки, условия, статусы sent/viewed/negotiating/accepted/rejected/withdrawn/expired. Новая `ResponseRevision` хранит приватную версию и ключ операции; все сервисные изменения — под order-row lock и атомарно; обновление с expected_revision, запрет записи чужого предложения, общий quota.
 - Изменены models/services, новый offer_services, миграция marketplace.0017 и синтетические regression tests; независимая проверка, PostgreSQL 17, полный suite, RU/EN/HE и GitHub Actions ещё не подтверждены. Production и реальные данные не затронуты.
+
+
+### 06.2 — сравнение в кабинете заказчика
+
+- `IMPLEMENTED / CI_PENDING`: форма отправки структурированного предложения и редактирования; приватное owner-only сравнение фиксированной цены, диапазона, условий, срока и реального агрегированного рейтинга без фальшивых оценок; публичное имя только через `WorkerProfile.public_display_name`. RU/EN/HE copy с RTL-friendly формами и bdi, действия POST+CSRF, object-level права в сервисах; новые тесты IDOR/сравнения.
+- Существующие каталоги и шаблоны анкеты специалиста не переписаны. Production не затронут; browser smoke и полный набор ещё не проверены.

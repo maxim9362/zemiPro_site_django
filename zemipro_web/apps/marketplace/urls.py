@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, offer_views
 
 app_name = 'marketplace'
 
@@ -28,6 +28,8 @@ urlpatterns = [
     path('orders/photos/<int:pk>/delete/', views.order_attachment_delete_view,
          name='order_attachment_delete'),
     path('orders/<int:pk>/respond/', views.order_respond_view, name='order_respond'),
+    path('offers/<int:pk>/edit/', offer_views.edit_offer_view, name='offer_edit'),
+    path('offers/<int:pk>/<str:action>/', offer_views.offer_action_view, name='offer_action'),
     path('orders/<int:order_id>/responses/<int:response_id>/accept/',
          views.order_accept_response_view, name='order_accept_response'),
     path('orders/<int:pk>/cancel/', views.order_cancel_view, name='order_cancel'),

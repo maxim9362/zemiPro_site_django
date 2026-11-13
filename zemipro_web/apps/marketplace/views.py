@@ -38,6 +38,9 @@ from .invitation_services import (
 from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
+from .offer_services import submit_offer
+from .offer_presentation import owner_offer_cards
+from .offer_ui import offer_copy
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating, OrderInvitation,
     ServiceQuestionnaire, OrderQuestionnaireAnswer,
@@ -966,9 +969,9 @@ def order_detail_view(request, pk):
             ).first()
 
         if is_owner:
-            responses = Response.objects.filter(
+            responses = list(Response.objects.filter(
                 order=order
-            ).select_related('worker').order_by('-created_at')
+            ).select_related('worker').order_by('-created_at'))
 
             existing_rating = Rating.objects.filter(order=order).first()
 
@@ -988,6 +991,8 @@ def order_detail_view(request, pk):
         'has_worker_profile': has_worker_profile,
         'is_owner': is_owner,
         'responses': responses,
+        'offer_cards': owner_offer_cards(order, responses) if is_owner else [],
+        'offer_copy': offer_copy(),
         'existing_rating': existing_rating,
         'can_view_private_details': can_read_private,
         'order_photos': list(visible_order_photos(order, request.user)),
@@ -1302,13 +1307,14 @@ def order_respond_view(request, pk):
         form = ResponseCreateForm(request.POST)
         if form.is_valid():
             try:
-                create_response(
-                    order=order,
-                    worker_user=request.user,
+                response, created = submit_offer(
+                    order=order, actor=request.user,
                     message=form.cleaned_data['message'],
+                    data=form.cleaned_data,
+                    operation_key=request.POST.get('operation_key'),
                 )
 
-                if order.client:
+                if created and order.client:
                     create_notification(
                         recipient=order.client,
                         title='Новый отклик',
@@ -1326,7 +1332,9 @@ def order_respond_view(request, pk):
     else:
         form = ResponseCreateForm()
 
-    return render(request, 'pages/order_respond.html', {
-        'order': order,
-        'form': form,
+    return render(request, 'pages/offer_form.html', {
+        'order': order, 'form': form, 'response': None,
+        'offer_copy': offer_copy(), 'page_title': offer_copy()['submit'],
+        'submit_label': offer_copy()['submit'],
+        'operation_key': request.POST.get('operation_key') or uuid.uuid4(),
     })
