@@ -120,6 +120,12 @@ new queue/outbox, for already local in-app notifications:
 - No network send is performed; these are database-backed internal
   notifications. Future external push/email requires a separate outbox.
 
+**Code-SHA remediation evidence:** `fa40cb2c2ce58d97e0bcdaee0a118c07854446c6` —
+GitHub push #43514415266, PR #43514422280, staging #43514422281 all
+SUCCESS; 510/510 Django, PostgreSQL 17 migrations, Ruff and 90+18 Chrome
+RU/EN/HE/RTL PASS. This is **not** independent re-review or authorization
+to merge/deploy. Final PR HEAD must pass all required GitHub Actions.
+
 **New synthetic regression:** `apps.marketplace.tests.test_stage06_notification_atomicity`.
 It injects notification failures at first and second recipients and verifies
 full rollback, replay and absence of partially committed histories, quotas
