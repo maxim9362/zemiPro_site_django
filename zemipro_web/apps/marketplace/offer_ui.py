@@ -19,6 +19,11 @@ _COPY = {
         'rejected': 'Отклонено', 'withdrawn': 'Отозвано',
         'expired': 'Истекло', 'cancelled': 'Отменено',
         'amount_min': 'Сумма, ₪', 'amount_max': 'До, ₪',
+        'agreement': 'Согласованные условия', 'confirmed': 'Подтверждено',
+        'change_agreement': 'Предложить изменения', 'pending_agreement': 'Ожидает решения',
+        'agreement_history': 'История соглашения', 'accept_change': 'Подтвердить',
+        'reject_change': 'Отклонить изменения', 'client_party': 'Заказчик',
+        'worker_party': 'Мастер',
     },
     'en': {
         'offers': 'Specialist responses', 'comparison': 'Compare offers',
@@ -37,6 +42,11 @@ _COPY = {
         'withdrawn': 'Withdrawn', 'expired': 'Expired',
         'cancelled': 'Cancelled', 'amount_min': 'Amount, ₪',
         'amount_max': 'Up to, ₪',
+        'agreement': 'Agreed terms', 'confirmed': 'Confirmed',
+        'change_agreement': 'Propose changes', 'pending_agreement': 'Awaiting decision',
+        'agreement_history': 'Agreement history', 'accept_change': 'Accept terms',
+        'reject_change': 'Reject changes', 'client_party': 'Customer',
+        'worker_party': 'Specialist',
     },
     'he': {
         'offers': 'תגובות בעלי מקצוע', 'comparison': 'השוואת הצעות',
@@ -55,6 +65,11 @@ _COPY = {
         'withdrawn': 'נמשך', 'expired': 'פג תוקף',
         'cancelled': 'בוטל', 'amount_min': 'סכום, ₪',
         'amount_max': 'עד, ₪',
+        'agreement': 'תנאים מוסכמים', 'confirmed': 'אושר',
+        'change_agreement': 'הצעת שינוי', 'pending_agreement': 'ממתין להחלטה',
+        'agreement_history': 'היסטוריית ההסכמות', 'accept_change': 'אישור השינוי',
+        'reject_change': 'דחיית השינוי', 'client_party': 'לקוח',
+        'worker_party': 'בעל מקצוע',
     },
 }
 

@@ -77,3 +77,75 @@ def offer_action_view(request, pk, action):
         messages.error(request, str(exc))
     # PermissionDenied propagates as 403; no redirect to private order details.
     return redirect('marketplace:order_detail', pk=response.order_id)
+
+
+@login_required
+@never_cache
+@require_http_methods(['GET', 'POST'])
+def agreement_propose_view(request, pk):
+    from apps.accounts.models import User
+    from .agreement_services import effective_agreement, propose_agreement_change
+
+    order = get_object_or_404(Order, pk=pk)
+    if (order.worker_id is None
+            or request.user.pk not in (order.client_id, order.worker_id)
+            or not User.objects.filter(
+                pk=request.user.pk, is_active=True, is_blocked=False,
+                email_verification_required=False,
+            ).exists()):
+        raise PermissionDenied('Соглашение недоступно.')
+    active = effective_agreement(order)
+    if active is None:
+        raise Http404
+    copy = offer_copy()
+    initial = {field: getattr(active, field) for field in (
+        'price_kind', 'amount_min_ils', 'amount_max_ils',
+        'pricing_method', 'estimated_timeline', 'terms',
+    )}
+    initial['message'] = ''
+    if request.method == 'POST':
+        form = ResponseCreateForm(request.POST)
+        if form.is_valid():
+            try:
+                propose_agreement_change(
+                    order_id=order.pk, actor=request.user, data=form.cleaned_data,
+                    note=form.cleaned_data['message'],
+                    base_version=request.POST.get('base_version'),
+                    operation_key=request.POST.get('operation_key'),
+                )
+                return redirect('marketplace:order_detail', pk=order.pk)
+            except OrderQuotaExceeded as exc:
+                from .views import _order_quota_response
+                return _order_quota_response(exc)
+            except ValueError as exc:
+                form.add_error(None, str(exc))
+    else:
+        form = ResponseCreateForm(initial=initial)
+    return render(request, 'pages/offer_form.html', {
+        'form': form, 'order': order, 'response': None,
+        'base_version': active.number, 'offer_copy': copy,
+        'page_title': copy['change_agreement'],
+        'submit_label': copy['change_agreement'],
+        'operation_key': request.POST.get('operation_key') or uuid.uuid4(),
+    })
+
+
+@login_required
+@never_cache
+@require_POST
+def agreement_decide_view(request, pk, action):
+    from .agreement_services import decide_agreement_change
+
+    try:
+        decision, _ = decide_agreement_change(
+            agreement_id=pk, actor=request.user, action=action,
+            operation_key=request.POST.get('operation_key'),
+        )
+    except OrderQuotaExceeded as exc:
+        from .views import _order_quota_response
+        return _order_quota_response(exc)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        # Never leak an unowned order ID on failed decisions.
+        return redirect('marketplace:client_dashboard')
+    return redirect('marketplace:order_detail', pk=decision.agreement.order_id)
