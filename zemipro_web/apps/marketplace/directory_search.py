@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.accounts.client_favorites import public_worker_queryset
 from apps.accounts.models import WorkerProfile
-from apps.locations.models import City
+from apps.locations.models import City, Neighborhood
 from apps.locations.services import get_public_cities, public_city_slug
 from .models import Category, Subcategory
 from .services import workers_serving_city
@@ -50,6 +50,10 @@ class WorkerDirectoryForm(forms.Form):
     city = forms.ModelChoiceField(
         queryset=City.objects.none(), required=False,
         empty_label=_('Город пилота'), label=_('Город'),
+    )
+    neighborhood = forms.ModelChoiceField(
+        queryset=Neighborhood.objects.none(), required=False,
+        empty_label=_('Все районы'), label=_('Район обслуживания'),
     )
     language = forms.ChoiceField(
         required=False, label=_('Язык общения'),
@@ -97,10 +101,16 @@ class WorkerDirectoryForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['city'].queryset = get_public_cities().order_by('name_ru', 'pk')
+        self.fields['neighborhood'].queryset = Neighborhood.objects.filter(
+            is_active=True, city__in=get_public_cities(),
+        ).order_by('city_id', 'slug')
 
     def clean(self):
         data = super().clean()
         category, service = data.get('category'), data.get('service')
+        city, neighborhood = data.get('city'), data.get('neighborhood')
+        if neighborhood and city and neighborhood.city_id != city.pk:
+            self.add_error('neighborhood', _('Район не относится к выбранному городу.'))
         if category and service and service.category_id != category.pk:
             self.add_error('service', _('Услуга не принадлежит выбранной категории.'))
         if (data.get('price_from') is not None
@@ -108,19 +118,6 @@ class WorkerDirectoryForm(forms.Form):
                 and data['price_from'] > data['price_to']):
             self.add_error('price_to', _('Цена до должна быть не меньше цены от.'))
         return data
-
-
-def _onsite_in_city(queryset, city):
-    """Only an explicitly served city or the unconfigured home-city fallback."""
-    through = WorkerProfile.service_cities.through
-    zones = through.objects.filter(workerprofile_id=OuterRef('pk'))
-    return queryset.alias(
-        _search_has_zones=Exists(zones),
-        _search_serves_city=Exists(zones.filter(city_id=city.pk)),
-    ).filter(
-        Q(_search_serves_city=True)
-        | Q(_search_has_zones=False, city_id=city.pk)
-    )
 
 
 def search_worker_profiles(form):
@@ -132,7 +129,8 @@ def search_worker_profiles(form):
     category = params['category']
     service = params['service']
     selected_category = category or (service.category if service else None)
-    city = params['city']
+    neighborhood = params['neighborhood']
+    city = params['city'] or (neighborhood.city if neighborhood else None)
     if city is None and public_city_slug():
         city = get_public_cities().first()
 
@@ -152,7 +150,10 @@ def search_worker_profiles(form):
             _service_match=Exists(offers_service)
         ).filter(_service_match=True)
     if city:
-        workers = workers_serving_city(workers, city, category=selected_category)
+        workers = workers_serving_city(
+            workers, city, category=selected_category, service=service,
+            mode=params['mode'], neighborhood=neighborhood,
+        )
 
     query = params['q']
     if query:
@@ -190,34 +191,38 @@ def search_worker_profiles(form):
     if params['price_to'] is not None:
         workers = workers.filter(starting_price_ils__lte=params['price_to'])
 
-    mode = params['mode']
-    if mode == 'online':
-        if (service and service.work_mode not in ('online', 'both')) or (
-            not service and category and category.work_mode not in ('online', 'both')
-        ):
-            return workers.none()
+    # The server-side matcher handles explicit service AND delivery mode.
+    # With no pilot city configured (historic test mode), a requested online
+    # service must still require the specialist's remote opt-in and eligibility.
+    if city is None and params['mode'] == 'online':
         workers = workers.filter(offers_remote=True)
+        allowed = (
+            selected_category is None
+            or selected_category.work_mode in ('online', 'both')
+        ) and (service is None or service.work_mode in ('online', 'both'))
+        if not allowed:
+            return workers.none()
         if selected_category is None:
-            online_skill = active_categories().filter(
+            online_categories = active_categories().filter(
                 workers=OuterRef('pk'), work_mode__in=('online', 'both'),
             )
             workers = workers.alias(
-                _has_online_skill=Exists(online_skill)
-            ).filter(_has_online_skill=True)
-    elif mode == 'onsite':
-        if (service and service.work_mode == 'online') or (
-            not service and category and category.work_mode == 'online'
-        ):
+                _has_online_work=Exists(online_categories),
+            ).filter(_has_online_work=True)
+    elif city is None and params['mode'] == 'onsite':
+        allowed = (
+            selected_category is None
+            or selected_category.work_mode in ('onsite', 'both')
+        ) and (service is None or service.work_mode in ('onsite', 'both'))
+        if not allowed:
             return workers.none()
         if selected_category is None:
-            onsite_skill = active_categories().filter(
+            onsite_categories = active_categories().filter(
                 workers=OuterRef('pk'), work_mode__in=('onsite', 'both'),
             )
             workers = workers.alias(
-                _has_onsite_skill=Exists(onsite_skill)
-            ).filter(_has_onsite_skill=True)
-        if city:
-            workers = _onsite_in_city(workers, city)
+                _has_onsite_work=Exists(onsite_categories),
+            ).filter(_has_onsite_work=True)
 
     # The join is only to actual Rating rows; an unrated worker stays NULL.
     workers = workers.annotate(

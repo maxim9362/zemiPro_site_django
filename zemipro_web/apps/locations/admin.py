@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import City, CityAlias, District
+from .models import City, CityAlias, District, Neighborhood
 
 
 @admin.register(District)
@@ -30,4 +30,12 @@ class CityAdmin(admin.ModelAdmin):
 class CityAliasAdmin(admin.ModelAdmin):
     list_display = ('slug', 'city')
     search_fields = ('slug', 'city__slug', 'city__name_ru')
+    raw_id_fields = ('city',)
+
+
+@admin.register(Neighborhood)
+class NeighborhoodAdmin(admin.ModelAdmin):
+    list_display = ('name_ru', 'city', 'slug', 'is_active')
+    list_filter = ('city', 'is_active')
+    search_fields = ('name_ru', 'name_en', 'name_he', 'slug', 'city__slug')
     raw_id_fields = ('city',)

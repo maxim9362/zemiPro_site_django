@@ -22,12 +22,20 @@
                 </div>
                 <div class="order-card__field">
                     <strong>{% trans 'Города обслуживания:' %}</strong>
-                    {% for service_city in profile.service_cities.all %}
+                    {% for service_city in profile.public_service_cities %}
                     <span class="tag">{{ service_city.localized_name }}</span>
                     {% empty %}
                     {{ profile.city.localized_name }}
                     {% endfor %}
                 </div>
+                {% if profile.public_service_neighborhoods %}
+                <div class="order-card__field">
+                    <strong>{% trans 'Районы обслуживания:' %}</strong>
+                    {% for area in profile.public_service_neighborhoods %}
+                    <span class="tag">{{ area.localized_name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% if profile.offers_remote %}
                 <div class="order-card__field">
                     <strong>{% trans 'Формат:' %}</strong> {% trans 'Возможна работа онлайн' %}

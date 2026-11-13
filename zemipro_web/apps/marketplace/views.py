@@ -20,7 +20,7 @@ from apps.accounts.client_favorites import (
 )
 from apps.accounts.models import WorkerProfile
 from apps.accounts.services import get_client_profile, get_worker_profile
-from apps.locations.models import CityAlias
+from apps.locations.models import CityAlias, Neighborhood
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from apps.notifications.services import create_notification
 from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
@@ -415,7 +415,14 @@ def service_detail(request, category_slug, service_slug):
 
 
 def worker_public_profile_view(request, pk):
-    workers = public_worker_queryset().prefetch_related('skills', 'service_cities')
+    workers = public_worker_queryset().prefetch_related(
+        'skills',
+        Prefetch('service_cities', queryset=get_public_cities(),
+                 to_attr='public_service_cities'),
+        Prefetch('service_neighborhoods', queryset=Neighborhood.objects.filter(
+            is_active=True, city__in=get_public_cities(),
+        ), to_attr='public_service_neighborhoods'),
+    )
     if public_city_slug():
         pilot_city = get_public_cities().first()
         workers = (

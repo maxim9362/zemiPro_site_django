@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 
-from apps.locations.models import City
+from apps.locations.models import City, Neighborhood
 from apps.locations.services import get_public_cities
 from apps.marketplace.models import Category, Rating, Subcategory
 from .models import ClientProfile, User, WorkerProfile, VerifiedContact
@@ -200,6 +200,11 @@ class WorkerProfileForm(forms.ModelForm):
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )
+    service_neighborhoods = LocalizedModelMultipleChoiceField(
+        queryset=Neighborhood.objects.none(),
+        label=_('Районы обслуживания (необязательно)'), required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
     offers_remote = forms.BooleanField(
         required=False,
         label=_('Выполняю подходящие услуги онлайн'),
@@ -216,7 +221,8 @@ class WorkerProfileForm(forms.ModelForm):
         model = WorkerProfile
         fields = [
             'provider_type', 'display_name', 'city', 'contact', 'description',
-            'skills', 'services', 'service_cities', 'offers_remote', 'spoken_languages',
+            'skills', 'services', 'service_cities', 'service_neighborhoods',
+            'offers_remote', 'spoken_languages',
             'pricing_details', 'starting_price_ils', 'availability', 'working_hours',
             'receive_notifications',
         ]
@@ -240,6 +246,9 @@ class WorkerProfileForm(forms.ModelForm):
         cities = get_public_cities()
         self.fields['city'].queryset = cities
         self.fields['service_cities'].queryset = cities
+        self.fields['service_neighborhoods'].queryset = Neighborhood.objects.filter(
+            city__in=cities, is_active=True,
+        ).order_by('city_id', 'slug')
         if self.instance.pk is None:
             self.fields['spoken_languages'].initial = ['ru']
         # Backward-compatible edit of Stage 02 profiles via older POST payloads.
@@ -255,6 +264,16 @@ class WorkerProfileForm(forms.ModelForm):
             if any(item.category_id not in category_ids for item in services):
                 raise forms.ValidationError(
                     _('Выберите конкретные услуги только из своих категорий.')
+                )
+        neighborhoods = data.get('service_neighborhoods')
+        if neighborhoods is not None:
+            zones = data.get('service_cities')
+            zone_ids = set(zones.values_list('pk', flat=True)) if zones is not None else set()
+            if not zone_ids and data.get('city') is not None:
+                zone_ids = {data['city'].pk}
+            if any(area.city_id not in zone_ids for area in neighborhoods):
+                raise forms.ValidationError(
+                    _('Районы должны принадлежать обслуживаемым городам.')
                 )
         if data.get('offers_remote'):
             skills = data.get('skills')

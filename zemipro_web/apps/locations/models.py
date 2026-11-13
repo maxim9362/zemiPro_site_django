@@ -93,3 +93,37 @@ class CityAlias(models.Model):
 
     def __str__(self):
         return f'{self.slug} → {self.city.slug}'
+
+
+class Neighborhood(models.Model):
+    """Optional verified service area inside a city; not a public city gate."""
+
+    city = models.ForeignKey(
+        City, on_delete=models.PROTECT, related_name='neighborhoods',
+    )
+    slug = models.SlugField()
+    name_ru = models.CharField(max_length=100)
+    name_en = models.CharField(max_length=100, blank=True, default='')
+    name_he = models.CharField(max_length=100, blank=True, default='')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'locations_neighborhood'
+        ordering = ['city_id', 'slug']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['city', 'slug'], name='unique_neighborhood_city_slug',
+            ),
+        ]
+
+    @property
+    def localized_name(self):
+        language = (get_language() or 'ru').split('-')[0]
+        translated = (
+            getattr(self, f'name_{language}', '')
+            if language in ('en', 'he') else ''
+        )
+        return translated or self.name_ru
+
+    def __str__(self):
+        return f'{self.city.slug} / {self.localized_name}'

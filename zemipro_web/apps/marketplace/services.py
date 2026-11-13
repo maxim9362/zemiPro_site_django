@@ -3,7 +3,7 @@ from django.db.models import Case, Exists, IntegerField, OuterRef, Q, Value, Whe
 
 from apps.accounts.models import User, WorkerProfile
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
-from .models import Category, Order, OrderStatusEvent, Response
+from .models import Category, Subcategory, Order, OrderStatusEvent, Response
 from .order_lifecycle import transition_order_status
 from .order_quota import consume_order_quota
 from .order_events import emit_order_event
@@ -185,42 +185,111 @@ def create_order(
 
 
 
-def workers_serving_city(queryset, city, *, category=None):
-    """Apply explicit zones, home city fallback, and online opt-in.
+def workers_serving_city(
+    queryset, city, *, category=None, service=None, mode=None, neighborhood=None,
+):
+    """Filter public coverage by stable IDs, service mode and city/neighborhood.
 
-    EXISTS subqueries prevent duplicate workers; no out-of-pilot geography is
-    exposed even by a crafted category/city query or remote-service flag.
+    An empty neighborhood selection means the worker serves the entire selected
+    city; selecting neighborhoods narrows onsite coverage for that city.
+    Remote delivery ignores onsite zones only for explicitly remote-eligible
+    services and worker opt-in. Ashdod-only remains a hard server-side gate.
     """
-    if not city_is_public(city):
+    if not city_is_public(city) or mode not in (None, 'onsite', 'online'):
         return queryset.none()
+    if neighborhood is not None and (
+        not neighborhood.is_active or neighborhood.city_id != city.pk
+    ):
+        return queryset.none()
+    if service is not None:
+        if (not service.is_active or not service.category.is_active
+                or (service.category.section_id is not None
+                    and not service.category.section.is_active)
+                or (category is not None and service.category_id != category.pk)):
+            return queryset.none()
+        category = service.category
+        declared_service = Subcategory.objects.filter(
+            pk=service.pk, workers__pk=OuterRef('pk'),
+        )
+        queryset = queryset.alias(
+            _declares_requested_service=Exists(declared_service),
+        ).filter(_declares_requested_service=True)
+    if category is not None:
+        if not Category.objects.filter(
+            pk=category.pk, is_active=True,
+        ).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ).exists():
+            return queryset.none()
+        # Callers may not omit category membership, even with a forged ID.
+        declared_category = Category.objects.filter(
+            pk=category.pk, workers__pk=OuterRef('pk'),
+        )
+        queryset = queryset.alias(
+            _declares_requested_category=Exists(declared_category),
+        ).filter(_declares_requested_category=True)
+
     if public_city_slug():
-        # Remote work is a delivery mode, not a way to publish a historical
-        # profile whose home city is outside the owner-approved pilot.
+        # Until the owner expands the pilot, a remote-capable non-Ashdod
+        # profile must NOT be promoted into public search by its mode.
         queryset = queryset.filter(city=city)
+
     through = WorkerProfile.service_cities.through
     zones = through.objects.filter(workerprofile_id=OuterRef('pk'))
-    serving = zones.filter(city_id=city.pk)
     queryset = queryset.alias(
         _has_explicit_zones=Exists(zones),
-        _serves_selected_city=Exists(serving),
+        _serves_selected_city=Exists(zones.filter(city_id=city.pk)),
     )
-    allowed = (
+    onsite = (
         Q(_serves_selected_city=True)
         | Q(_has_explicit_zones=False, city_id=city.pk)
     )
-    if category is not None:
-        if category.work_mode in ('online', 'both'):
-            allowed |= Q(offers_remote=True)
-    else:
-        online_categories = Category.objects.filter(
-            workers__pk=OuterRef('pk'), is_active=True,
-            work_mode__in=('online', 'both'),
-        ).filter(Q(section__isnull=True) | Q(section__is_active=True))
-        queryset = queryset.alias(
-            _has_remote_skill=Exists(online_categories)
+    if neighborhood is not None:
+        neighborhood_through = WorkerProfile.service_neighborhoods.through
+        areas_for_city = neighborhood_through.objects.filter(
+            workerprofile_id=OuterRef('pk'), neighborhood__city_id=city.pk,
         )
-        allowed |= Q(offers_remote=True, _has_remote_skill=True)
-    return queryset.filter(allowed)
+        queryset = queryset.alias(
+            _has_area_limit=Exists(areas_for_city),
+            _covers_neighborhood=Exists(areas_for_city.filter(
+                neighborhood_id=neighborhood.pk,
+            )),
+        )
+        onsite &= (
+            Q(_has_area_limit=False) | Q(_covers_neighborhood=True)
+        )
+
+    onsite_permitted = (
+        (category is None or category.work_mode in ('onsite', 'both'))
+        and (service is None or service.work_mode in ('onsite', 'both'))
+    )
+    remote_permitted = (
+        (category is None or category.work_mode in ('online', 'both'))
+        and (service is None or service.work_mode in ('online', 'both'))
+    )
+    if category is None and remote_permitted:
+        remote_categories = Category.objects.filter(
+            workers__pk=OuterRef('pk'),
+            is_active=True, work_mode__in=('online', 'both'),
+        ).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        )
+        queryset = queryset.alias(_remote_skill=Exists(remote_categories))
+        remote = Q(offers_remote=True, _remote_skill=True)
+    else:
+        remote = Q(offers_remote=True)
+
+    if mode == 'onsite':
+        return queryset.filter(onsite) if onsite_permitted else queryset.none()
+    if mode == 'online':
+        return queryset.filter(remote) if remote_permitted else queryset.none()
+    if onsite_permitted and remote_permitted:
+        return queryset.filter(onsite | remote)
+    if onsite_permitted:
+        return queryset.filter(onsite)
+    if remote_permitted:
+        return queryset.filter(remote)
+    return queryset.none()
 
 
 def get_available_orders_for_worker(worker_profile):

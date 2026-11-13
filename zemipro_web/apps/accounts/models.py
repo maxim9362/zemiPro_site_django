@@ -171,6 +171,11 @@ class WorkerProfile(models.Model):
         'locations.City', blank=True,
         related_name='service_workers', verbose_name='Города обслуживания',
     )
+    service_neighborhoods = models.ManyToManyField(
+        'locations.Neighborhood', blank=True,
+        related_name='service_workers',
+        verbose_name=_('Районы обслуживания'),
+    )
     offers_remote = models.BooleanField(
         default=False, verbose_name='Работаю онлайн',
     )

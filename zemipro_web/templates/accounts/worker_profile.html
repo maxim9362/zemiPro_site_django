@@ -87,6 +87,13 @@
             </div>
 
             <div class="form__group">
+                <label class="form__label">{% trans 'Районы обслуживания' %}</label>
+                <p class="form__hint">{% trans 'Не выбирайте районы, если работаете по всему указанному городу. Справочник районов наполняется только подтверждёнными данными.' %}</p>
+                <div class="checkbox-grid">{{ form.service_neighborhoods }}</div>
+                {{ form.service_neighborhoods.errors }}
+            </div>
+
+            <div class="form__group">
                 <label class="form__label">
                     {{ form.offers_remote }}
                     {% trans 'Выполняю услуги онлайн' %}
