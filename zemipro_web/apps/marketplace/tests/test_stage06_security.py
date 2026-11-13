@@ -10,7 +10,7 @@ from django.urls import reverse
 
 from apps.marketplace.agreement_services import propose_agreement_change
 from apps.marketplace.models import (
-    Order, OrderAgreementVersion, OrderWorkEvent, Response, ResponseRevision,
+    OrderAgreementVersion, Response, ResponseRevision,
 )
 from apps.marketplace.offer_services import edit_offer, submit_offer
 from apps.marketplace.order_quota import ORDER_WRITE_LIMITS, OrderQuotaExceeded
