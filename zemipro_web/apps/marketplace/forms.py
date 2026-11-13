@@ -158,15 +158,25 @@ class ResponseCreateForm(forms.ModelForm):
             'estimated_timeline': forms.TextInput(attrs={'maxlength': 160, 'dir': 'auto'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .offer_ui import offer_copy
+        copy = offer_copy()
+        self.fields['price_kind'].choices = [
+            (kind, copy.get(kind, label))
+            for kind, label in Response.PriceKind.choices
+        ]
+
     def clean(self):
         data = super().clean()
         if self.errors:
             return data
         from .offer_services import normalize_offer
+        from .offer_ui import offer_copy
         try:
             normalize_offer(data)
         except ValueError as exc:
-            raise forms.ValidationError(str(exc)) from exc
+            raise forms.ValidationError(offer_copy()['invalid_offer']) from exc
         if len(data.get('message') or '') > 1000:
             raise forms.ValidationError('Слишком длинное сообщение.')
         return data

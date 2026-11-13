@@ -1259,7 +1259,7 @@ def order_work_action_view(request, pk, action):
     except OrderQuotaExceeded as error:
         return _order_quota_response(error)
     except ValueError as error:
-        messages.error(request, str(error))
+        messages.error(request, offer_copy()['action_error'])
         return redirect('marketplace:order_detail', pk=order.pk)
     if changed:
         recipient_id = (
@@ -1277,7 +1277,7 @@ def order_work_action_view(request, pk, action):
                     notification_type='order_updated',
                     related_order=order,
                 )
-        messages.success(request, _('Статус выполнения обновлён.'))
+        messages.success(request, offer_copy()['status_updated'])
     return redirect('marketplace:order_detail', pk=order.pk)
 
 

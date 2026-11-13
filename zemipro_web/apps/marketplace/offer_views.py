@@ -48,7 +48,7 @@ def edit_offer_view(request, pk):
                 from .views import _order_quota_response
                 return _order_quota_response(exc)
             except ValueError as exc:
-                form.add_error(None, str(exc))
+                form.add_error(None, copy['action_error'])
         key = request.POST.get('operation_key') or uuid.uuid4()
     else:
         form = ResponseCreateForm(instance=response)
@@ -74,7 +74,7 @@ def offer_action_view(request, pk, action):
         from .views import _order_quota_response
         return _order_quota_response(exc)
     except ValueError as exc:
-        messages.error(request, str(exc))
+        messages.error(request, offer_copy()['action_error'])
     # PermissionDenied propagates as 403; no redirect to private order details.
     return redirect('marketplace:order_detail', pk=response.order_id)
 
