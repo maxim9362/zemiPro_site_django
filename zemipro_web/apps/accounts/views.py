@@ -198,6 +198,17 @@ def confirm_verification_view(request):
 
 
 @login_required
+@require_POST
+def clear_worker_history_view(request):
+    from .worker_views import clear_own_worker_history
+    from apps.marketplace.directory_ui import directory_copy
+    if not clear_own_worker_history(request.user):
+        raise PermissionDenied
+    messages.success(request, directory_copy()['history_cleared'])
+    return redirect('accounts:client_settings')
+
+
+@login_required
 @require_http_methods(['GET', 'POST'])
 def client_settings_view(request):
     """Only the signed-in user's account/profile/settings; no user-id parameter."""
@@ -225,7 +236,9 @@ def client_settings_view(request):
                 samesite='Lax',
             )
             return response
+    from apps.marketplace.directory_ui import directory_copy
     return render(request, 'accounts/client_settings.html', {
+        'directory_copy': directory_copy(),
         'form': form,
         'privacy_requests': PrivacyRequest.objects.filter(
             user=request.user,

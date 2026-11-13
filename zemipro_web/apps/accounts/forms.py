@@ -353,6 +353,7 @@ class ClientSettingsForm(forms.Form):
         required=False,
         label=_('Получать дополнительные уведомления'),
     )
+    track_worker_views = forms.BooleanField(required=False)
 
     def __init__(self, *args, user, profile, **kwargs):
         if (not args or args[0] is None) and 'initial' not in kwargs:
@@ -367,10 +368,13 @@ class ClientSettingsForm(forms.Form):
                 'receive_optional_updates': (
                     profile.receive_optional_updates if profile else True
                 ),
+                'track_worker_views': profile.track_worker_views if profile else False,
             }
         super().__init__(*args, **kwargs)
         self.owner = user
         self.fields['city'].queryset = get_public_cities()
+        from apps.marketplace.directory_ui import directory_copy
+        self.fields['track_worker_views'].label = directory_copy()['views_opt_in']
 
     def clean_email(self):
         return self.cleaned_data.get('email', '').strip().casefold()

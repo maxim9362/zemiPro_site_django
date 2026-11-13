@@ -32,8 +32,8 @@ def own_visible_favorites(user):
 
 
 @transaction.atomic
-def toggle_own_favorite(user, worker):
-    """Return True if added, False if removed. Never accept a client id."""
+def set_own_favorite(user, worker, *, saved):
+    """Set desired private state; retries cannot silently undo an action."""
     if not user.is_authenticated or user.pk is None:
         raise PermissionDenied
     owner = User.objects.select_for_update().get(pk=user.pk)
@@ -44,11 +44,8 @@ def toggle_own_favorite(user, worker):
         raise ValueError('Нельзя сохранить собственный профиль.')
     if not public_worker_queryset().filter(pk=worker.pk).exists():
         raise ValueError('Мастер пока не доступен.')
-    existing = FavoriteWorker.objects.filter(
-        client=owner, worker_id=worker.pk,
-    )
-    if existing.exists():
-        existing.delete()
+    if not saved:
+        FavoriteWorker.objects.filter(client=owner, worker_id=worker.pk).delete()
         return False
-    FavoriteWorker.objects.create(client=owner, worker=worker)
+    FavoriteWorker.objects.get_or_create(client=owner, worker=worker)
     return True

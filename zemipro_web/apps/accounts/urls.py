@@ -11,6 +11,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('client/profile/', views.client_profile_view, name='client_profile'),
     path('client/settings/', views.client_settings_view, name='client_settings'),
+    path('client/history/clear/', views.clear_worker_history_view, name='clear_worker_history'),
     path('client/privacy/request/', views.client_privacy_request_view,
          name='client_privacy_request'),
     path('worker/profile/', views.worker_profile_view, name='worker_profile'),

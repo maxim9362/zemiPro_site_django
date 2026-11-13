@@ -88,6 +88,7 @@ class ClientProfile(models.Model):
     receive_optional_updates = models.BooleanField(
         default=True, verbose_name='Дополнительные уведомления',
     )
+    track_worker_views = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлён')
 
@@ -332,6 +333,33 @@ class PrivacyRequest(models.Model):
                 name='accounts_unique_pending_privacy_request',
             ),
         ]
+
+class WorkerProfileView(models.Model):
+    """Opt-in private history; never used for a public ranking or counter."""
+
+    client = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='viewed_workers',
+    )
+    worker = models.ForeignKey(
+        WorkerProfile, on_delete=models.CASCADE, related_name='viewer_history',
+    )
+    last_viewed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'accounts_worker_profile_view'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['client', 'worker'],
+                name='accounts_unique_private_worker_view',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['client', '-last_viewed_at'],
+                name='accounts_view_owner_recent_idx',
+            ),
+        ]
+
 
 class FavoriteWorker(models.Model):
     """Private customer bookmark; not a public recommendation or endorsement."""
