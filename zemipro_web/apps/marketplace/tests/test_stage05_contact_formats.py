@@ -236,7 +236,7 @@ class ContactFormatPrivacyTests(TestCase):
         self.worker.refresh_from_db()
         self.assertEqual(self.worker.searchable_display_name, 'New')
         self.assertEqual(
-            self.worker.searchable_description, 'Synthetic repairs and .',
+            self.worker.searchable_description, 'Synthetic repairs and',
         )
         self.assertEqual(self.worker.public_display_name, 'New […]')
 
