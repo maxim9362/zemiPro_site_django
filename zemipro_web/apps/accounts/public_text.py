@@ -1,5 +1,5 @@
-"""Current policy; historical versions remain frozen for migrations."""
-from .contact_policy_v3 import (
+"""Current public contact policy. Migration versions remain frozen."""
+from .contact_policy_v4 import (
     contact_shaped_query,
     contains_public_contact,
     normalize_public_text,

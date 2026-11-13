@@ -439,8 +439,22 @@ class PortfolioUploadForm(forms.Form):
         label=_('Подтверждаю, что имею право публиковать эту фотографию'),
     )
 
+    def clean_caption(self):
+        value = self.cleaned_data['caption'].strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
+
 
 class PortfolioEditForm(forms.Form):
     caption = forms.CharField(max_length=300, required=False)
     sort_order = forms.IntegerField(min_value=0, max_value=999)
     is_public = forms.BooleanField(required=False)
+
+    def clean_caption(self):
+        value = self.cleaned_data['caption'].strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value

@@ -19,6 +19,7 @@ from django.utils.translation import gettext as _
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from .models import User, WorkerPortfolioPhoto, WorkerProfile
+from .public_text import contains_public_contact
 
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -138,6 +139,8 @@ def add_own_portfolio_photo(user, uploaded, *, caption='', sort_order=0,
     _check_sort_order(sort_order)
     if len(caption) > 300:
         raise PortfolioError(_('Описание слишком длинное.'))
+    if contains_public_contact(caption):
+        raise PortfolioError(_('Контакты и внешние ссылки нельзя указывать в подписи.'))
     image_data = sanitize_portfolio_image(uploaded)
     worker = _active_worker(user)
     if WorkerPortfolioPhoto.objects.filter(worker=worker).count() >= MAX_PHOTOS:
@@ -168,6 +171,8 @@ def update_own_portfolio_photo(user, photo_id, *, caption, sort_order, is_public
     _check_sort_order(sort_order)
     if type(is_public) is not bool or len(caption) > 300:
         raise PortfolioError(_('Недопустимые данные фотографии.'))
+    if contains_public_contact(caption):
+        raise PortfolioError(_('Контакты и внешние ссылки нельзя указывать в подписи.'))
     photo.caption = caption.strip()
     photo.sort_order = sort_order
     photo.is_public = is_public
