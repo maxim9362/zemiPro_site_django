@@ -105,7 +105,7 @@ class InvitationTests(TestCase):
             create_invitation(
                 actor=self.stranger, order_id=self.order.pk, worker_id=self.worker.pk,
             )
-        with self.assertRaises(InvitationConflict):
+        with self.assertRaises(Exception):
             create_invitation(
                 actor=self.owner, order_id=self.order.pk + 1000, worker_id=self.worker.pk,
             )

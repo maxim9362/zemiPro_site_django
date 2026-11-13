@@ -3,6 +3,7 @@ import uuid
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import get_language
 
 
@@ -672,7 +673,10 @@ class OrderInvitation(models.Model):
                 name='market_order_worker_invite_unique',
             ),
             models.CheckConstraint(
-                condition=models.Q(status__in=Status.values),
+                condition=models.Q(status__in=[
+                    'pending', 'accepted', 'declined', 'withdrawn',
+                    'expired', 'unavailable',
+                ]),
                 name='market_order_invite_status_allowed',
             ),
         ]
