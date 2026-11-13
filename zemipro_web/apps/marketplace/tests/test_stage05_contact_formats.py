@@ -70,9 +70,9 @@ class ContactFormatPrivacyTests(TestCase):
         sample = 'Legacy @legacyhandle; Contact @contacthandle or 050/7654321.'
         self.assertEqual(
             redact_public_contact(sample),
-            'Legacy […]; Contact […] or […].',
+            '[…]',
         )
-        self.assertEqual(searchable_public_text(sample), 'Legacy ; Contact or .')
+        self.assertEqual(searchable_public_text(sample), '')
         self.assertTrue(contains_public_contact(sample))
         for fragment in ('legacyhandle', 'contacthandle', '6543', '7654321'):
             self.assertNotIn(fragment, searchable_public_text(sample))
@@ -108,14 +108,16 @@ class ContactFormatPrivacyTests(TestCase):
         for lang in ('ru', 'en', 'he'):
             with override(lang):
                 url = reverse('catalog_i18n:worker_directory')
-                for keyword in ('Legacy', 'Synthetic', 'Repair'):
+                for keyword, expected in (
+                    ('Legacy', 0), ('Synthetic', 0), ('Repair', 1),
+                ):
                     with self.subTest(lang=lang, q=keyword):
                         response = self.client.get(
                             url, {'q': keyword}, HTTP_ACCEPT_LANGUAGE=lang,
                         )
                         self.assertEqual(response.status_code, 200)
                         self.assertEqual(
-                            response.context['page_obj'].paginator.count, 1,
+                            response.context['page_obj'].paginator.count, expected,
                         )
                         self.assert_contact_absent(response)
 
@@ -127,14 +129,16 @@ class ContactFormatPrivacyTests(TestCase):
                 self.assertEqual(profile.status_code, 200)
                 self.assertContains(profile, '<title>')
                 self.assertContains(profile, 'name="description"')
-                self.assertContains(profile, 'Legacy')
+                self.assertContains(profile, '[…]')
+                self.assertNotContains(profile, 'Legacy')
                 self.assert_contact_absent(profile)
 
         self.client.force_login(self.client_user)
         picker_url = reverse('marketplace:worker_invitation_select', args=[self.worker.pk])
         picker = self.client.get(picker_url)
         self.assertEqual(picker.status_code, 200)
-        self.assertContains(picker, 'Legacy')
+        self.assertContains(picker, '[…]')
+        self.assertNotContains(picker, 'Legacy')
         self.assert_contact_absent(picker)
         response = self.client.post(picker_url, {'order_id': self.order.pk})
         self.assertEqual(response.status_code, 302)
@@ -146,7 +150,8 @@ class ContactFormatPrivacyTests(TestCase):
                     HTTP_ACCEPT_LANGUAGE=lang,
                 )
                 self.assertEqual(dashboard.status_code, 200)
-                self.assertContains(dashboard, 'Legacy')
+                self.assertContains(dashboard, '[…]')
+                self.assertNotContains(dashboard, 'Legacy')
                 self.assert_contact_absent(dashboard)
 
     def test_worker_form_rejects_handles_and_slash_phones_in_each_public_field(self):
@@ -234,11 +239,9 @@ class ContactFormatPrivacyTests(TestCase):
         self.worker.description = 'Synthetic repairs 050/7654321 and @newhandle.'
         self.worker.save(update_fields=['description'])
         self.worker.refresh_from_db()
-        self.assertEqual(self.worker.searchable_display_name, 'New')
-        self.assertEqual(
-            self.worker.searchable_description, 'Synthetic repairs and',
-        )
-        self.assertEqual(self.worker.public_display_name, 'New […]')
+        self.assertEqual(self.worker.searchable_display_name, '')
+        self.assertEqual(self.worker.searchable_description, '')
+        self.assertEqual(self.worker.public_display_name, '[…]')
 
     def test_mixed_safe_words_and_non_contact_numbers_remain_searchable(self):
         safe = 'Pipe repair version 2.0 available in Ashdod'

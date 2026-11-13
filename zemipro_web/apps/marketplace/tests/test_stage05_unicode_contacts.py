@@ -77,13 +77,13 @@ class UnicodeContactPrivacyTests(TestCase):
 
     def test_v3_policy_catches_unicode_bidi_urls_and_obfuscated_email(self):
         cases = {
-            'Service ＠widehandle 050–7654321': 'Service […] […]',
-            'Contact t.me/contacthandle or 050\u200f-7654321.': 'Contact […] or […].',
-            'Call 050‑7654321': 'Call […]',
-            'Call 050·7654321': 'Call […]',
-            'Call 050\n7654321': 'Call […]',
-            'Find instagram.com/handle': 'Find […]',
-            'Find https://t.me/handle': 'Find […]',
+            'Service ＠widehandle 050–7654321': '[…]',
+            'Contact t.me/contacthandle or 050\u200f-7654321.': '[…]',
+            'Call 050‑7654321': '[…]',
+            'Call 050·7654321': '[…]',
+            'Call 050\n7654321': '[…]',
+            'Find instagram.com/handle': '[…]',
+            'Find https://t.me/handle': '[…]',
             'name [at] example [dot] com': '[…]',
             'name%40example.com': '[…]',
             'name＠example.com': '[…]',
@@ -129,15 +129,16 @@ class UnicodeContactPrivacyTests(TestCase):
                         self.assertEqual(r.context['page_obj'].paginator.count, 0)
                         # User-typed GET text may be echoed in a form. The
                         # result set is the oracle that must remain empty.
-                for word in ('Service', 'Synthetic', 'Ремонт'):
+                for word, expected in (
+                    ('Service', 0), ('Synthetic', 0), ('Ремонт', 1),
+                ):
                     with self.subTest(lang=lang, public_word=word):
                         r = self.client.get(url, {'q': word}, HTTP_ACCEPT_LANGUAGE=lang)
                         self.assertEqual(r.status_code, 200)
-                        self.assertEqual(r.context['page_obj'].paginator.count, 1)
-                        self.assertEqual(
-                            list(r.context['page_obj'].object_list)[0].pk,
-                            self.worker.pk,
-                        )
+                        rows = list(r.context['page_obj'].object_list)
+                        self.assertEqual(len(rows), expected)
+                        if expected:
+                            self.assertEqual(rows[0].pk, self.worker.pk)
                         self.assert_no_contacts(r)
 
     def test_profile_title_meta_h1_are_safe_in_all_three_languages(self):
@@ -256,10 +257,8 @@ class UnicodeContactPrivacyTests(TestCase):
         self.worker.description = 'Repair services t.me/contacthandle and 050\u200f-7654321.'
         self.worker.save(update_fields=['description'])
         self.worker.refresh_from_db()
-        self.assertEqual(self.worker.searchable_display_name, 'New and')
-        self.assertEqual(
-            self.worker.searchable_description, 'Repair services and .',
-        )
+        self.assertEqual(self.worker.searchable_display_name, '')
+        self.assertEqual(self.worker.searchable_description, '')
         self.assertNotIn('contacthandle', self.worker.searchable_description)
         self.assertNotIn('freshhandle', self.worker.searchable_display_name)
 

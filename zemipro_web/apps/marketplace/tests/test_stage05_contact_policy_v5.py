@@ -111,9 +111,9 @@ class ContactPolicyV5Tests(TestCase):
                 self.assertNotIn('john', output)
                 self.assertNotIn('example.com', output)
                 self.assertIn('[…]', redact_public_contact(source))
-        self.assertEqual(searchable_public_text('Contact john at example dot com'), 'Contact')
-        self.assertEqual(searchable_public_text('Contact john @ example.com'), 'Contact')
-        self.assertEqual(searchable_public_text('Call 050      7654321'), 'Call')
+        self.assertEqual(searchable_public_text('Contact john at example dot com'), '')
+        self.assertEqual(searchable_public_text('Contact john @ example.com'), '')
+        self.assertEqual(searchable_public_text('Call 050      7654321'), '')
         self.assertEqual(normalize_public_text('050%25252525252F7654321'), '050/7654321')
 
     def test_contact_queries_rejected_and_normal_words_remain_searchable(self):
@@ -146,13 +146,18 @@ class ContactPolicyV5Tests(TestCase):
                         )
                         self.assertEqual(result.status_code, 200)
                         self.assertEqual(result.context['page_obj'].paginator.count, 0)
-                for word in ('Service', 'Call', 'Ремонт'):
+                for word, expected in (
+                    ('Service', 0), ('Call', 0), ('Ремонт', 1),
+                ):
                     with self.subTest(lang=lang, safe=word):
                         result = self.client.get(
                             url, {'q': word}, HTTP_ACCEPT_LANGUAGE=lang,
                         )
                         self.assertEqual(result.status_code, 200)
-                        self.assertEqual(result.context['page_obj'].paginator.count, 1)
+                        self.assertEqual(
+                            result.context['page_obj'].paginator.count,
+                            expected,
+                        )
                         self.assert_no_contact(result)
 
     def test_html_seo_portfolio_invitation_dashboard_and_favorites_no_contact(self):
@@ -165,8 +170,9 @@ class ContactPolicyV5Tests(TestCase):
                 self.assertEqual(page.status_code, 200)
                 self.assertContains(page, '<title>')
                 self.assertContains(page, 'name="description"')
-                self.assertContains(page, 'Service')
-                self.assertContains(page, 'Edited')
+                self.assertNotContains(page, 'Service 050')
+                self.assertNotContains(page, 'Edited x://')
+                self.assertContains(page, '[…]')
                 self.assert_no_contact(page)
 
         self.client.force_login(self.client_user)
@@ -312,6 +318,6 @@ class ContactPolicyV5Tests(TestCase):
         self.worker.description = 'Repair john @ example.com and x://contacthandle'
         self.worker.save(update_fields=['description'])
         self.worker.refresh_from_db()
-        self.assertEqual(self.worker.searchable_display_name, 'New')
-        self.assertEqual(self.worker.searchable_description, 'Repair and')
-        self.assertEqual(self.worker.public_display_name, 'New […]')
+        self.assertEqual(self.worker.searchable_display_name, '')
+        self.assertEqual(self.worker.searchable_description, '')
+        self.assertEqual(self.worker.public_display_name, '[…]')

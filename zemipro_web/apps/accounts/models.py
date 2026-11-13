@@ -3,7 +3,11 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .public_text import (redact_public_contact, searchable_public_name, searchable_public_text)
+from .public_text import (
+    profile_public_content_is_safe,
+    redact_public_contact,
+    searchable_public_name,
+)
 
 
 class User(AbstractUser):
@@ -130,6 +134,10 @@ class WorkerProfile(models.Model):
     searchable_description = models.TextField(
         blank=True, default='', editable=False,
     )
+    public_content_safe = models.BooleanField(
+        default=False, editable=False, db_index=True,
+        verbose_name=_('Публичный текст прошёл защитную проверку'),
+    )
     spoken_languages = models.JSONField(
         default=list, blank=True, verbose_name=_('Языки общения'),
     )
@@ -214,24 +222,54 @@ class WorkerProfile(models.Model):
         """The one canonical public representation (templates, SEO, invitations)."""
         return redact_public_contact(self.display_name)
 
+    @property
+    def public_description(self):
+        return redact_public_contact(self.description)
+
+    @property
+    def public_pricing_details(self):
+        return redact_public_contact(self.pricing_details)
+
+    @property
+    def public_working_hours(self):
+        return redact_public_contact(self.working_hours, allow_work_hours=True)
+
     def save(self, *args, **kwargs):
         """Synchronize public search fields on normal edits and owner services.
 
-        QuerySet.update/bulk_create bypass save. The migration backfills legacy
-        rows and bulk data importers must explicitly provide sanitized fields.
+        Description text is deliberately excluded from keyword search.  Search
+        uses a safe name plus curated categories/services. QuerySet.update and
+        bulk_create bypass save; the migration backfills legacy rows.
         """
         updates = kwargs.get('update_fields')
         if updates is None:
             self.searchable_display_name = searchable_public_name(self.display_name)
-            self.searchable_description = searchable_public_text(self.description)
+            self.searchable_description = ''
+            self.public_content_safe = profile_public_content_is_safe(
+                display_name=self.display_name,
+                description=self.description,
+                pricing_details=self.pricing_details,
+                working_hours=self.working_hours,
+            )
         else:
             updates = set(updates)
             if 'display_name' in updates:
                 self.searchable_display_name = searchable_public_name(self.display_name)
                 updates.add('searchable_display_name')
             if 'description' in updates:
-                self.searchable_description = searchable_public_text(self.description)
+                self.searchable_description = ''
                 updates.add('searchable_description')
+            public_fields = {
+                'display_name', 'description', 'pricing_details', 'working_hours',
+            }
+            if updates & public_fields:
+                self.public_content_safe = profile_public_content_is_safe(
+                    display_name=self.display_name,
+                    description=self.description,
+                    pricing_details=self.pricing_details,
+                    working_hours=self.working_hours,
+                )
+                updates.add('public_content_safe')
             kwargs['update_fields'] = updates
         return super().save(*args, **kwargs)
 
@@ -250,6 +288,10 @@ class WorkerPortfolioPhoto(models.Model):
     is_public = models.BooleanField(default=False)
     rights_confirmed_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def public_caption(self):
+        return redact_public_contact(self.caption)
 
     class Meta:
         db_table = 'accounts_worker_portfolio_photo'

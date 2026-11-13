@@ -81,7 +81,8 @@ class Stage05ReviewPrivacyTests(TestCase):
         )
         page = self.client.get(profile_url)
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, 'Privacy Probe')
+        self.assertContains(page, '[…]')
+        self.assertNotContains(page, 'Privacy Probe')
         self.assertContains(page, 'name="description"')
         self.assert_no_stored_contact(page)
 
@@ -89,7 +90,8 @@ class Stage05ReviewPrivacyTests(TestCase):
         picker_url = reverse('marketplace:worker_invitation_select', args=[self.worker.pk])
         picker = self.client.get(picker_url)
         self.assertEqual(picker.status_code, 200)
-        self.assertContains(picker, 'Privacy Probe')
+        self.assertContains(picker, '[…]')
+        self.assertNotContains(picker, 'Privacy Probe')
         self.assert_no_stored_contact(picker)
 
         posted = self.client.post(picker_url, {'order_id': self.order.pk})
@@ -97,7 +99,8 @@ class Stage05ReviewPrivacyTests(TestCase):
         self.assertEqual(OrderInvitation.objects.count(), 1)
         dashboard = self.client.get(reverse('marketplace:client_dashboard'))
         self.assertEqual(dashboard.status_code, 200)
-        self.assertContains(dashboard, 'Privacy Probe')
+        self.assertContains(dashboard, '[…]')
+        self.assertNotContains(dashboard, 'Privacy Probe')
         self.assert_no_stored_contact(dashboard)
 
         invitation = OrderInvitation.objects.get()
@@ -134,14 +137,16 @@ class Stage05ReviewPrivacyTests(TestCase):
 
     def test_visible_keywords_still_find_worker_and_rank_without_raw_contact(self):
         url = reverse('marketplace:worker_directory')
-        for keyword in ('Privacy', 'Synthetic', 'Сантехника'):
+        for keyword, expected in (
+            ('Privacy', 0), ('Synthetic', 0), ('Сантехника', 1),
+        ):
             with self.subTest(keyword=keyword):
                 response = self.client.get(url, {'q': keyword})
                 self.assertEqual(response.status_code, 200)
-                self.assertEqual(
-                    list(response.context['page_obj'].object_list)[0].pk,
-                    self.worker.pk,
-                )
+                rows = list(response.context['page_obj'].object_list)
+                self.assertEqual(len(rows), expected)
+                if expected:
+                    self.assertEqual(rows[0].pk, self.worker.pk)
                 self.assert_no_stored_contact(response)
         self.assertNotIn('hidden-name', self.worker.searchable_display_name)
         self.assertNotIn('hidden-contact', self.worker.searchable_description)
@@ -191,10 +196,10 @@ class Stage05ReviewPrivacyTests(TestCase):
         self.worker.description = 'Synthetic repairs, 055-76543210, appointment only.'
         self.worker.save(update_fields=['description'])
         self.worker.refresh_from_db()
-        self.assertEqual(self.worker.searchable_display_name, 'Visible Company')
+        self.assertEqual(self.worker.searchable_display_name, '')
         self.assertNotIn('055', self.worker.searchable_description)
         self.assertNotIn('76543210', self.worker.searchable_description)
-        self.assertEqual(searchable_public_text('Alpha phone 050 8765432'), 'Alpha phone')
+        self.assertEqual(searchable_public_text('Alpha phone 050 8765432'), '')
         self.assertTrue(contact_shaped_query('0508765432'))
         self.assertTrue(contact_shaped_query('hidden@example.invalid'))
         self.assertFalse(contact_shaped_query('Privacy'))
@@ -205,5 +210,5 @@ class Stage05ReviewPrivacyTests(TestCase):
             {'sort': 'name', 'q': 'Privacy'},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['page_obj'].paginator.count, 1)
+        self.assertEqual(response.context['page_obj'].paginator.count, 0)
         self.assert_no_stored_contact(response)

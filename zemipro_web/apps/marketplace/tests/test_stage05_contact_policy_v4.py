@@ -150,11 +150,16 @@ class ContactPolicyV4Tests(TestCase):
                         response = self.client.get(url, {'q': query})
                         self.assertEqual(response.status_code, 200)
                         self.assertEqual(response.context['page_obj'].paginator.count, 0)
-                for query in ('Service', 'Contact', 'Ремонт'):
+                for query, expected in (
+                    ('Service', 0), ('Contact', 0), ('Ремонт', 1),
+                ):
                     with self.subTest(lang=lang, public_query=query):
                         response = self.client.get(url, {'q': query})
                         self.assertEqual(response.status_code, 200)
-                        self.assertEqual(response.context['page_obj'].paginator.count, 1)
+                        self.assertEqual(
+                            response.context['page_obj'].paginator.count,
+                            expected,
+                        )
                         self.assert_no_contact_fragments(response)
 
     def test_public_html_seo_photocaption_picker_and_dashboard_are_safe(self):
@@ -165,7 +170,8 @@ class ContactPolicyV4Tests(TestCase):
                 self.assertEqual(r.status_code, 200)
                 self.assertContains(r, '<title>')
                 self.assertContains(r, 'name="description"')
-                self.assertContains(r, 'Caption')
+                self.assertNotContains(r, 'Caption')
+                self.assertContains(r, '[…]')
                 self.assert_no_contact_fragments(r)
 
         self.client.force_login(self.client_user)
@@ -320,5 +326,5 @@ class ContactPolicyV4Tests(TestCase):
         self.worker.save(update_fields=['description'])
         self.worker.refresh_from_db()
         self.assertEqual(len(self.worker.searchable_display_name), 120)
-        self.assertEqual(self.worker.searchable_description, 'Repair')
+        self.assertEqual(self.worker.searchable_description, '')
         self.assertNotIn('7654321', self.worker.searchable_description)

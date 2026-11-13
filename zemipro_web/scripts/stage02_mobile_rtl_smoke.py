@@ -1,5 +1,6 @@
 """Stage 02.6: mobile browser smoke in isolated CI, NOT physical Android tests."""
 from pathlib import Path
+import os
 import sys
 
 import django
@@ -148,7 +149,15 @@ def main():
     credentials = {lang: bootstrap_verified_user(lang) for lang in LANGUAGES}
     worker_pk = bootstrap_public_worker()
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(channel='chrome', headless=True)
+        executable_path = os.environ.get('PLAYWRIGHT_EXECUTABLE_PATH')
+        launch_options = {'headless': True}
+        if executable_path:
+            launch_options['executable_path'] = executable_path
+        else:
+            launch_options['channel'] = os.environ.get(
+                'PLAYWRIGHT_CHANNEL', 'chrome',
+            )
+        browser = playwright.chromium.launch(**launch_options)
         try:
             for lang in LANGUAGES:
                 username, password = credentials[lang]

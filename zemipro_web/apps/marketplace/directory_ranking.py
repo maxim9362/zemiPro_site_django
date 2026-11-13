@@ -5,7 +5,7 @@ position or claimed experience. Only public, persisted facts contribute.
 No profile editing, order transitions or third-party search engine is involved.
 
 Algorithm v1 (points; order for ties: real review count, profile PK):
-* explicitly requested service +40; category +25; matched keyword +4..16
+* explicitly requested service +40; category +25; matched keyword +8..16
 * service in chosen area +10..17, remote-only match +6
 * self-reported available +12, limited +6, unavailable +0
 * profile fields: explicit services +4, public portfolio +2,
@@ -46,7 +46,6 @@ def add_directory_scores(workers, *, category, service, query, city,
             When(searchable_display_name__icontains=query, then=_constant(16)),
             When(_search_service_text=True, then=_constant(12)),
             When(_search_category_text=True, then=_constant(8)),
-            When(searchable_description__icontains=query, then=_constant(4)),
         )
     else:
         keyword = _constant(0)

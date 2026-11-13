@@ -39,7 +39,7 @@
                     {% endif %}
                 </div>
                 <div class="order-card-sm__body">
-                    <p class="order-card-sm__desc">{{ wp.description|public_text|truncatewords:20 }}</p>
+                    <p class="order-card-sm__desc">{{ wp.public_description|truncatewords:20 }}</p>
                     <p>
                         {% for skill in wp.skills.all %}
                         <span class="tag">{{ skill.emoji }} {{ skill.localized_name }}</span>

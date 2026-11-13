@@ -186,7 +186,6 @@ def search_worker_profiles(form):
             _search_service_text=Exists(matching_services),
         ).filter(
             Q(searchable_display_name__icontains=query)
-            | Q(searchable_description__icontains=query)
             | Q(_search_category_text=True)
             | Q(_search_service_text=True)
         )

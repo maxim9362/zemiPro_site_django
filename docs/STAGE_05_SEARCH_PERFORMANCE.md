@@ -166,6 +166,28 @@ EXPLAIN root: `Sort (cost=656.46..656.47 rows=1 width=4714)`.
 An index scan was present, without proof of choosing one specific index.
 These timings are isolated CI observations, NOT a production SLO.
 
+## Fail-closed v6 local verification (synthetic PostgreSQL 17)
+
+The ZP-05-006/007 root fix no longer indexes arbitrary worker descriptions.
+Keyword matching uses the whole-field-safe display-name projection and curated
+RU/EN/HE category/service names.  This intentionally trades description-word
+search for a materially smaller contact-oracle surface; raw descriptions remain
+stored and are rendered only through the fail-closed public field policy.
+
+Codex Cloud full-suite run on 300 synthetic workers, three warmed samples:
+
+| Scenario | SQL queries | p50 (ms) | Results |
+|---|---:|---:|---:|
+| Unfiltered | 10 | 72.91 | 300 |
+| Complex combined filters | 14 | 65.71 | 126 |
+| Keyword/rating | 10 | 55.22 | 300 |
+| Empty | 8 | 229.88 | 0 |
+| Invalid | 5 | 13.39 | 0 |
+
+EXPLAIN retained an index scan.  The isolated empty-result sample was noisy and
+is recorded rather than presented as an SLO regression.  Query counts stayed
+bounded; a public staging/load run remains necessary before launch decisions.
+
 ## Known limits and interpretation
 
 - Django test client timings exclude network transfer, actual browser paint
