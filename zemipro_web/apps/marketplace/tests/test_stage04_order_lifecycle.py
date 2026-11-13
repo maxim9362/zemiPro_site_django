@@ -6,7 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase, override_settings
 
-from apps.marketplace.models import Order, OrderStatusEvent, Response
+from apps.marketplace.models import Order, OrderStatusEvent, Response, Subcategory
 from apps.marketplace.order_lifecycle import transition_order_status
 from apps.marketplace.services import accept_response, cancel_order, create_order
 
@@ -20,14 +20,37 @@ class OrderLifecycleTests(TestCase):
         cls.city = make_city('stage04-ashdod')
         cls.other_city = make_city('stage04-haifa')
         cls.category = make_category('stage04-category')
+        cls.service = Subcategory.objects.create(
+            category=cls.category, slug='stage04-service', name_ru='Сервис',
+            work_mode='onsite',
+        )
         cls.owner = make_user('stage04-owner')
         cls.other_user = make_user('stage04-stranger')
         cls.worker = make_user('stage04-worker')
 
     def make_draft(self):
+        # These status-transition tests use an otherwise valid materialized
+        # wizard draft. A raw/incomplete draft may never publish via service.
+        description = 'Synthetic service request for CI permissions checks.'
+        steps = {
+            '1': {'category_id': self.category.pk,
+                  'subcategory_id': self.service.pk},
+            '2': {'version_id': None, 'answers': {}},
+            '3': {'city_id': self.city.pk, 'mode': 'onsite', 'area': ''},
+            '4': {'preferred_date': '', 'urgency': 'normal'},
+            '5': {'price_type': 'negotiable',
+                  'amount_min': '', 'amount_max': ''},
+            '6': {'description': description},
+            '7': {'display_name': '', 'chat_only': True},
+        }
         return make_order(
             client=self.owner, category=self.category,
-            city=self.city, status=Order.Status.DRAFT,
+            subcategory=self.service, city=self.city,
+            status=Order.Status.DRAFT, wizard_token=uuid.uuid4(),
+            wizard_data={'steps': steps}, description=description,
+            price_kind=Order.PriceKind.NEGOTIABLE,
+            work_mode=Order.WorkMode.ONSITE,
+            urgency=Order.Urgency.NORMAL,
         )
 
     def test_declared_states_and_default_published(self):
