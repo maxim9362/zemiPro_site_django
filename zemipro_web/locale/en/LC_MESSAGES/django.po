@@ -1370,3 +1370,36 @@ msgid "Найден %(counter)s специалист"
 msgid_plural "Найдено специалистов: %(counter)s"
 msgstr[0] "Found %(counter)s professional"
 msgstr[1] "Found %(counter)s professionals"
+
+msgid "Все районы"
+msgstr "All neighborhoods"
+
+msgid "Выберите только активные услуги из своих категорий."
+msgstr "Select active services from your categories only."
+
+msgid "Город обслуживания пока не доступен."
+msgstr "This service city is not available yet."
+
+msgid "Не выбирайте районы, если работаете по всему указанному городу. Справочник районов наполняется только подтверждёнными данными."
+msgstr "Leave neighborhoods unselected if you serve the whole city. The neighborhood directory contains only verified entries."
+
+msgid "Район не относится к выбранному городу."
+msgstr "This neighborhood does not belong to the selected city."
+
+msgid "Район обслуживания"
+msgstr "Service neighborhood"
+
+msgid "Районы должны принадлежать обслуживаемым городам."
+msgstr "Neighborhoods must belong to your service cities."
+
+msgid "Районы обслуживания"
+msgstr "Service neighborhoods"
+
+msgid "Районы обслуживания (необязательно)"
+msgstr "Service neighborhoods (optional)"
+
+msgid "Районы обслуживания:"
+msgstr "Service neighborhoods:"
+
+msgid "Требуется вход в аккаунт."
+msgstr "Please sign in."
