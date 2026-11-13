@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .public_text import redact_public_contact, searchable_public_text
+from .public_text import (redact_public_contact, searchable_public_name, searchable_public_text)
 
 
 class User(AbstractUser):
@@ -222,12 +222,12 @@ class WorkerProfile(models.Model):
         """
         updates = kwargs.get('update_fields')
         if updates is None:
-            self.searchable_display_name = searchable_public_text(self.display_name)
+            self.searchable_display_name = searchable_public_name(self.display_name)
             self.searchable_description = searchable_public_text(self.description)
         else:
             updates = set(updates)
             if 'display_name' in updates:
-                self.searchable_display_name = searchable_public_text(self.display_name)
+                self.searchable_display_name = searchable_public_name(self.display_name)
                 updates.add('searchable_display_name')
             if 'description' in updates:
                 self.searchable_description = searchable_public_text(self.description)

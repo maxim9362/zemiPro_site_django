@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.accounts.client_favorites import public_worker_queryset
 from apps.accounts.models import WorkerProfile
-from apps.accounts.public_text import contact_shaped_query
+from apps.accounts.public_text import contact_shaped_query, normalize_public_text
 from apps.locations.models import City, Neighborhood
 from apps.locations.services import get_public_cities, public_city_slug
 from .models import Category, Subcategory
@@ -113,7 +113,7 @@ class WorkerDirectoryForm(forms.Form):
         if contact_shaped_query(query):
             from .directory_ui import directory_copy
             raise forms.ValidationError(directory_copy()['privacy_query'])
-        return query
+        return normalize_public_text(query)
 
     def clean(self):
         data = super().clean()
