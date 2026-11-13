@@ -24,6 +24,7 @@ from apps.marketplace.order_management import (
 )
 from apps.marketplace.questionnaire_examples import DEMO_QUESTIONNAIRES
 from apps.marketplace.questionnaire_services import publish_questionnaire
+from apps.marketplace.wizard_forms import ConfirmStepForm
 
 from .factories import make_user
 
@@ -212,7 +213,10 @@ class OrderManagementTests(TestCase):
         self.assertFalse(changed)
         self.assertEqual(repeated.status, Order.Status.DRAFT)
         from apps.marketplace.wizard_services import publish_order_wizard
-        published, changed = publish_order_wizard(order_id=order.pk, actor=self.owner)
+        published, changed = publish_order_wizard(
+            order_id=order.pk, actor=self.owner,
+            confirmation_form=ConfirmStepForm(data={'confirm': 'on'}),
+        )
         self.assertTrue(changed)
         self.assertEqual(published.status, Order.Status.PUBLISHED)
         self.assertEqual(list(order.status_events.order_by('pk').values_list(
@@ -288,7 +292,10 @@ class OrderManagementTests(TestCase):
         order.wizard_data = updated
         order.save(update_fields=['wizard_data'])
         from apps.marketplace.wizard_services import publish_order_wizard
-        published, _ = publish_order_wizard(order_id=order.pk, actor=self.owner)
+        published, _ = publish_order_wizard(
+            order_id=order.pk, actor=self.owner,
+            confirmation_form=ConfirmStepForm(data={'confirm': 'on'}),
+        )
         self.assertEqual(published.status, Order.Status.PUBLISHED)
         archive = OrderQuestionnaireAnswerArchive.objects.get(order=order)
         self.assertEqual(archive.answers, {'issue': 'pipe', 'urgent': False})

@@ -23,7 +23,7 @@ from apps.marketplace.order_events import (
 )
 from apps.marketplace.order_management import edit_published_order
 from apps.marketplace.services import cancel_order, create_order
-from apps.marketplace.wizard_forms import ServiceStepForm
+from apps.marketplace.wizard_forms import ConfirmStepForm, ServiceStepForm
 from apps.marketplace.wizard_services import (
     publish_order_wizard, start_order_wizard,
 )
@@ -123,11 +123,13 @@ class OrderDomainOutboxTests(TestCase):
         order.save(update_fields=['wizard_data'])
         published, created = publish_order_wizard(
             order_id=order.pk, actor=self.owner,
+            confirmation_form=ConfirmStepForm(data={'confirm': 'on'}),
         )
         self.assertTrue(created)
         self.assertEqual(published.status, Order.Status.PUBLISHED)
         self.assertEqual(publish_order_wizard(
             order_id=order.pk, actor=self.owner,
+            confirmation_form=ConfirmStepForm(data={'confirm': 'on'}),
         )[1], False)
         self.assertCountEqual(
             list(order.domain_events.values_list('kind', flat=True)),
