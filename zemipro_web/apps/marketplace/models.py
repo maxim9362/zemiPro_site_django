@@ -725,6 +725,84 @@ class ResponseRevision(models.Model):
 
 
 
+class OrderAgreementVersion(models.Model):
+    """Immutable negotiated terms; only an accepted decision activates a version."""
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='agreement_versions',
+    )
+    response = models.ForeignKey(
+        Response, on_delete=models.PROTECT, related_name='agreement_versions',
+    )
+    number = models.PositiveIntegerField()
+    response_revision = models.PositiveIntegerField()
+    proposed_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='proposed_agreements',
+    )
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    price_kind = models.CharField(max_length=12, choices=Response.PriceKind.choices)
+    amount_min_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True,
+    )
+    amount_max_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True,
+    )
+    pricing_method = models.CharField(max_length=240, blank=True, default='')
+    estimated_timeline = models.CharField(max_length=160, blank=True, default='')
+    terms = models.TextField(blank=True, default='')
+    note = models.TextField(blank=True, default='')
+    proposed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_agreement_version'
+        ordering = ['number', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'number'], name='agreement_version_number_unique',
+            ),
+            models.UniqueConstraint(
+                fields=['order', 'operation_key'], name='agreement_version_operation_unique',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Agreement versions are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Agreement versions cannot be deleted.')
+
+
+class OrderAgreementDecision(models.Model):
+    """Immutable counterparty consent or rejection of one proposed version."""
+
+    class Result(models.TextChoices):
+        ACCEPTED = 'accepted', 'Принято'
+        REJECTED = 'rejected', 'Отклонено'
+
+    agreement = models.OneToOneField(
+        OrderAgreementVersion, on_delete=models.PROTECT, related_name='decision',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='agreement_decisions',
+    )
+    result = models.CharField(max_length=8, choices=Result.choices)
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    decided_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_agreement_decision'
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Agreement decisions are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Agreement decisions cannot be deleted.')
+
+
 class OrderInvitation(models.Model):
     """One registered specialist may be invited once to an existing order.
 
