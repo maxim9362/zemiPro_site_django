@@ -263,6 +263,15 @@ def workers_serving_city(
         (category is None or category.work_mode in ('onsite', 'both'))
         and (service is None or service.work_mode in ('onsite', 'both'))
     )
+    if category is None:
+        onsite_categories = Category.objects.filter(
+            workers__pk=OuterRef('pk'),
+            is_active=True, work_mode__in=('onsite', 'both'),
+        ).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        )
+        queryset = queryset.alias(_has_onsite_skill=Exists(onsite_categories))
+        onsite &= Q(_has_onsite_skill=True)
     remote_permitted = (
         (category is None or category.work_mode in ('online', 'both'))
         and (service is None or service.work_mode in ('online', 'both'))

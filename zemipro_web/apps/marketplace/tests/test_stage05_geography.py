@@ -217,6 +217,22 @@ class AreaAndServiceModeTests(TestCase):
             self.local_worker.service_neighborhoods.add(self.other_area)
             self.assertIsNotNone(publication_issue(self.local_worker))
 
+    def test_online_only_skill_without_remote_optin_is_not_local(self):
+        online_only = Category.objects.create(
+            slug='geo052-online-only', name_ru='Синтетический удалённый сервис',
+            work_mode='online',
+        )
+        profile = self._worker('geo052-online-nooptin', self.ashdod, remote=False)
+        profile.skills.add(online_only)
+        self.assertNotIn(profile.pk, self.search({}))
+        self.assertNotIn(profile.pk, self.search({'mode': 'onsite'}))
+        self.assertNotIn(profile.pk, self.search({'mode': 'online'}))
+        profile.offers_remote = True
+        profile.save(update_fields=['offers_remote'])
+        self.assertIn(profile.pk, self.search({'mode': 'online'}))
+        self.assertIn(profile.pk, self.search({}))
+        self.assertNotIn(profile.pk, self.search({'mode': 'onsite'}))
+
     def test_neighborhood_aliases_are_not_confused_between_cities(self):
         self.assertEqual(
             Neighborhood.objects.filter(slug='synthetic-area-a').count(), 2,
