@@ -1258,7 +1258,7 @@ def order_work_action_view(request, pk, action):
             )
     except OrderQuotaExceeded as error:
         return _order_quota_response(error)
-    except ValueError as error:
+    except ValueError:
         messages.error(request, offer_copy()['action_error'])
         return redirect('marketplace:order_detail', pk=order.pk)
     if changed:

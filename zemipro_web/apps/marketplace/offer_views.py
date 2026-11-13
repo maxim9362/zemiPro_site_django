@@ -47,7 +47,7 @@ def edit_offer_view(request, pk):
             except OrderQuotaExceeded as exc:
                 from .views import _order_quota_response
                 return _order_quota_response(exc)
-            except ValueError as exc:
+            except ValueError:
                 form.add_error(None, copy['action_error'])
         key = request.POST.get('operation_key') or uuid.uuid4()
     else:
@@ -73,7 +73,7 @@ def offer_action_view(request, pk, action):
     except OrderQuotaExceeded as exc:
         from .views import _order_quota_response
         return _order_quota_response(exc)
-    except ValueError as exc:
+    except ValueError:
         messages.error(request, offer_copy()['action_error'])
     # PermissionDenied propagates as 403; no redirect to private order details.
     return redirect('marketplace:order_detail', pk=response.order_id)
@@ -117,8 +117,8 @@ def agreement_propose_view(request, pk):
             except OrderQuotaExceeded as exc:
                 from .views import _order_quota_response
                 return _order_quota_response(exc)
-            except ValueError as exc:
-                form.add_error(None, str(exc))
+            except ValueError:
+                form.add_error(None, copy['action_error'])
     else:
         form = ResponseCreateForm(initial=initial)
     return render(request, 'pages/offer_form.html', {
@@ -144,8 +144,8 @@ def agreement_decide_view(request, pk, action):
     except OrderQuotaExceeded as exc:
         from .views import _order_quota_response
         return _order_quota_response(exc)
-    except ValueError as exc:
-        messages.error(request, str(exc))
+    except ValueError:
+        messages.error(request, copy['action_error'])
         # Never leak an unowned order ID on failed decisions.
         return redirect('marketplace:client_dashboard')
     return redirect('marketplace:order_detail', pk=decision.agreement.order_id)
