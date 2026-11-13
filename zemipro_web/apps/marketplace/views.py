@@ -27,6 +27,7 @@ from .catalog_seo import catalog_context, complete_collection, complete_content,
 from .directory_search import (
     WorkerDirectoryForm, active_categories, search_worker_profiles,
 )
+from .directory_ranking import ranking_audit_rows
 from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
@@ -108,6 +109,14 @@ def worker_directory_view(request):
     ))
     paginator = Paginator(workers, ITEMS_PER_PAGE)
     page = paginator.get_page(request.GET.get('page'))
+    if form.is_valid():
+        params = form.cleaned_data
+        ranking_audit_rows(
+            page, params=params,
+            city=bool(
+                params['city'] or params['neighborhood'] or public_city_slug()
+            ),
+        )
     # Only verified filter names/values survive links; no arbitrary GET reflection.
     preserved = {}
     if form.is_valid():

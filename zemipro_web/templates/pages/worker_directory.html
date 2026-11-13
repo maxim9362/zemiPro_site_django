@@ -31,6 +31,7 @@
             </div>
             <p class="form__hint">{% trans 'Фильтр цены применяется только к добровольно указанной числовой стартовой цене в шекелях.' %}</p>
             <p class="form__hint">{% trans 'Онлайн означает формат услуги; расстояние в километрах без проверенных координат не рассчитывается.' %}</p>
+            <p class="form__hint">{% trans 'Ранжирование показывает соответствие запросу, а не подтверждённое качество или опыт. Рейтинг основан только на отзывах пользователей.' %}</p>
             <button type="submit" class="btn btn--primary">{% trans 'Найти специалистов' %}</button>
             <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}" class="btn btn--secondary">{% trans 'Сбросить фильтры' %}</a>
         </form>
@@ -59,6 +60,14 @@
                     <p>{% trans 'Заявленная стартовая цена:' %} {{ worker.starting_price_ils }} ₪</p>
                     {% endif %}
                     <p>{% trans 'Доступность:' %} {{ worker.get_availability_display }}</p>
+                    {% if worker.rank_reasons %}
+                    <div aria-label="{% trans 'Причины ранжирования' %}">
+                        <p class="form__hint">{% trans 'Почему этот специалист в результатах:' %}</p>
+                        <ul class="form__hint">
+                            {% for reason in worker.rank_reasons %}<li>{{ reason }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="order-card-sm__actions">
                     <a href="{% url 'marketplace:worker_public_profile' pk=worker.pk %}" class="btn btn--primary btn--sm">{% trans 'Открыть профиль' %}</a>

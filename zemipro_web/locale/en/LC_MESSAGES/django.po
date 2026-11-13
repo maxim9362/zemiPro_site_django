@@ -1403,3 +1403,42 @@ msgstr "Service neighborhoods:"
 
 msgid "Требуется вход в аккаунт."
 msgstr "Please sign in."
+
+msgid "Лучшее совпадение"
+msgstr "Best match"
+
+msgid "Ранжирование показывает соответствие запросу, а не подтверждённое качество или опыт. Рейтинг основан только на отзывах пользователей."
+msgstr "Ranking reflects relevance to your search, not independently verified quality or experience. Ratings use only user reviews."
+
+msgid "Причины ранжирования"
+msgstr "Why this result appears here"
+
+msgid "Почему этот специалист в результатах:"
+msgstr "Why this professional appears in results:"
+
+msgid "Указана выбранная услуга"
+msgstr "Offers the selected service"
+
+msgid "Работает по выбранной категории"
+msgstr "Works in the selected category"
+
+msgid "Совпадение по поисковому запросу"
+msgstr "Matches your search keywords"
+
+msgid "Обслуживает выбранную зону"
+msgstr "Serves the selected area"
+
+msgid "Предлагает подходящую онлайн-услугу"
+msgstr "Offers a suitable online service"
+
+msgid "Принимает заявки по данным анкеты"
+msgstr "Accepts requests (self-reported)"
+
+msgid "Ограниченная доступность по данным анкеты"
+msgstr "Limited availability (self-reported)"
+
+msgid "Указаны дополнительные сведения об услугах"
+msgstr "Provides additional service details"
+
+msgid "Есть отзывы пользователей"
+msgstr "Has user reviews"

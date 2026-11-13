@@ -15,6 +15,7 @@ from apps.accounts.models import WorkerProfile
 from apps.locations.models import City, Neighborhood
 from apps.locations.services import get_public_cities, public_city_slug
 from .models import Category, Subcategory
+from .directory_ranking import add_directory_scores
 from .services import workers_serving_city
 
 
@@ -90,6 +91,7 @@ class WorkerDirectoryForm(forms.Form):
     sort = forms.ChoiceField(
         required=False, label=_('Сортировка'),
         choices=(
+            ('relevance', _('Лучшее совпадение')),
             ('rating', _('Рейтинг (реальные отзывы)')),
             ('price_asc', _('Стартовая цена: по возрастанию')),
             ('price_desc', _('Стартовая цена: по убыванию')),
@@ -232,7 +234,12 @@ def search_worker_profiles(form):
     if params['min_rating'] is not None:
         workers = workers.filter(avg_rating__gte=params['min_rating'])
 
-    sort = params['sort'] or 'rating'
+    sort = params['sort'] or 'relevance'
+    if sort == 'relevance':
+        return add_directory_scores(
+            workers, category=category, service=service, query=query,
+            city=city, neighborhood=neighborhood, mode=params['mode'] or None,
+        ).order_by('-rank_score', '-review_count', 'pk')
     if sort == 'price_asc':
         return workers.order_by(F('starting_price_ils').asc(nulls_last=True), 'pk')
     if sort == 'price_desc':
