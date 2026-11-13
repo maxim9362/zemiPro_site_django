@@ -271,6 +271,27 @@ class ContactPolicyV4Tests(TestCase):
                     'Caption 050:7654321 and @ handlecaption',
                 )
 
+    def test_portfolio_http_upload_and_edit_reject_contact_captions(self):
+        self.client.force_login(self.worker_user)
+        caption = 'Caption tg://resolve?domain=contacthandle and 050:7654321'
+        upload = self.client.post(reverse('accounts:worker_portfolio_add'), {
+            'image': SimpleUploadedFile(
+                'example.png', b'dummy bytes not stored on invalid caption',
+                content_type='image/png',
+            ),
+            'caption': caption, 'sort_order': '1',
+            'is_public': 'on', 'rights_confirmed': 'on',
+        })
+        self.assertEqual(upload.status_code, 400)
+        self.assertEqual(WorkerPortfolioPhoto.objects.filter(worker=self.worker).count(), 1)
+        edit = self.client.post(
+            reverse('accounts:worker_portfolio_edit', args=[self.photo.pk]),
+            {'caption': caption, 'sort_order': '1', 'is_public': 'on'},
+        )
+        self.assertEqual(edit.status_code, 400)
+        self.photo.refresh_from_db()
+        self.assertEqual(self.photo.caption, 'Caption 050:7654321 and @ handlecaption')
+
     def test_0018_forward_data_migration_scrubs_legacy_index(self):
         originals = (self.worker.pk, self.worker.user_id, self.order.pk,
                      self.worker.display_name, self.worker.description)
