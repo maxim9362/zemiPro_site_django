@@ -463,7 +463,9 @@ def accept_response(response, *, actor):
         if (not selected.worker.is_active or selected.worker.is_blocked
                 or selected.worker.email_verification_required):
             raise ValueError('Исполнитель недоступен.')
-        profile = WorkerProfile.objects.filter(
+        # Serialize profile publication changes with selection; the join
+        # above already locks the current worker user along with Response.
+        profile = WorkerProfile.objects.select_for_update().filter(
             user_id=selected.worker_id, is_published=True,
         ).first()
         if profile is None or not worker_matches_order(profile.pk, order):

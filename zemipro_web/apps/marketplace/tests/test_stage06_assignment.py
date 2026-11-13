@@ -56,6 +56,16 @@ class Stage06AssignmentTests(TestCase):
         self.assertIsNone(self.order.worker_id)
         self.assertEqual(self.order.status, Order.Status.PUBLISHED)
 
+    def test_unpublished_worker_cannot_be_selected(self):
+        from apps.accounts.models import WorkerProfile
+        profile = WorkerProfile.objects.get(user=self.workers[0])
+        profile.is_published = False
+        profile.save(update_fields=['is_published'])
+        with self.assertRaises(ValueError):
+            accept_response(self.responses[0], actor=self.client_user)
+        self.order.refresh_from_db()
+        self.assertIsNone(self.order.worker_id)
+
     def test_foreign_client_cannot_assign(self):
         with self.assertRaises(PermissionDenied):
             accept_response(self.responses[0], actor=self.other)
