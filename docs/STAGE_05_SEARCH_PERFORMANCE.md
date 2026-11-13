@@ -115,6 +115,32 @@ production latency guarantees. SQL EXPLAIN still indicates an index scan
 somewhere in the query plan, not proof of a specific chosen worker index.
 Independent security re-review is REQUIRED before merge.
 
+## Contact-policy v4 remediation baseline (isolated CI only)
+
+ZP-05-005 HIGH required a further forward-only contact-free search
+rebuild (accounts.0018). v4 uses Unicode punctuation and IDN/URI filtering
+plus phone-digit count. Earlier numbers remain historical; they are not
+claimed to measure v4. The working-hours exception is scoped to that
+field only; searchable text remains strictly contact-free.
+
+Actual code SHA `6107e85d72441d91226ef565d01c494e2b76640b`;
+[GitHub Actions #43431571624](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43431571624)
+SUCCESS (433/433 Django, PostgreSQL 17, Ruff, 90 Chrome cases).
+Same isolated 300 synthetic published profiles, 10-per-page and three
+sequential post-warm-up measurements per scenario:
+
+| Scenario | SQL queries | p50 (ms) | Matches |
+|---|---:|---:|---:|
+| Unfiltered | 10 | 104.57 | 300 |
+| Complex filters | 14 | 92.34 | 126 |
+| Keyword + rating sort | 10 | 77.57 | 300 |
+| Empty | 8 | 93.09 | 0 |
+| Invalid filters | 5 | 22.31 | 0 |
+
+EXPLAIN root: `Sort (cost=626.95..626.96 rows=1 width=4714)`; one
+index scan present, not a guarantee of a specific worker index.
+These figures are GitHub-runner measurements, not performance SLOs.
+
 ## Known limits and interpretation
 
 - Django test client timings exclude network transfer, actual browser paint
