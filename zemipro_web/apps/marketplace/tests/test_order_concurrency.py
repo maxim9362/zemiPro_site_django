@@ -8,6 +8,7 @@ from apps.accounts.models import User
 from apps.locations.models import City
 from apps.marketplace.models import Category, Order, Response
 from apps.marketplace.services import accept_response
+from apps.marketplace.tests.factories import make_worker_profile
 
 
 class ConcurrentResponseAcceptanceTests(TransactionTestCase):
@@ -28,6 +29,8 @@ class ConcurrentResponseAcceptanceTests(TransactionTestCase):
             address='Concurrent test address',
             description='Concurrent selection test order description.',
         )
+        make_worker_profile(self.worker_one, city=self.city, category=self.category)
+        make_worker_profile(self.worker_two, city=self.city, category=self.category)
         self.response_one = Response.objects.create(
             order=self.order, worker=self.worker_one
         )
@@ -64,7 +67,7 @@ class ConcurrentResponseAcceptanceTests(TransactionTestCase):
         self.assertEqual([result[0] for result in results].count('accepted'), 1)
         self.assertEqual([result[0] for result in results].count('rejected'), 1)
         self.assertIn(self.order.worker_id, [self.worker_one.pk, self.worker_two.pk])
-        self.assertEqual(self.order.status, Order.Status.IN_PROGRESS)
+        self.assertEqual(self.order.status, Order.Status.ASSIGNED)
         self.assertEqual(
             [self.response_one.status, self.response_two.status].count(
                 Response.Status.ACCEPTED

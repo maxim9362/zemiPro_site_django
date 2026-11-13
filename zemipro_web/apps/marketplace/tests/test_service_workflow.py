@@ -53,10 +53,12 @@ class ServiceWorkflowTests(TestCase):
         accepted = accept_response(response, actor=self.owner)
         order.refresh_from_db()
         accepted.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.IN_PROGRESS)
+        self.assertEqual(order.status, Order.Status.ASSIGNED)
         self.assertEqual(order.worker_id, self.worker.pk)
         self.assertEqual(accepted.status, Response.Status.ACCEPTED)
 
+        from apps.marketplace.order_lifecycle import transition_order_status
+        transition_order_status(order, Order.Status.IN_PROGRESS, actor=self.owner)
         complete_order(order, actor=self.owner)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.COMPLETED)

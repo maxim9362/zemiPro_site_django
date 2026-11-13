@@ -1095,12 +1095,8 @@ def order_accept_response_view(request, order_id, response_id):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=order_id, client=request.user, status=Order.Status.PUBLISHED)
+    order = get_object_or_404(Order, pk=order_id, client=request.user)
     response = get_object_or_404(Response, pk=response_id, order=order)
-
-    rejected_workers = list(
-        Response.objects.filter(order=order).exclude(pk=response.pk).values_list('worker_id', flat=True)
-    )
 
     try:
         response = accept_response(response, actor=request.user)
@@ -1110,28 +1106,26 @@ def order_accept_response_view(request, order_id, response_id):
         messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
 
-    create_notification(
-        recipient=response.worker,
-        title='Вас выбрали',
-        message=f'Клиент выбрал вас исполнителем по заявке №{order.pk}.',
-        notification_type='response_accepted',
-        related_order=order,
-        related_response=response,
-    )
-
-    from apps.accounts.models import User
-    for worker_id in rejected_workers:
-        try:
-            worker_user = User.objects.get(pk=worker_id)
-            create_notification(
-                recipient=worker_user,
-                title='Выбран другой мастер',
-                message=f'По заявке №{order.pk} клиент выбрал другого мастера.',
-                notification_type='response_rejected',
-                related_order=order,
-            )
-        except User.DoesNotExist:
-            continue
+    if getattr(response, '_assignment_created', False):
+        create_notification(
+            recipient=response.worker,
+            title='Вас выбрали',
+            message=f'Клиент выбрал вас исполнителем по заявке №{order.pk}.',
+            notification_type='response_accepted',
+            related_order=order,
+            related_response=response,
+        )
+        from apps.accounts.models import User
+        for worker_id in response._rejected_worker_ids:
+            worker_user = User.objects.filter(pk=worker_id).first()
+            if worker_user:
+                create_notification(
+                    recipient=worker_user,
+                    title='Выбран другой мастер',
+                    message=f'По заявке №{order.pk} клиент выбрал другого мастера.',
+                    notification_type='response_rejected',
+                    related_order=order,
+                )
 
     messages.success(request, _('Мастер %(worker)s выбран!') % {'worker': response.worker})
     return redirect('marketplace:order_detail', pk=order.pk)

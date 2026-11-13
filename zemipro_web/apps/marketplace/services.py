@@ -419,8 +419,14 @@ def create_response(order, worker_user, message='', *, offer_data=None, operatio
 
 
 def accept_response(response, *, actor):
-    """Accept one response only when the persisted order owner requested it."""
+    """Atomically select exactly one eligible offer; work starts separately.
+
+    Locks Order before any Response; concurrent selections never both win.
+    A replay of the already selected offer is a no-op with no notifications.
+    """
     from django.core.exceptions import PermissionDenied
+    from .offer_services import ACTIVE_STATUSES, record_response_revision
+    from .invitation_services import worker_matches_order
 
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=response.order_id)
@@ -433,41 +439,63 @@ def accept_response(response, *, actor):
             ).exists()
         ):
             raise PermissionDenied('Нет права назначать исполнителя.')
-        if order.status != Order.Status.PUBLISHED:
+
+        if (order.worker_id == response.worker_id
+                and order.status in (Order.Status.ASSIGNED, Order.Status.IN_PROGRESS,
+                                     Order.Status.COMPLETED, Order.Status.DISPUTED)
+                and Response.objects.filter(
+                    pk=response.pk, order=order,
+                    status=Response.Status.ACCEPTED,
+                ).exists()):
+            selected = Response.objects.get(pk=response.pk)
+            selected._assignment_created = False
+            selected._rejected_worker_ids = ()
+            return selected
+
+        if (order.worker_id is not None
+                or order.status not in (Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION)):
             raise ValueError('Исполнитель для этой заявки уже выбран.')
-
-        locked_response = Response.objects.select_for_update().select_related(
-            'worker'
-        ).get(pk=response.pk, order=order)
-        if locked_response.status != Response.Status.PENDING:
-            raise ValueError('Этот отклик уже обработан.')
-        if (not locked_response.worker.is_active or locked_response.worker.is_blocked
-                or locked_response.worker.email_verification_required):
+        selected = Response.objects.select_for_update().select_related('worker').get(
+            pk=response.pk, order=order,
+        )
+        if selected.status not in ACTIVE_STATUSES:
+            raise ValueError('Это предложение уже недоступно.')
+        if (not selected.worker.is_active or selected.worker.is_blocked
+                or selected.worker.email_verification_required):
             raise ValueError('Исполнитель недоступен.')
+        profile = WorkerProfile.objects.filter(
+            user_id=selected.worker_id, is_published=True,
+        ).first()
+        if profile is None or not worker_matches_order(profile.pk, order):
+            raise ValueError('Анкета или услуга исполнителя больше недоступна.')
 
-        locked_response.status = Response.Status.ACCEPTED
-        locked_response.save(update_fields=['status', 'updated_at'])
+        selected.status = Response.Status.ACCEPTED
+        selected.revision += 1
+        selected.save(update_fields=['status', 'revision', 'updated_at'])
+        record_response_revision(selected, actor=actor, action='accepted')
 
-        Response.objects.filter(
-            order=order
-        ).exclude(
-            pk=locked_response.pk
-        ).update(status=Response.Status.REJECTED)
+        rejected_ids = []
+        other_offers = Response.objects.select_for_update().filter(
+            order=order, status__in=ACTIVE_STATUSES,
+        ).exclude(pk=selected.pk).order_by('pk')
+        for other in other_offers:
+            rejected_ids.append(other.worker_id)
+            other.status = Response.Status.REJECTED
+            other.revision += 1
+            other.save(update_fields=['status', 'revision', 'updated_at'])
+            record_response_revision(other, actor=actor, action='rejected')
 
-        order.worker = locked_response.worker
+        order.worker_id = selected.worker_id
         order.save(update_fields=['worker', 'updated_at'])
-        # Preserve current UX: selection immediately starts work, but
-        # record two distinct domain transitions under the same row lock.
-        transition_order_status(
+        # Assignment is not work-start; both are independent audited actions.
+        order = transition_order_status(
             order.pk, Order.Status.ASSIGNED, actor=actor,
             reason=OrderStatusEvent.Reason.WORKER_ASSIGNED,
         )
-        transition_order_status(
-            order.pk, Order.Status.IN_PROGRESS, actor=actor,
-            reason=OrderStatusEvent.Reason.WORK_STARTED,
-        )
-        locked_response.order = order
-    return locked_response
+        selected.order = order
+        selected._assignment_created = True
+        selected._rejected_worker_ids = tuple(rejected_ids)
+        return selected
 
 
 def complete_order(order, *, actor):
