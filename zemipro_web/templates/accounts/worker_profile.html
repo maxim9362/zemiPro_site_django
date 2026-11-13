@@ -87,6 +87,13 @@
             </div>
 
             <div class="form__group">
+                <label class="form__label">{% trans 'Районы обслуживания' %}</label>
+                <p class="form__hint">{% trans 'Не выбирайте районы, если работаете по всему указанному городу. Справочник районов наполняется только подтверждёнными данными.' %}</p>
+                <div class="checkbox-grid">{{ form.service_neighborhoods }}</div>
+                {{ form.service_neighborhoods.errors }}
+            </div>
+
+            <div class="form__group">
                 <label class="form__label">
                     {{ form.offers_remote }}
                     {% trans 'Выполняю услуги онлайн' %}
@@ -111,6 +118,13 @@
             </div>
 
             <div class="form__group">
+                <label class="form__label">{% trans 'Конкретные услуги, которые вы выполняете' %}</label>
+                <p class="form__hint">{% trans 'Выбирайте только услуги из отмеченных категорий. Поиск по конкретной услуге показывает только тех, кто её указал.' %}</p>
+                <div class="checkbox-grid">{{ form.services }}</div>
+                {{ form.services.errors }}
+            </div>
+
+            <div class="form__group">
                 <label class="form__label">{% trans 'Языки общения' %}</label>
                 <div class="checkbox-grid">{{ form.spoken_languages }}</div>
                 {{ form.spoken_languages.errors }}
@@ -118,6 +132,9 @@
             <div class="form__group">
                 <label for="id_pricing_details" class="form__label">{% trans 'Цены или принцип расчёта' %}</label>
                 {{ form.pricing_details }}{{ form.pricing_details.errors }}
+                <label for="id_starting_price_ils" class="form__label">{% trans 'Заявленная стартовая цена (₪, необязательно)' %}</label>
+                {{ form.starting_price_ils }}{{ form.starting_price_ils.errors }}
+                <p class="form__hint">{% trans 'Число используется только для фильтра стартовой цены. Из текстового описания сумма не извлекается.' %}</p>
             </div>
             <div class="form__row">
                 <div class="form__group">

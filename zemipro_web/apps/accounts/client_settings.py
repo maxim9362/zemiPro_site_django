@@ -60,9 +60,15 @@ def save_client_settings(user, cleaned):
     profile.receive_optional_updates = bool(
         cleaned.get('receive_optional_updates', False)
     )
+    was_tracking = profile.track_worker_views
+    profile.track_worker_views = bool(cleaned.get('track_worker_views', False))
     profile.save(update_fields=[
-        'city', 'contact', 'receive_optional_updates', 'updated_at',
+        'city', 'contact', 'receive_optional_updates',
+        'track_worker_views', 'updated_at',
     ])
+    if was_tracking and not profile.track_worker_views:
+        from .models import WorkerProfileView
+        WorkerProfileView.objects.filter(client=owner).delete()
     # Do not mutate worker profile, legacy role, orders or private addresses.
     user.first_name = owner.first_name
     user.last_name = owner.last_name

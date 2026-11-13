@@ -14,7 +14,10 @@ class TelegramIdentifierRemovalSafetyTests(TransactionTestCase):
         previous = ('accounts', '0009_worker_portfolio')
         telegram_removal = ('accounts', '0010_remove_legacy_telegram_id')
         latest = ('accounts', '0011_user_email_verification_required')
+        # Capture every leaf, including later migrations added in new stages.
+        # Historical test must not leave the test DB at the old 0011 schema.
         executor = MigrationExecutor(connection)
+        current_leaves = executor.loader.graph.leaf_nodes()
         executor.migrate([previous])
         historical_user = executor.loader.project_state([previous]).apps.get_model(
             'accounts', 'User',
@@ -55,19 +58,16 @@ class TelegramIdentifierRemovalSafetyTests(TransactionTestCase):
                 pk=synthetic_pk,
             ).exists())
         finally:
-            # Restore the latest schema if a preceding assertion failed.
+            # The explicit historical check stops at 0011, but later schema
+            # additions must be restored before ANY other TransactionTestCase.
             with connection.cursor() as cursor:
                 columns = connection.introspection.get_table_description(
                     cursor, 'accounts_user',
                 )
-                if 'telegram_id' in {column.name for column in columns}:
-                    if synthetic_pk is not None:
-                        cursor.execute(
-                            'UPDATE accounts_user SET telegram_id = NULL WHERE id = %s',
-                            [synthetic_pk],
-                        )
-                    MigrationExecutor(connection).migrate([latest])
-                elif 'email_verification_required' not in {
-                    column.name for column in columns
-                }:
-                    MigrationExecutor(connection).migrate([latest])
+                if ('telegram_id' in {column.name for column in columns}
+                        and synthetic_pk is not None):
+                    cursor.execute(
+                        'UPDATE accounts_user SET telegram_id = NULL WHERE id = %s',
+                        [synthetic_pk],
+                    )
+            MigrationExecutor(connection).migrate(current_leaves)

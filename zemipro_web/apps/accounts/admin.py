@@ -75,7 +75,7 @@ class WorkerProfileAdmin(admin.ModelAdmin):
     )
     list_filter = ('city', 'provider_type', 'is_published', 'offers_remote',
                    'is_verified', 'receive_notifications')
-    readonly_fields = ('is_published', 'published_at')
+    readonly_fields = ('is_published', 'published_at', 'public_content_safe')
     search_fields = ('user__username', 'user__email', 'contact', 'description')
     raw_id_fields = ('user', 'city')
     filter_horizontal = ('skills', 'service_cities')

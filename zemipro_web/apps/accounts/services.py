@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from apps.locations.services import city_is_public, get_public_cities
+from apps.marketplace.models import Subcategory
 
 from .models import User, ClientProfile, WorkerProfile
 
@@ -19,6 +20,11 @@ def _validate_public_profile_cities(form_data):
         not city_is_public(item) for item in service_cities
     ):
         raise ValueError('Город обслуживания пока не доступен.')
+    neighborhoods = form_data.get('service_neighborhoods')
+    if neighborhoods is not None and any(
+        not item.is_active or not city_is_public(item.city) for item in neighborhoods
+    ):
+        raise ValueError('Район обслуживания пока не доступен.')
 
 
 def create_client_profile(user, city=None, contact=''):
@@ -73,12 +79,28 @@ def _locked_worker_owner(user):
 
 
 def publication_issue(profile):
+
     """Shared publication criteria; reused after editing a published profile."""
     if (not profile.user.is_active or profile.user.is_blocked
             or profile.user.email_verification_required):
         return _('Аккаунт недоступен.')
     if not profile.display_name.strip():
         return _('Укажите публичное имя или название компании.')
+    from .public_text import build_profile_snapshot
+    from apps.marketplace.directory_ui import directory_copy
+    if build_profile_snapshot(
+        display_name=profile.display_name,
+        description=profile.description,
+        pricing_details=profile.pricing_details,
+        working_hours=profile.working_hours,
+        private_values=(profile.contact, profile.user.email, profile.user.phone),
+    ) is None:
+        if (
+            '@' in profile.display_name
+            or profile.display_name != profile.public_display_name
+        ):
+            return directory_copy()['privacy_name']
+        return directory_copy()['privacy_text']
     if not profile.city_id or not city_is_public(profile.city):
         return _('Выберите обслуживаемый город.')
     if len(profile.description.strip()) < 20:
@@ -96,6 +118,14 @@ def publication_issue(profile):
         return _('Укажите доступность.')
     if profile.service_cities.exclude(pk__in=get_public_cities()).exists():
         return _('Город обслуживания пока не доступен.')
+    covered = set(profile.service_cities.values_list('pk', flat=True))
+    if not covered:
+        covered = {profile.city_id}
+    if profile.service_neighborhoods.exclude(
+        is_active=True, city_id__in=covered,
+        city__in=get_public_cities(),
+    ).exists():
+        return _('Районы должны принадлежать обслуживаемым городам.')
     skills = profile.skills.filter(is_active=True).filter(
         Q(section__isnull=True) | Q(section__is_active=True)
     )
@@ -114,7 +144,8 @@ def create_or_update_worker_profile(user, form_data):
     profile, _ = WorkerProfile.objects.select_for_update().get_or_create(user=owner)
     fields = (
         'provider_type', 'display_name', 'city', 'contact', 'description',
-        'pricing_details', 'spoken_languages', 'availability', 'working_hours',
+        'pricing_details', 'starting_price_ils', 'spoken_languages',
+        'availability', 'working_hours',
         'receive_notifications',
     )
     for name in fields:
@@ -128,6 +159,41 @@ def create_or_update_worker_profile(user, form_data):
         profile.skills.set(form_data['skills'])
     if 'service_cities' in form_data:
         profile.service_cities.set(form_data['service_cities'])
+    valid_zone_ids = set(profile.service_cities.values_list('pk', flat=True))
+    if not valid_zone_ids:
+        valid_zone_ids = {profile.city_id}
+    if 'service_neighborhoods' in form_data:
+        selected_neighborhoods = list(form_data['service_neighborhoods'])
+        if any(
+            not area.is_active or not city_is_public(area.city)
+            or area.city_id not in valid_zone_ids
+            for area in selected_neighborhoods
+        ):
+            raise ValueError(_('Районы должны принадлежать обслуживаемым городам.'))
+        profile.service_neighborhoods.set(selected_neighborhoods)
+    elif 'service_cities' in form_data or 'city' in form_data:
+        profile.service_neighborhoods.remove(
+            *profile.service_neighborhoods.exclude(
+                city_id__in=valid_zone_ids,
+            ).values_list('pk', flat=True)
+        )
+    if 'services' in form_data:
+        selected = list(form_data['services'])
+        selected_ids = {item.pk for item in selected}
+        valid_ids = set(Subcategory.objects.filter(
+            pk__in=selected_ids, is_active=True, category__is_active=True,
+            category__in=profile.skills.all(),
+        ).filter(
+            Q(category__section__isnull=True) | Q(category__section__is_active=True)
+        ).values_list('pk', flat=True))
+        if selected_ids != valid_ids:
+            raise ValueError(_('Выберите только активные услуги из своих категорий.'))
+        profile.services.set(selected_ids)
+    elif 'skills' in form_data:
+        # Legacy callers cannot retain an incompatible concrete service.
+        profile.services.remove(*profile.services.exclude(
+            category__in=profile.skills.all()
+        ).values_list('pk', flat=True))
     if profile.is_published and publication_issue(profile):
         profile.is_published = False
         profile.published_at = None
@@ -149,13 +215,20 @@ def set_worker_publication(user, publish):
         error = publication_issue(profile)
         if error:
             raise ValueError(error)
+        profile._refresh_public_snapshot()
         profile.is_published = True
         if not profile.published_at:
             profile.published_at = timezone.now()
     else:
         profile.is_published = False
         profile.published_at = None
-    profile.save(update_fields=['is_published', 'published_at', 'updated_at'])
+    profile.save(update_fields=[
+        'is_published', 'published_at',
+        'public_display_name_snapshot', 'public_description_snapshot',
+        'public_pricing_details_snapshot', 'public_working_hours_snapshot',
+        'searchable_display_name', 'searchable_description',
+        'public_content_safe', 'public_content_policy_version', 'updated_at',
+    ])
     return profile
 
 

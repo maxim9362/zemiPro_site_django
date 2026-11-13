@@ -18,6 +18,7 @@
             <a href="{% url 'marketplace:home' %}" class="logo">ZemiPro</a>
             <nav class="nav">
                 <a href="{% if catalog_localized %}{% url 'catalog_i18n:categories_list' %}{% else %}{% url 'marketplace:categories_list' %}{% endif %}">{% trans 'Категории' %}</a>
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}">{% trans 'Специалисты' %}</a>
                 <a href="{% if catalog_localized %}{% url 'catalog_i18n:cities_list' %}{% else %}{% url 'marketplace:cities_list' %}{% endif %}">{% trans 'Города' %}</a>
                 <a href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
                 {% if user.is_authenticated %}
@@ -53,7 +54,7 @@
             <form method="post" action="{% url 'set_language' %}" class="language-switcher"
                   aria-label="{% trans 'Язык сайта' %}">
                 {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="next" value="{% if language_switch_next %}{{ language_switch_next }}{% else %}{{ request.get_full_path }}{% endif %}">
                 <label class="sr-only" for="language-choice">{% trans 'Язык сайта' %}</label>
                 <select id="language-choice" name="language" onchange="this.form.submit()">
                     <option value="ru" {% if current_language == 'ru' %}selected{% endif %}>Русский</option>

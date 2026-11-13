@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n public_text %}
 
 {% block title %}{{ city.localized_name }} — ZemiPro{% endblock %}
 {% block meta_description %}{% trans 'Поиск специалистов в городе' %} {{ city.localized_name }}.{% endblock %}
@@ -33,13 +33,13 @@
             {% for wp in page_obj %}
             <div class="order-card-sm">
                 <div class="order-card-sm__header">
-                    <span class="order-card__category">{{ wp.display_name }}</span>
+                    <span class="order-card__category">{{ wp.public_display_name }}</span>
                     {% if wp.avg_rating %}
                     <span style="font-size: 0.875rem;">★ {{ wp.avg_rating|floatformat:1 }} ({{ wp.review_count }})</span>
                     {% endif %}
                 </div>
                 <div class="order-card-sm__body">
-                    <p class="order-card-sm__desc">{{ wp.description|truncatewords:20 }}</p>
+                    <p class="order-card-sm__desc">{{ wp.public_description|truncatewords:20 }}</p>
                     <p>
                         {% for skill in wp.skills.all %}
                         <span class="tag">{{ skill.emoji }} {{ skill.localized_name }}</span>

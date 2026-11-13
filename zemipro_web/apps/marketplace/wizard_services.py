@@ -84,7 +84,7 @@ def wizard_max_step(order):
     return _next_step(order.wizard_data.get('steps', {}))
 
 
-def start_order_wizard(*, actor, form, token):
+def start_order_wizard(*, actor, form, token, invite_worker_id=None):
     """Create a single owner-bound draft, even across repeated/racing submissions."""
     ensure_wizard_owner(actor)
     if not form.is_valid():
@@ -94,10 +94,20 @@ def start_order_wizard(*, actor, form, token):
     except (ValueError, TypeError, AttributeError) as exc:
         raise ValueError('Invalid wizard token.') from exc
 
+    if invite_worker_id is not None:
+        from apps.accounts.client_favorites import public_worker_queryset
+        requested_worker = public_worker_queryset().filter(
+            pk=invite_worker_id, skills=form.cleaned_data['category'],
+            services=form.cleaned_data['subcategory'],
+        ).exclude(user_id=actor.pk).first()
+        if requested_worker is None:
+            raise ValueError('Selected specialist does not offer this service.')
     with transaction.atomic():
         existing = Order.objects.select_for_update().filter(wizard_token=key).first()
         if existing is not None:
-            if existing.client_id != actor.pk:
+            if existing.client_id != actor.pk or (
+                (existing.wizard_data or {}).get('invite_worker_id') != invite_worker_id
+            ):
                 raise PermissionDenied(wizard_copy()['not_eligible'])
             return existing
         city = get_public_cities().order_by('pk').first()
@@ -115,7 +125,11 @@ def start_order_wizard(*, actor, form, token):
                     subcategory_id=values['subcategory_id'],
                     city=city, address='', description='',
                     status=Order.Status.DRAFT, wizard_token=key,
-                    wizard_data={'steps': {'1': values}},
+                    wizard_data={
+                        'steps': {'1': values},
+                        **({'invite_worker_id': invite_worker_id}
+                           if invite_worker_id is not None else {}),
+                    },
                 )
                 source = OrderStatusEvent.objects.create(
                     order=order, actor_id=actor.pk, previous_status='',
@@ -125,7 +139,9 @@ def start_order_wizard(*, actor, form, token):
                 emit_order_event(order, 'order_created', source.operation_key)
         except IntegrityError:
             existing = Order.objects.select_for_update().get(wizard_token=key)
-            if existing.client_id != actor.pk:
+            if existing.client_id != actor.pk or (
+                (existing.wizard_data or {}).get('invite_worker_id') != invite_worker_id
+            ):
                 raise PermissionDenied(wizard_copy()['not_eligible']) from None
             return existing
         return order

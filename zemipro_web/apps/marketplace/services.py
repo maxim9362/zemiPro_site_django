@@ -3,7 +3,7 @@ from django.db.models import Case, Exists, IntegerField, OuterRef, Q, Value, Whe
 
 from apps.accounts.models import User, WorkerProfile
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
-from .models import Category, Order, OrderStatusEvent, Response
+from .models import Category, Subcategory, Order, OrderStatusEvent, Response
 from .order_lifecycle import transition_order_status
 from .order_quota import consume_order_quota
 from .order_events import emit_order_event
@@ -185,42 +185,120 @@ def create_order(
 
 
 
-def workers_serving_city(queryset, city, *, category=None):
-    """Apply explicit zones, home city fallback, and online opt-in.
+def workers_serving_city(
+    queryset, city, *, category=None, service=None, mode=None, neighborhood=None,
+):
+    """Filter public coverage by stable IDs, service mode and city/neighborhood.
 
-    EXISTS subqueries prevent duplicate workers; no out-of-pilot geography is
-    exposed even by a crafted category/city query or remote-service flag.
+    An empty neighborhood selection means the worker serves the entire selected
+    city; selecting neighborhoods narrows onsite coverage for that city.
+    Remote delivery ignores onsite zones only for explicitly remote-eligible
+    services and worker opt-in. Ashdod-only remains a hard server-side gate.
     """
-    if not city_is_public(city):
+    if not city_is_public(city) or mode not in (None, 'onsite', 'online'):
         return queryset.none()
+    if neighborhood is not None and (
+        not neighborhood.is_active or neighborhood.city_id != city.pk
+    ):
+        return queryset.none()
+    if service is not None:
+        if (not service.is_active or not service.category.is_active
+                or (service.category.section_id is not None
+                    and not service.category.section.is_active)
+                or (category is not None and service.category_id != category.pk)):
+            return queryset.none()
+        category = service.category
+        declared_service = Subcategory.objects.filter(
+            pk=service.pk, workers__pk=OuterRef('pk'),
+        )
+        queryset = queryset.alias(
+            _declares_requested_service=Exists(declared_service),
+        ).filter(_declares_requested_service=True)
+    if category is not None:
+        if not Category.objects.filter(
+            pk=category.pk, is_active=True,
+        ).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        ).exists():
+            return queryset.none()
+        # Callers may not omit category membership, even with a forged ID.
+        declared_category = Category.objects.filter(
+            pk=category.pk, workers__pk=OuterRef('pk'),
+        )
+        queryset = queryset.alias(
+            _declares_requested_category=Exists(declared_category),
+        ).filter(_declares_requested_category=True)
+
     if public_city_slug():
-        # Remote work is a delivery mode, not a way to publish a historical
-        # profile whose home city is outside the owner-approved pilot.
+        # Until the owner expands the pilot, a remote-capable non-Ashdod
+        # profile must NOT be promoted into public search by its mode.
         queryset = queryset.filter(city=city)
+
     through = WorkerProfile.service_cities.through
     zones = through.objects.filter(workerprofile_id=OuterRef('pk'))
-    serving = zones.filter(city_id=city.pk)
     queryset = queryset.alias(
         _has_explicit_zones=Exists(zones),
-        _serves_selected_city=Exists(serving),
+        _serves_selected_city=Exists(zones.filter(city_id=city.pk)),
     )
-    allowed = (
+    onsite = (
         Q(_serves_selected_city=True)
         | Q(_has_explicit_zones=False, city_id=city.pk)
     )
-    if category is not None:
-        if category.work_mode in ('online', 'both'):
-            allowed |= Q(offers_remote=True)
-    else:
-        online_categories = Category.objects.filter(
-            workers__pk=OuterRef('pk'), is_active=True,
-            work_mode__in=('online', 'both'),
-        ).filter(Q(section__isnull=True) | Q(section__is_active=True))
-        queryset = queryset.alias(
-            _has_remote_skill=Exists(online_categories)
+    if neighborhood is not None:
+        neighborhood_through = WorkerProfile.service_neighborhoods.through
+        areas_for_city = neighborhood_through.objects.filter(
+            workerprofile_id=OuterRef('pk'), neighborhood__city_id=city.pk,
         )
-        allowed |= Q(offers_remote=True, _has_remote_skill=True)
-    return queryset.filter(allowed)
+        queryset = queryset.alias(
+            _has_area_limit=Exists(areas_for_city),
+            _covers_neighborhood=Exists(areas_for_city.filter(
+                neighborhood_id=neighborhood.pk,
+            )),
+        )
+        onsite &= (
+            Q(_has_area_limit=False) | Q(_covers_neighborhood=True)
+        )
+
+    onsite_permitted = (
+        (category is None or category.work_mode in ('onsite', 'both'))
+        and (service is None or service.work_mode in ('onsite', 'both'))
+    )
+    if category is None:
+        onsite_categories = Category.objects.filter(
+            workers__pk=OuterRef('pk'),
+            is_active=True, work_mode__in=('onsite', 'both'),
+        ).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        )
+        queryset = queryset.alias(_has_onsite_skill=Exists(onsite_categories))
+        onsite &= Q(_has_onsite_skill=True)
+    remote_permitted = (
+        (category is None or category.work_mode in ('online', 'both'))
+        and (service is None or service.work_mode in ('online', 'both'))
+    )
+    if category is None and remote_permitted:
+        remote_categories = Category.objects.filter(
+            workers__pk=OuterRef('pk'),
+            is_active=True, work_mode__in=('online', 'both'),
+        ).filter(
+            Q(section__isnull=True) | Q(section__is_active=True)
+        )
+        queryset = queryset.alias(_remote_skill=Exists(remote_categories))
+        remote = Q(offers_remote=True, _remote_skill=True)
+    else:
+        remote = Q(offers_remote=True)
+
+    if mode == 'onsite':
+        return queryset.filter(onsite) if onsite_permitted else queryset.none()
+    if mode == 'online':
+        return queryset.filter(remote) if remote_permitted else queryset.none()
+    if onsite_permitted and remote_permitted:
+        return queryset.filter(onsite | remote)
+    if onsite_permitted:
+        return queryset.filter(onsite)
+    if remote_permitted:
+        return queryset.filter(remote)
+    return queryset.none()
 
 
 def get_available_orders_for_worker(worker_profile):
@@ -243,15 +321,35 @@ def get_available_orders_for_worker(worker_profile):
         status=Order.Status.PUBLISHED, category__in=skills,
         city__in=get_public_cities(),
     ).exclude(client_id=worker_profile.user_id)
+    declared_services = worker_profile.services.filter(
+        is_active=True, category__is_active=True,
+    )
+    base_qs = base_qs.filter(
+        Q(subcategory__isnull=True) | Q(subcategory__in=declared_services),
+    )
 
     # A worker without an explicit area inherits only the historical home city;
     # no default nationwide visibility for new or legacy profiles.
     zones = worker_profile.service_cities.filter(is_active=True)
-    zone_filter = Q(city__in=zones)
+    onsite_zone = Q(city__in=zones)
     if not worker_profile.service_cities.exists() and worker_profile.city_id:
-        zone_filter = Q(city_id=worker_profile.city_id)
+        onsite_zone = Q(city_id=worker_profile.city_id)
+    onsite_order = (
+        Q(work_mode=Order.WorkMode.ONSITE)
+        | Q(
+            work_mode=Order.WorkMode.LEGACY,
+            category__work_mode__in=('onsite', 'both'),
+        )
+    )
+    zone_filter = onsite_order & onsite_zone
     if worker_profile.offers_remote:
-        zone_filter |= Q(category__work_mode__in=('online', 'both'))
+        zone_filter |= (
+            Q(work_mode=Order.WorkMode.ONLINE)
+            | Q(
+                work_mode=Order.WorkMode.LEGACY,
+                category__work_mode__in=('online', 'both'),
+            )
+        )
 
     return base_qs.filter(zone_filter).annotate(
         city_priority=Case(
@@ -267,7 +365,9 @@ def create_response(order, worker_user, message=''):
     with transaction.atomic():
         # Lock the order FIRST, just like acceptance and withdrawal.
         # This prevents inserting PENDING after winner was selected.
-        order = Order.objects.select_for_update().select_related('city').get(pk=order.pk)
+        order = Order.objects.select_for_update(of=('self',)).select_related(
+            'city', 'category__section', 'subcategory__category__section',
+        ).get(pk=order.pk)
         if not User.objects.filter(
             pk=worker_user.pk, is_active=True, is_blocked=False,
             email_verification_required=False,
@@ -289,6 +389,17 @@ def create_response(order, worker_user, message=''):
         if (not worker_profile.is_published
                 or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE):
             raise ValueError('Анкета мастера не опубликована или недоступна.')
+        mode = (
+            order.work_mode
+            if order.work_mode in (Order.WorkMode.ONSITE, Order.WorkMode.ONLINE)
+            else None
+        )
+        if not workers_serving_city(
+            WorkerProfile.objects.filter(pk=worker_profile.pk),
+            order.city, category=order.category,
+            service=order.subcategory, mode=mode,
+        ).exists():
+            raise ValueError('Заявка не соответствует услугам или зоне мастера.')
         if Response.objects.filter(order=order, worker_id=worker_user.pk).exists():
             raise ValueError('Вы уже откликались на этот заказ.')
         consume_order_quota(worker_user, 'response')

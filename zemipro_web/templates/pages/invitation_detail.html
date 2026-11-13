@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}{{ invite_copy.details }} — ZemiPro{% endblock %}
+{% block content %}
+<section class="dashboard"><div class="container" style="max-width:760px">
+    <h1>{{ invite_copy.details }} #{{ invitation.pk }}</h1>
+    <p><strong>{{ invite_copy.status }}:</strong> {{ invitation.localized_status }}</p>
+    <div class="order-card">
+        <strong>{{ invitation.order.category.localized_name }}</strong>
+        {% if invitation.order.subcategory %}<p>{{ invitation.order.subcategory.localized_name }}</p>{% endif %}
+        <p>{{ invitation.order.city.localized_name }}</p>
+        <p>{{ invite_copy.only_public }}</p>
+    </div>
+    {% if invitation.effective_status == 'pending' %}
+        {% if is_client %}
+        <form method="post" action="{% url 'marketplace:invitation_action' pk=invitation.pk action='withdraw' %}">
+            {% csrf_token %}<button type="submit" class="btn btn--secondary">{{ invite_copy.withdraw }}</button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'marketplace:invitation_action' pk=invitation.pk action='accept' %}">
+            {% csrf_token %}<button type="submit" class="btn btn--primary">{{ invite_copy.accept }}</button>
+        </form>
+        <form method="post" action="{% url 'marketplace:invitation_action' pk=invitation.pk action='decline' %}">
+            {% csrf_token %}<button type="submit" class="btn btn--secondary">{{ invite_copy.decline }}</button>
+        </form>
+        {% endif %}
+    {% endif %}
+    {% if is_client %}
+    <a href="{% url 'marketplace:order_detail' pk=invitation.order_id %}">{{ invite_copy.to_order }}</a>
+    {% else %}
+    <a href="{% url 'marketplace:order_detail' pk=invitation.order_id %}">{{ invite_copy.to_order }}</a>
+    {% endif %}
+</div></section>
+{% endblock %}

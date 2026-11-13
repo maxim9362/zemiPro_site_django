@@ -49,6 +49,10 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="{% if is_new_wizard %}start{% elif step == 8 %}publish{% else %}next{% endif %}">
             {% if is_new_wizard %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
+            {% if is_new_wizard and invite_worker_pk %}
+                <input type="hidden" name="invite_worker" value="{{ invite_worker_pk }}">
+                <p class="zw-muted">{{ invite_copy.chosen }} · {{ invite_copy.hint }}</p>
+            {% endif %}
             {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
             {% for error in form.non_field_errors %}<p class="zw-error">{{ error }}</p>{% endfor %}
             {% if step == 8 %}

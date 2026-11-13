@@ -8,9 +8,10 @@ from django.utils.translation import gettext_lazy as _
 
 from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceField
 
-from apps.locations.models import City
+from apps.locations.models import City, Neighborhood
 from apps.locations.services import get_public_cities
-from apps.marketplace.models import Category, Rating
+from apps.marketplace.models import Category, Rating, Subcategory
+from .public_text import contains_public_contact
 from .models import ClientProfile, User, WorkerProfile, VerifiedContact
 from .verification import contact_fingerprint, normalize_israeli_phone
 
@@ -184,10 +185,25 @@ class WorkerProfileForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
     )
 
+    services = LocalizedModelMultipleChoiceField(
+        queryset=Subcategory.objects.filter(
+            is_active=True, category__is_active=True,
+        ).filter(
+            Q(category__section__isnull=True) | Q(category__section__is_active=True)
+        ).order_by('category__sort_order', 'sort_order', 'pk'),
+        label=_('Конкретные услуги (только фактически оказываемые)'),
+        required=False, widget=forms.CheckboxSelectMultiple,
+    )
+
     service_cities = LocalizedModelMultipleChoiceField(
         queryset=City.objects.filter(is_active=True).order_by('name_ru', 'pk'),
         label=_('Города обслуживания (можно выбрать несколько)'),
         required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    service_neighborhoods = LocalizedModelMultipleChoiceField(
+        queryset=Neighborhood.objects.none(),
+        label=_('Районы обслуживания (необязательно)'), required=False,
         widget=forms.CheckboxSelectMultiple,
     )
     offers_remote = forms.BooleanField(
@@ -206,8 +222,9 @@ class WorkerProfileForm(forms.ModelForm):
         model = WorkerProfile
         fields = [
             'provider_type', 'display_name', 'city', 'contact', 'description',
-            'skills', 'service_cities', 'offers_remote', 'spoken_languages',
-            'pricing_details', 'availability', 'working_hours',
+            'skills', 'services', 'service_cities', 'service_neighborhoods',
+            'offers_remote', 'spoken_languages',
+            'pricing_details', 'starting_price_ils', 'availability', 'working_hours',
             'receive_notifications',
         ]
         labels = {
@@ -230,6 +247,9 @@ class WorkerProfileForm(forms.ModelForm):
         cities = get_public_cities()
         self.fields['city'].queryset = cities
         self.fields['service_cities'].queryset = cities
+        self.fields['service_neighborhoods'].queryset = Neighborhood.objects.filter(
+            city__in=cities, is_active=True,
+        ).order_by('city_id', 'slug')
         if self.instance.pk is None:
             self.fields['spoken_languages'].initial = ['ru']
         # Backward-compatible edit of Stage 02 profiles via older POST payloads.
@@ -238,6 +258,24 @@ class WorkerProfileForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        services = data.get('services')
+        skills = data.get('skills')
+        if services is not None and skills is not None:
+            category_ids = set(skills.values_list('pk', flat=True))
+            if any(item.category_id not in category_ids for item in services):
+                raise forms.ValidationError(
+                    _('Выберите конкретные услуги только из своих категорий.')
+                )
+        neighborhoods = data.get('service_neighborhoods')
+        if neighborhoods is not None:
+            zones = data.get('service_cities')
+            zone_ids = set(zones.values_list('pk', flat=True)) if zones is not None else set()
+            if not zone_ids and data.get('city') is not None:
+                zone_ids = {data['city'].pk}
+            if any(area.city_id not in zone_ids for area in neighborhoods):
+                raise forms.ValidationError(
+                    _('Районы должны принадлежать обслуживаемым городам.')
+                )
         if data.get('offers_remote'):
             skills = data.get('skills')
             if skills is not None and not skills.filter(
@@ -257,13 +295,33 @@ class WorkerProfileForm(forms.ModelForm):
                 or self.instance.availability or WorkerProfile.Availability.AVAILABLE)
 
     def clean_display_name(self):
-        return self.cleaned_data.get('display_name', '').strip()
+        value = self.cleaned_data.get('display_name', '').strip()
+        if contains_public_contact(value) or '@' in value:
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_name'])
+        return value
 
     def clean_description(self):
-        return self.cleaned_data.get('description', '').strip()
+        value = self.cleaned_data.get('description', '').strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
 
     def clean_pricing_details(self):
-        return self.cleaned_data.get('pricing_details', '').strip()
+        value = self.cleaned_data.get('pricing_details', '').strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
+
+    def clean_working_hours(self):
+        value = self.cleaned_data.get('working_hours', '').strip()
+        if contains_public_contact(value, allow_work_hours=True):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
+
 
 
 class RatingCreateForm(forms.ModelForm):
@@ -285,6 +343,13 @@ class RatingCreateForm(forms.ModelForm):
             'rating': _('Оценка (от 1 до 5)'),
             'review_text': _('Текст отзыва'),
         }
+
+    def clean_review_text(self):
+        value = self.cleaned_data.get('review_text', '').strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
 
 class ClientSettingsForm(forms.Form):
     """Edit only own User + ClientProfile data; no role/permission fields."""
@@ -316,6 +381,7 @@ class ClientSettingsForm(forms.Form):
         required=False,
         label=_('Получать дополнительные уведомления'),
     )
+    track_worker_views = forms.BooleanField(required=False)
 
     def __init__(self, *args, user, profile, **kwargs):
         if (not args or args[0] is None) and 'initial' not in kwargs:
@@ -330,10 +396,13 @@ class ClientSettingsForm(forms.Form):
                 'receive_optional_updates': (
                     profile.receive_optional_updates if profile else True
                 ),
+                'track_worker_views': profile.track_worker_views if profile else False,
             }
         super().__init__(*args, **kwargs)
         self.owner = user
         self.fields['city'].queryset = get_public_cities()
+        from apps.marketplace.directory_ui import directory_copy
+        self.fields['track_worker_views'].label = directory_copy()['views_opt_in']
 
     def clean_email(self):
         return self.cleaned_data.get('email', '').strip().casefold()
@@ -377,8 +446,22 @@ class PortfolioUploadForm(forms.Form):
         label=_('Подтверждаю, что имею право публиковать эту фотографию'),
     )
 
+    def clean_caption(self):
+        value = self.cleaned_data['caption'].strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
+
 
 class PortfolioEditForm(forms.Form):
     caption = forms.CharField(max_length=300, required=False)
     sort_order = forms.IntegerField(min_value=0, max_value=999)
     is_public = forms.BooleanField(required=False)
+
+    def clean_caption(self):
+        value = self.cleaned_data['caption'].strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value

@@ -75,7 +75,10 @@ class FavoriteWorkerTests(TestCase):
         self.assertNotContains(other, 'favorite-worker')
         self.assertNotContains(other, 'HIDDEN-OWNER-CONTACT')
         self.client.force_login(self.client_user)
-        self.client.post(self.url)
+        self.client.post(self.url)  # idempotent replay
+        self.assertEqual(FavoriteWorker.objects.count(), 1)
+        self.client.post(self.url, {'action': 'remove'})
+        self.client.post(self.url, {'action': 'remove'})
         self.assertFalse(FavoriteWorker.objects.exists())
 
     def test_crafted_offpilot_worker_id_cannot_be_favorited(self):

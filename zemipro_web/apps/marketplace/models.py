@@ -3,6 +3,7 @@ import uuid
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import get_language
 
 
@@ -472,6 +473,7 @@ class OrderWriteQuota(models.Model):
         RESPONSE = 'response', 'Отклики исполнителей'
         PHOTO = 'photo', 'Новые фотографии'
         STATE = 'state', 'Переходы статусов'
+        INVITE = 'invite', 'Приглашения мастерам'
 
     owner = models.ForeignKey(
         'accounts.User', on_delete=models.PROTECT, related_name='order_write_quotas',
@@ -630,6 +632,88 @@ class Response(models.Model):
         return f'Отклик {self.worker} на заказ #{self.order_id}'
 
 
+
+class OrderInvitation(models.Model):
+    """One registered specialist may be invited once to an existing order.
+
+    An invitation is not an assignment and cannot grant private order access.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает'
+        ACCEPTED = 'accepted', 'Принято'
+        DECLINED = 'declined', 'Отклонено'
+        WITHDRAWN = 'withdrawn', 'Отозвано'
+        EXPIRED = 'expired', 'Истекло'
+        UNAVAILABLE = 'unavailable', 'Недоступно'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='specialist_invitations',
+    )
+    client = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='sent_order_invitations',
+    )
+    worker = models.ForeignKey(
+        'accounts.WorkerProfile', on_delete=models.PROTECT,
+        related_name='order_invitations',
+    )
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.PENDING,
+    )
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'marketplace_order_invitation'
+        ordering = ['-created_at', '-pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'worker'],
+                name='market_order_worker_invite_unique',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=[
+                    'pending', 'accepted', 'declined', 'withdrawn',
+                    'expired', 'unavailable',
+                ]),
+                name='market_order_invite_status_allowed',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['worker', 'status', '-created_at'],
+                name='market_inv_worker_status_idx',
+            ),
+            models.Index(
+                fields=['client', '-created_at'],
+                name='market_inv_client_created_idx',
+            ),
+        ]
+
+    @property
+    def effective_status(self):
+        """Present expired/cancelled/unavailable pending invites truthfully."""
+        if self.status != self.Status.PENDING:
+            return self.status
+        if self.expires_at <= timezone.now():
+            return self.Status.EXPIRED
+        if self.order.status != Order.Status.PUBLISHED or self.order.worker_id is not None:
+            return self.Status.UNAVAILABLE
+        if (not self.worker.is_published
+                or self.worker.availability == self.worker.Availability.UNAVAILABLE
+                or not self.worker.user.is_active
+                or self.worker.user.is_blocked
+                or self.worker.user.email_verification_required):
+            return self.Status.UNAVAILABLE
+        return self.Status.PENDING
+
+    @property
+    def localized_status(self):
+        from .invitation_ui import invitation_copy
+        return invitation_copy()[self.effective_status]
+
+
 class Rating(models.Model):
     """Отзыв и рейтинг заказчика на исполнителя."""
 
@@ -651,6 +735,13 @@ class Rating(models.Model):
         verbose_name='Оценка'
     )
     review_text = models.TextField(blank=True, default='', verbose_name='Текст отзыва')
+    public_review_text_snapshot = models.TextField(
+        blank=True, default='', editable=False,
+    )
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    public_content_policy_version = models.PositiveSmallIntegerField(
+        default=0, editable=False,
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
 
     class Meta:
@@ -661,6 +752,33 @@ class Rating(models.Model):
 
     def __str__(self):
         return f'{self.worker} — {self.rating}/5'
+
+    @property
+    def public_review_text(self):
+        from apps.accounts.public_text import MARKER, POLICY_VERSION
+        if (
+            self.public_content_safe
+            and self.public_content_policy_version == POLICY_VERSION
+        ):
+            return self.public_review_text_snapshot or (MARKER if self.review_text else '')
+        return MARKER if self.review_text else ''
+
+    def save(self, *args, **kwargs):
+        from apps.accounts.public_text import POLICY_VERSION, build_caption_snapshot
+        updates = kwargs.get('update_fields')
+        if updates is None or 'review_text' in set(updates):
+            snapshot = build_caption_snapshot(self.review_text)
+            self.public_review_text_snapshot = snapshot or ''
+            self.public_content_safe = True
+            self.public_content_policy_version = POLICY_VERSION
+            if updates is not None:
+                updates = set(updates)
+                updates.update({
+                    'public_review_text_snapshot', 'public_content_safe',
+                    'public_content_policy_version',
+                })
+                kwargs['update_fields'] = updates
+        return super().save(*args, **kwargs)
 
 
 class ServiceQuestionnaire(models.Model):

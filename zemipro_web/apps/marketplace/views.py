@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -15,19 +16,30 @@ from django.utils.translation import gettext as _
 from apps.accounts.forms import RatingCreateForm
 from apps.accounts.models import FavoriteWorker
 from apps.accounts.client_favorites import (
-    own_visible_favorites, toggle_own_favorite, public_worker_queryset,
+    own_visible_favorites, set_own_favorite, public_worker_queryset,
 )
 from apps.accounts.models import WorkerProfile
+from apps.accounts.worker_views import record_worker_view, own_visible_worker_history
 from apps.accounts.services import get_client_profile, get_worker_profile
-from apps.locations.models import CityAlias
+from apps.locations.models import CityAlias, Neighborhood
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from apps.notifications.services import create_notification
 from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
+from .directory_search import (
+    WorkerDirectoryForm, active_categories, search_worker_profiles,
+)
+from .directory_ranking import ranking_audit_rows
+from .directory_ui import directory_copy
+from .invitation_ui import invitation_copy
+from .invitation_services import (
+    InvitationConflict, create_invitation, act_on_invitation,
+    invitable_orders, worker_matches_order,
+)
 from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
 from .models import (
-    Category, ServiceSection, Subcategory, Order, Response, Rating,
+    Category, ServiceSection, Subcategory, Order, Response, Rating, OrderInvitation,
     ServiceQuestionnaire, OrderQuestionnaireAnswer,
 )
 from .services import (
@@ -89,6 +101,61 @@ def home(request):
         Q(section__isnull=True) | Q(section__is_active=True)
     ).order_by('sort_order', 'pk')
     return render(request, 'pages/home.html', {'categories': categories})
+
+
+@require_GET
+def worker_directory_view(request):
+    """Public read-only specialist directory; never render private contacts."""
+    form = WorkerDirectoryForm(request.GET)
+    workers = search_worker_profiles(form).select_related(
+        'user', 'city',
+    ).prefetch_related(Prefetch(
+        'skills',
+        queryset=active_categories().order_by('sort_order', 'pk'),
+        to_attr='public_search_skills',
+    ))
+    paginator = Paginator(workers, ITEMS_PER_PAGE)
+    page = paginator.get_page(request.GET.get('page'))
+    if form.is_valid():
+        params = form.cleaned_data
+        ranking_audit_rows(
+            page, params=params,
+            city=bool(
+                params['city'] or params['neighborhood'] or public_city_slug()
+            ),
+        )
+    # Only verified filter names/values survive links; no arbitrary GET reflection.
+    preserved = {}
+    if form.is_valid():
+        for name in form.fields:
+            value = request.GET.get(name, '')
+            if value:
+                preserved[name] = value
+    safe_query = urlencode(preserved)
+    # Never index user-generated/filter URLs automatically. Localized
+    # canonical + hreflang come from the existing Stage 02 catalog policy.
+    seo = catalog_context(request, 'worker_directory', indexable=False)
+    if not seo.get('catalog_localized'):
+        seo['seo_canonical'] = request.build_absolute_uri(
+            reverse('marketplace:worker_directory')
+        )
+    if form.errors:
+        for field_name in form.errors:
+            if field_name in form.fields:
+                form.fields[field_name].widget.attrs['aria-invalid'] = 'true'
+    return render(request, 'pages/worker_directory.html', {
+        'form': form,
+        'page_obj': page,
+        'pagination_query': safe_query,
+        'directory_copy': directory_copy(),
+        'language_switch_next': request.path + (
+            '?' + safe_query if safe_query else ''
+        ),
+        **seo,
+        # No unapproved mass indexing of directory pages, including empty
+        # results, deep pagination and filtered combinations.
+        'seo_noindex': True,
+    })
 
 
 def categories_list(request):
@@ -374,7 +441,17 @@ def service_detail(request, category_slug, service_slug):
 
 
 def worker_public_profile_view(request, pk):
-    workers = public_worker_queryset().prefetch_related('skills', 'service_cities')
+    workers = public_worker_queryset().prefetch_related(
+        Prefetch('skills', queryset=active_categories().order_by('sort_order', 'pk')),
+        Prefetch('services', queryset=Subcategory.objects.filter(
+            is_active=True, category__is_active=True,
+        ).order_by('category_id', 'sort_order', 'pk')),
+        Prefetch('service_cities', queryset=get_public_cities(),
+                 to_attr='public_service_cities'),
+        Prefetch('service_neighborhoods', queryset=Neighborhood.objects.filter(
+            is_active=True, city__in=get_public_cities(),
+        ), to_attr='public_service_neighborhoods'),
+    )
     if public_city_slug():
         pilot_city = get_public_cities().first()
         workers = (
@@ -382,19 +459,27 @@ def worker_public_profile_view(request, pk):
             if pilot_city is not None else workers.none()
         )
     profile = get_object_or_404(workers, pk=pk)
+    record_worker_view(request.user, profile)
     reviews = Rating.objects.filter(
-        worker=profile.user
-    ).select_related('client').order_by('-created_at')
+        worker_id=profile.user_id,
+    ).order_by('-created_at')
 
-    avg_rating = reviews.aggregate(avg=Avg('rating'))['avg'] or 0
-    review_count = reviews.count()
+    review_stats = reviews.aggregate(avg=Avg('rating'), count=Count('pk'))
+    avg_rating = review_stats['avg'] or 0
+    review_count = review_stats['count']
 
-    return render(request, 'pages/worker_public_profile.html', {
+    response = render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
         'public_photos': profile.portfolio_photos.filter(is_public=True),
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),
         'review_count': review_count,
+        'invite_copy': invitation_copy(),
+        'directory_copy': directory_copy(),
+        'seo_noindex': True,
+        'seo_canonical': request.build_absolute_uri(
+            reverse('marketplace:worker_public_profile', args=[profile.pk])
+        ),
         'is_favorite': (
             request.user.is_authenticated
             and FavoriteWorker.objects.filter(
@@ -402,9 +487,84 @@ def worker_public_profile_view(request, pk):
             ).exists()
         ),
     })
+    # The favorite/opt-in experience is per-user; never cache publicly.
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
 
 
 @login_required
+@never_cache
+def worker_invitation_select_view(request, pk):
+    """Registered specialist → owned published request, with POST confirmation."""
+    worker = get_object_or_404(public_worker_queryset(), pk=pk)
+    copy = invitation_copy()
+    if request.method == 'POST':
+        try:
+            order_id = int(request.POST.get('order_id', ''))
+        except (TypeError, ValueError):
+            raise Http404 from None
+        try:
+            invitation, created = create_invitation(
+                actor=request.user, order_id=order_id, worker_id=worker.pk,
+            )
+        except OrderQuotaExceeded as error:
+            return _order_quota_response(error)
+        except (InvitationConflict, ValueError, PermissionDenied):
+            # Never reveal whether someone else's order ID exists.
+            raise Http404 from None
+        messages.success(request, copy['sent'] if created else copy['existing'])
+        return redirect('marketplace:invitation_detail', pk=invitation.pk)
+    if request.method != 'GET':
+        raise Http404
+    orders = invitable_orders(request.user, worker)
+    selected_order = request.GET.get('order', '')
+    return render(request, 'pages/worker_invitation_select.html', {
+        'worker': worker, 'orders': orders, 'selected_order': selected_order,
+        'invite_copy': copy, 'seo_noindex': True,
+    })
+
+
+@login_required
+@never_cache
+def invitation_detail_view(request, pk):
+    invitation = get_object_or_404(
+        OrderInvitation.objects.select_related(
+            'order', 'order__category', 'order__subcategory', 'order__city',
+            'worker', 'worker__user',
+        ).filter(Q(client_id=request.user.pk) | Q(worker__user_id=request.user.pk)),
+        pk=pk,
+    )
+    if not request.user.is_active or request.user.is_blocked or request.user.email_verification_required:
+        raise Http404
+    return render(request, 'pages/invitation_detail.html', {
+        'invitation': invitation,
+        'is_client': invitation.client_id == request.user.pk,
+        'invite_copy': invitation_copy(),
+        'seo_noindex': True,
+    })
+
+
+@login_required
+@require_POST
+@never_cache
+def invitation_action_view(request, pk, action):
+    if action not in ('accept', 'decline', 'withdraw'):
+        raise Http404
+    try:
+        invite, _ = act_on_invitation(
+            actor=request.user, invitation_id=pk, action=action,
+        )
+    except (PermissionDenied, OrderInvitation.DoesNotExist):
+        raise Http404 from None
+    except (InvitationConflict, ValueError):
+        messages.warning(request, invitation_copy()['conflict'])
+        return redirect('marketplace:invitation_detail', pk=pk)
+    return redirect('marketplace:invitation_detail', pk=invite.pk)
+
+
+@login_required
+@never_cache
 def toggle_favorite_worker_view(request, pk):
     """Add/remove the authenticated user's private favorite via POST only."""
     if request.method != 'POST':
@@ -412,8 +572,11 @@ def toggle_favorite_worker_view(request, pk):
     worker = get_object_or_404(
         WorkerProfile.objects.select_related('user'), pk=pk,
     )
+    action = request.POST.get('action', 'add')
+    if action not in ('add', 'remove'):
+        raise Http404
     try:
-        toggle_own_favorite(request.user, worker)
+        set_own_favorite(request.user, worker, saved=action == 'add')
     except ValueError:
         raise Http404 from None
     return redirect('marketplace:worker_public_profile', pk=pk)
@@ -475,6 +638,8 @@ def order_create_view(request):
 def _wizard_render(request, *, step, form, order=None, token='', drafts=None):
     t = wizard_copy()
     return render(request, 'pages/order_wizard.html', {
+        'invite_copy': invitation_copy(),
+        'invite_worker_pk': getattr(request, '_invite_worker_pk', None),
         'copy': t, 'form': form, 'step': step, 'order': order,
         'previous_step': max(1, step - 1),
         'wizard_steps': [
@@ -522,6 +687,11 @@ def order_wizard_start_view(request):
             raise Http404
         form = ServiceStepForm(request.POST)
         token = request.POST.get('token', '')
+        invite_worker_value = request.POST.get('invite_worker', '')
+        try:
+            invite_worker_id = int(invite_worker_value) if invite_worker_value else None
+        except (TypeError, ValueError):
+            raise Http404 from None
         if form.is_valid():
             # Per-session token prevents accidental repeat creation across taps.
             if token != request.session.get('order_wizard_token'):
@@ -529,6 +699,7 @@ def order_wizard_start_view(request):
             try:
                 order = start_order_wizard(
                     actor=request.user, form=form, token=token,
+                    invite_worker_id=invite_worker_id,
                 )
             except OrderQuotaExceeded as error:
                 return _order_quota_response(error)
@@ -540,7 +711,25 @@ def order_wizard_start_view(request):
     else:
         token = str(uuid.uuid4())
         request.session['order_wizard_token'] = token
-        form = ServiceStepForm()
+        initial = {}
+        worker_id = request.GET.get('worker', '')
+        if worker_id:
+            worker = get_object_or_404(public_worker_queryset(), pk=worker_id)
+            if worker.user_id == request.user.pk:
+                raise Http404
+            selected_service = worker.services.filter(
+                is_active=True, category__is_active=True,
+                category__in=worker.skills.all(),
+            ).order_by('pk').first()
+            if selected_service:
+                initial = {
+                    'category': selected_service.category_id,
+                    'subcategory': selected_service.pk,
+                }
+            request._invite_worker_pk = worker.pk
+        form = ServiceStepForm(initial=initial)
+    if request.method == 'POST':
+        request._invite_worker_pk = invite_worker_id
     drafts = Order.objects.filter(
         client=request.user, status=Order.Status.DRAFT,
         wizard_token__isnull=False,
@@ -588,6 +777,12 @@ def order_wizard_edit_view(request, pk):
                         confirmation_form=form,
                     )
                     _flush_order_events(published)
+                    invite_id = (published.wizard_data or {}).get('invite_worker_id')
+                    if invite_id and worker_matches_order(invite_id, published):
+                        return redirect(
+                            reverse('marketplace:worker_invitation_select', args=[invite_id])
+                            + f'?order={published.pk}'
+                        )
                     return redirect('marketplace:order_detail', pk=published.pk)
                 saved = save_order_wizard_step(
                     order_id=order.pk, actor=request.user,
@@ -878,6 +1073,16 @@ def client_dashboard_view(request):
         'cancelled_orders': cancelled_orders,
         'orders_with_responses': orders_with_responses,
         'favorite_workers': own_visible_favorites(request.user)[:12],
+        'viewed_workers': own_visible_worker_history(request.user)[:12]
+            if profile.track_worker_views else [],
+        'track_worker_views': profile.track_worker_views,
+        'directory_copy': directory_copy(),
+        'client_invitations': OrderInvitation.objects.filter(
+            client_id=request.user.pk,
+        ).select_related(
+            'order', 'order__category', 'order__city', 'worker', 'worker__user',
+        )[:20],
+        'invite_copy': invitation_copy(),
     })
 
 @login_required
@@ -1054,6 +1259,13 @@ def worker_dashboard_view(request):
         'profile': profile,
         'page_obj': orders_page,
         'my_responses': my_responses,
+        'worker_invitations': OrderInvitation.objects.filter(
+            worker=profile,
+        ).select_related(
+            'order', 'order__category', 'order__subcategory',
+            'order__city', 'worker', 'worker__user',
+        )[:20],
+        'invite_copy': invitation_copy(),
     })
 
 
@@ -1069,15 +1281,17 @@ def order_respond_view(request, pk):
         raise Http404
 
     order = get_object_or_404(
-        Order.objects.select_related('category', 'city').filter(
-            city__in=get_public_cities()
-        ),
-        pk=pk, status=Order.Status.PUBLISHED,
+        Order.objects.select_related('category', 'subcategory', 'city').filter(
+            city__in=get_public_cities(), status=Order.Status.PUBLISHED,
+        ), pk=pk,
     )
 
     if order.client_id == request.user.pk:
         messages.error(request, _('Нельзя откликнуться на собственную заявку.'))
         return redirect('marketplace:order_detail', pk=order.pk)
+
+    if not get_available_orders_for_worker(profile).filter(pk=order.pk).exists():
+        raise Http404
 
     existing = Response.objects.filter(order=order, worker=request.user).first()
     if existing:

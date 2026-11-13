@@ -77,7 +77,9 @@ class QueryScalingTests(TestCase):
             response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.category.name_ru)
-        self.assertLessEqual(len(queries), 8)
+        # Stage 05.5 adds bounded, fixed profile queries for active service
+        # selection; the separate 05.6 regression guards against N+1.
+        self.assertLessEqual(len(queries), 10)
 
     def test_worker_dashboard_related_orders_are_joined(self):
         profile = self.make_worker(0)
@@ -91,6 +93,6 @@ class QueryScalingTests(TestCase):
             response = self.client.get(reverse('marketplace:worker_dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.category.name_ru)
-        # Stage 03.6 adds one fixed DB read of persisted account-block state;
-        # this stays constant as the number of orders increases (no N+1).
-        self.assertLessEqual(len(queries), 13)
+        # Stage 03.6 adds one fixed blocked-account read; Stage 05.4 adds
+        # one bounded invitations listing. Neither scales with order count.
+        self.assertLessEqual(len(queries), 14)
