@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n public_text %}
 
 {% block title %}{{ category.localized_name }} — ZemiPro{% endblock %}
 {% block meta_description %}{{ category.localized_description }}. {% trans 'Найдите мастера по категории' %} {{ category.localized_name }}.{% endblock %}
@@ -48,14 +48,14 @@
             {% for wp in page_obj %}
             <div class="order-card-sm">
                 <div class="order-card-sm__header">
-                    <span class="order-card__category">{{ wp.display_name }}</span>
+                    <span class="order-card__category">{{ wp.display_name|public_text }}</span>
                     {% if wp.avg_rating %}
                     <span style="font-size: 0.875rem;">★ {{ wp.avg_rating|floatformat:1 }} ({{ wp.review_count }})</span>
                     {% endif %}
                 </div>
                 <div class="order-card-sm__body">
                     <p class="order-card-sm__city">{{ wp.city.localized_name }}</p>
-                    <p class="order-card-sm__desc">{{ wp.description|truncatewords:20 }}</p>
+                    <p class="order-card-sm__desc">{{ wp.description|public_text|truncatewords:20 }}</p>
                 </div>
                 <div class="order-card-sm__actions">
                     <a href="{% url 'marketplace:worker_public_profile' pk=wp.pk %}" class="btn btn--primary btn--sm">{% trans 'Открыть профиль' %}</a>

@@ -83,7 +83,7 @@ class PublicProfileTests(TestCase):
         ):
             self.assertNotContains(response, secret)
         self.assertContains(response, 'Примеры работ')
-        self.assertContains(response, '4.0/5')
+        self.assertContains(response, '4,0/5')
 
     def test_unpublished_and_blocked_never_visible_even_when_favorited(self):
         self.client.force_login(self.owner)

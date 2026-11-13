@@ -77,7 +77,9 @@ class QueryScalingTests(TestCase):
             response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.category.name_ru)
-        self.assertLessEqual(len(queries), 8)
+        # Stage 05.5 adds bounded, fixed profile queries for active service
+        # selection; the separate 05.6 regression guards against N+1.
+        self.assertLessEqual(len(queries), 10)
 
     def test_worker_dashboard_related_orders_are_joined(self):
         profile = self.make_worker(0)
