@@ -501,10 +501,13 @@ def accept_response(response, *, actor):
 
 
 def complete_order(order, *, actor):
-    """Complete an order only for the authenticated, persisted owner."""
-    return transition_order_status(
-        order, Order.Status.COMPLETED, actor=actor,
+    """Explicit client sign-off with an append-only work event."""
+    from .work_services import confirm_work_result
+    current, _ = confirm_work_result(
+        order_id=order.pk if isinstance(order, Order) else order,
+        actor=actor,
     )
+    return current
 
 
 def cancel_order(order, *, actor):

@@ -38,6 +38,8 @@ urlpatterns = [
          views.order_accept_response_view, name='order_accept_response'),
     path('orders/<int:pk>/cancel/', views.order_cancel_view, name='order_cancel'),
     path('orders/<int:pk>/complete/', views.order_complete_view, name='order_complete'),
+    path('orders/<int:pk>/work/<str:action>/', views.order_work_action_view,
+         name='order_work_action'),
     path('orders/<int:pk>/review/', views.rating_create_view, name='rating_create'),
 
     path('worker/<int:pk>/', views.worker_public_profile_view, name='worker_public_profile'),
