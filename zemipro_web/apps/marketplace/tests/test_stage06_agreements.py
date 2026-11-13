@@ -85,6 +85,31 @@ class AgreementRevisionTests(TestCase):
         self.assertEqual(self.response.amount_min_ils, 200)
         self.assertEqual(OrderAgreementVersion.objects.count(), 2)
 
+    def test_rejected_version_does_not_reuse_sequence_number(self):
+        data = {
+            'price_kind': 'fixed', 'amount_min_ils': '250.00',
+            'estimated_timeline': 'Four days', 'terms': 'Rejected terms',
+        }
+        rejected, _ = propose_agreement_change(
+            order_id=self.order.pk, actor=self.worker, data=data,
+            note='Changed conditions', base_version=1,
+            operation_key=uuid.uuid4(),
+        )
+        decide_agreement_change(
+            agreement_id=rejected.pk, actor=self.client_user,
+            action='reject', operation_key=uuid.uuid4(),
+        )
+        self.assertEqual(effective_agreement(self.order).number, 1)
+        third, created = propose_agreement_change(
+            order_id=self.order.pk, actor=self.worker,
+            data={**data, 'terms': 'New request after rejection'},
+            note='Revised conditions', base_version=1,
+            operation_key=uuid.uuid4(),
+        )
+        self.assertTrue(created)
+        self.assertEqual(third.number, 3)
+        self.assertEqual(effective_agreement(self.order).number, 1)
+
     def test_stranger_cannot_change_and_owner_cannot_confirm_own(self):
         with self.assertRaises(PermissionDenied):
             propose_agreement_change(

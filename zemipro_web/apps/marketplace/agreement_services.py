@@ -1,6 +1,7 @@
 """Stage 06.4: immutable agreements with explicit two-party approval."""
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Max
 
 from .models import Order, OrderAgreementDecision, OrderAgreementVersion, Response
 from .offer_services import OFFER_FIELDS, _enabled, _key, normalize_offer
@@ -56,10 +57,6 @@ def propose_agreement_change(*, order_id, actor, data, note, base_version,
     """Keep active version until the other party explicitly approves changes."""
     key = _key(operation_key)
     order = _locked_order(order_id, actor)
-    if order.status not in (
-        Order.Status.ASSIGNED, Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
-    ):
-        raise ValueError('Изменение соглашения недоступно.')
     payload = normalize_offer(data)
     if not isinstance(note, str) or len(note) > 1000:
         raise ValueError('Некорректные условия соглашения.')
@@ -71,6 +68,10 @@ def propose_agreement_change(*, order_id, actor, data, note, base_version,
                 or any(getattr(replay, field) != value for field, value in payload.items())):
             raise ValueError('Идентификатор операции уже использован.')
         return replay, False
+    if order.status not in (
+        Order.Status.ASSIGNED, Order.Status.IN_PROGRESS, Order.Status.DISPUTED,
+    ):
+        raise ValueError('Изменение соглашения недоступно.')
     active = effective_agreement(order)
     if active is None or str(active.number) != str(base_version):
         raise ValueError('Версия соглашения изменилась.')
@@ -83,7 +84,10 @@ def propose_agreement_change(*, order_id, actor, data, note, base_version,
         order=order, worker_id=order.worker_id, status=Response.Status.ACCEPTED,
     )
     version = OrderAgreementVersion.objects.create(
-        order=order, response=response, number=active.number + 1,
+        order=order, response=response,
+        number=OrderAgreementVersion.objects.filter(
+            order=order,
+        ).aggregate(highest=Max('number'))['highest'] + 1,
         response_revision=response.revision, proposed_by=actor,
         operation_key=key, note=note, **payload,
     )
