@@ -56,6 +56,17 @@ class Stage06AssignmentTests(TestCase):
         self.assertIsNone(self.order.worker_id)
         self.assertEqual(self.order.status, Order.Status.PUBLISHED)
 
+    def test_assigned_from_in_discussion_status_preserves_one_winner(self):
+        from apps.marketplace.order_lifecycle import transition_order_status
+        transition_order_status(
+            self.order, Order.Status.IN_DISCUSSION, actor=self.client_user,
+        )
+        selected = accept_response(self.responses[0], actor=self.client_user)
+        self.assertTrue(selected._assignment_created)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.ASSIGNED)
+        self.assertEqual(self.order.worker_id, self.workers[0].pk)
+
     def test_unpublished_worker_cannot_be_selected(self):
         from apps.accounts.models import WorkerProfile
         profile = WorkerProfile.objects.get(user=self.workers[0])

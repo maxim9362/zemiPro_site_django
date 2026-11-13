@@ -426,7 +426,7 @@ def accept_response(response, *, actor):
     """
     from django.core.exceptions import PermissionDenied
     from .offer_services import ACTIVE_STATUSES, record_response_revision
-    from .invitation_services import worker_matches_order
+    from .invitation_services import worker_eligible_for_order
 
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=response.order_id)
@@ -468,7 +468,7 @@ def accept_response(response, *, actor):
         profile = WorkerProfile.objects.select_for_update().filter(
             user_id=selected.worker_id, is_published=True,
         ).first()
-        if profile is None or not worker_matches_order(profile.pk, order):
+        if profile is None or not worker_eligible_for_order(profile.pk, order):
             raise ValueError('Анкета или услуга исполнителя больше недоступна.')
 
         selected.status = Response.Status.ACCEPTED
