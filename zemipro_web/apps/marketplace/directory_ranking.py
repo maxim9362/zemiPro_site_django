@@ -20,7 +20,6 @@ from django.db.models import (
 from django.utils.translation import gettext as _
 
 from apps.accounts.models import WorkerPortfolioPhoto, WorkerProfile
-from .models import Category, Subcategory
 
 RANKING_VERSION = 'directory-v1'
 LOGGER = logging.getLogger('zemipro')
