@@ -1,6 +1,6 @@
 # Stage 05.6 — PostgreSQL search baseline and UX gate
 
-Status: MEASUREMENTS_PENDING_CI. Values are not invented.
+Status: CI_VERIFIED. All values below were captured from a single successful run on isolated synthetic data.
 
 ## Isolated dataset and method
 
@@ -20,9 +20,29 @@ Status: MEASUREMENTS_PENDING_CI. Values are not invented.
 
 ## Actual measurement
 
-To be filled from the completed successful GitHub Actions run. Search logs for
-STAGE05_SEARCH_BASELINE. Record the SHA, run ID, query count and p50 (ms) for
-all five scenarios; never fabricate a synthetic throughput figure.
+Source: GitHub Actions run #43397840288, commit 2aca30fedebd766849818cad68d7f9314714c771,
+SUCCESS, PostgreSQL 17, Django 397/397, Ruff, browser 90/90.
+Full run: https://github.com/maxim9362/zemiPro_site_django/actions/runs/43397840288
+
+| Scenario | SQL query count | p50 (milliseconds) | Matching workers |
+|---|---:|---:|---:|
+| Unfiltered relevance | 10 | 81.93 | 300 |
+| Combined category/service/city/language/online/availability/price | 14 | 74.73 | 126 |
+| Keyword + real-rating sort | 10 | 57.87 | 300 |
+| Empty results | 8 | 74.44 | 0 |
+| Invalid parameters | 5 | 18.29 | 0 |
+
+Measured: 3 warm-cache serial samples per case after a warm-up GET.
+Search pagination: 10 per page. The 20→300 N+1 regression passed.
+EXPLAIN root: Sort (cost=656.46..656.47 rows=1 width=4424).
+An index scan was observed in the query plan, and the
+worker_public_search_idx index exists. This does NOT establish that the
+specific worker index was chosen for all paths.
+Chrome emulation: 90 page/viewport/language cases, 320–1440px, RU/EN/HE,
+RTL, published profile, invitation CTA and search form — PASS.
+
+Source line identifier: STAGE05_SEARCH_BASELINE. These are synthetic
+CI observations, not guaranteed response times or SLOs.
 
 ## Known limits and interpretation
 

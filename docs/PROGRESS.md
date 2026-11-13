@@ -923,6 +923,12 @@
 - **UX:** ошибки форм помечены aria-invalid, сохранены фильтры пагинации, персональные кнопки профиля защищены private/no-store. CI Chrome emulation на 320–1440px проверяет каталог, профиль специалиста и CTA в RU/EN/HE/RTL. Физические устройства и production/performance load test — NOT_RUN.
 - **Ограничения:** документация `docs/STAGE_05_SEARCH_PERFORMANCE.md`; нет Redis, Elasticsearch, миграции production, секретов, DNS/VPS, deployment или merge. Независимый Codex Cloud review остаётся отдельным обязательным гейтом.
 
+### Подтверждение 05.6 в GitHub Actions
+
+- [Run #43397840288](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43397840288) SUCCESS на SHA `2aca30fedebd766849818cad68d7f9314714c771`: PostgreSQL 17 migrations и consistency, Ruff, 397/397 Django, Chrome 90 RU/EN/HE viewport cases, Ashdod-only, строгие настройки без deployment.
+- **Измеренный synthetic-only baseline**: 300 опубликованных профилей; unfiltered 10 SQL/81.93 ms p50; complex 14 SQL/74.73 ms p50/126 results; keyword 10 SQL/57.87 ms; empty 8 SQL/74.44 ms; invalid 5 SQL/18.29 ms. Всё при 3 serial samples и warmup на общем GitHub runner. Query scaling 20→300 PASS; PostgreSQL EXPLAIN показал индексный путь и подтверждён существующий `worker_public_search_idx`. Эти цифры не являются production SLO.
+- **Этап 05:** `05.1–05.6 IMPLEMENTED / CI_VERIFIED / CODE_REVIEW_PENDING / MERGE_PENDING / DEPLOYMENT_NOT_PERFORMED`. Owner GO, независимое code review и эксплуатационные release-гейты до публичного запуска отдельно обязательны.
+
 ## 2026-11-13 — этап 05 / 05.4: приглашение зарегистрированного специалиста
 
 - **Статус:** `IMPLEMENTED / CI_PENDING` (проверки на GitHub Actions после commit); одна рабочая ветка этапа 05, без отдельного PR/merge/deployment.
