@@ -152,7 +152,7 @@ def search_worker_profiles(form):
     if city:
         workers = workers_serving_city(
             workers, city, category=selected_category, service=service,
-            mode=params['mode'], neighborhood=neighborhood,
+            mode=params['mode'] or None, neighborhood=neighborhood,
         )
 
     query = params['q']

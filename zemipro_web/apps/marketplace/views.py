@@ -434,8 +434,9 @@ def worker_public_profile_view(request, pk):
         worker=profile.user
     ).select_related('client').order_by('-created_at')
 
-    avg_rating = reviews.aggregate(avg=Avg('rating'))['avg'] or 0
-    review_count = reviews.count()
+    review_stats = reviews.aggregate(avg=Avg('rating'), count=Count('pk'))
+    avg_rating = review_stats['avg'] or 0
+    review_count = review_stats['count']
 
     return render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
