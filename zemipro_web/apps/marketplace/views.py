@@ -961,8 +961,17 @@ def order_detail_view(request, pk):
     responses = []
 
     if request.user.is_authenticated:
-        has_worker_profile = hasattr(request.user, 'worker_profile')
-        is_owner = order.client == request.user
+        # Persisted account gates must guard even GET projections: a blocked or
+        # unverified owner must not read private offers via a stale session.
+        from apps.accounts.models import User
+        account_enabled = User.objects.filter(
+            pk=request.user.pk, is_active=True, is_blocked=False,
+            email_verification_required=False,
+        ).exists()
+        has_worker_profile = account_enabled and hasattr(
+            request.user, 'worker_profile',
+        )
+        is_owner = account_enabled and order.client_id == request.user.pk
 
         if has_worker_profile:
             worker_response = Response.objects.filter(
