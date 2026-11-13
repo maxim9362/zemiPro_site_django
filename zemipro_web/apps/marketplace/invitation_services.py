@@ -121,8 +121,9 @@ def act_on_invitation(*, actor, invitation_id, action):
     ).first()
     if order_id is None:
         raise PermissionDenied('Invitation unavailable.')
+    # Do not join nullable subcategory in a PostgreSQL FOR UPDATE query.
     order = Order.objects.select_for_update().select_related(
-        'category', 'subcategory', 'city',
+        'category', 'city',
     ).get(pk=order_id)
     invite = OrderInvitation.objects.select_for_update().select_related(
         'worker__user', 'order', 'client',
@@ -162,7 +163,7 @@ def act_on_invitation(*, actor, invitation_id, action):
         ).first()
         if response is None:
             create_response(order, actor, message='')
-            _notice(order.client, 'notice_received', order, title_key='notice_state_title')
+            _notice(order.client, 'notice_accepted', order)
         elif response.status != Response.Status.PENDING:
             raise InvitationConflict('Existing response no longer eligible.')
     invite.status = target
