@@ -270,13 +270,18 @@ class DirectoryRankingTests(TestCase):
         )
 
     def test_reasons_are_translated_for_hebrew_and_english(self):
-        url = reverse('catalog_i18n:worker_directory')
         for locale, snippet in (
             ('en', 'Why this professional appears in results'),
             ('he', 'מדוע איש המקצוע מופיע בתוצאות'),
         ):
             with self.subTest(language=locale), override(locale):
-                response = self.client.get(url, HTTP_ACCEPT_LANGUAGE=locale)
+                # Reverse *inside* the language override: /ru/ must not be
+                # reused for English/Hebrew through LocaleMiddleware.
+                url = reverse('catalog_i18n:worker_directory')
+                self.assertTrue(url.startswith(f'/{locale}/'), url)
+                response = self.client.get(url, HTTP_ACCEPT_LANGUAGE='ru')
                 self.assertEqual(response.status_code, 200)
+                direction = 'rtl' if locale == 'he' else 'ltr'
+                self.assertContains(response, f'<html lang="{locale}" dir="{direction}">')
                 self.assertContains(response, snippet)
                 self.assertNotContains(response, 'DO_NOT_LOG_PHONE_053')
