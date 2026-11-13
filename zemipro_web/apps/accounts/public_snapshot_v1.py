@@ -42,6 +42,31 @@ _DOMAIN = re.compile(
     r"(?::\d{2,5})?(?:\s*/\s*[^\s<>\"']*)?",
     re.I,
 )
+_DOMAIN_WITH_PATH = re.compile(
+    r"(?<![\w@])(?:[\w-]+\s*\.\s*)+[\w-]{2,63}"
+    r"(?::\d{2,5})?\s*/\s*[^\s<>\"']+",
+    re.I,
+)
+_BROAD_DOMAIN = re.compile(
+    r'(?<![\w@])(?:[\w-]+\.)+'
+    r'(?P<tld>[^\W\d_][\w-]{1,62})',
+    re.I,
+)
+_SPACED_BROAD_DOMAIN = re.compile(
+    r'(?<![\w@])(?:[\w-]+\s+\.\s+)+[^\W\d_][\w-]{1,62}',
+    re.I,
+)
+_CONTACT_INTENT = re.compile(
+    r'(?<!\w)(?:contact|visit|see|website|web\s*site|url|link|reach|message|'
+    r'контакт|сайт|ссылка|пишите|связаться|'
+    r'צור\s+קשר|אתר|קישור)(?!\w)',
+    re.I,
+)
+_SAFE_DOTTED_TECH_NAMES = frozenset({
+    'react.js', 'node.js', 'next.js', 'nuxt.js', 'vue.js', 'angular.js',
+    'asp.net',
+})
+_SAFE_DOTTED_ABBREVIATIONS = frozenset({'e.g', 'i.e', 'u.s', 'u.k'})
 _EMAIL = re.compile(
     r"(?<![\w!#$%&'*+/=?^\x60{|}~.-])"
     r"[\w.!#$%&'*+/=?^\x60{|}~-]{1,128}\s*@\s*"
@@ -99,6 +124,16 @@ _NUMBER_WORD = re.compile(
     r'(?!\w)',
     re.I,
 )
+_PRIVATE_LABEL_PREFIX = re.compile(
+    r'^(?:telegram|instagram|whatsapp|contact|phone|email|tel|tg|ig|wa|'
+    r'телеграм|инстаграм|ватсап|контакт|телефон|почта|'
+    r'טלגרם|אינסטגרם|וואטסאפ|קשר|טלפון|דוא[״"]?ל)\b\s*[:/-]?\s*',
+    re.I,
+)
+_GENERIC_MAILBOX_LOCALS = frozenset({
+    'admin', 'contact', 'hello', 'help', 'info', 'mail', 'office', 'sales',
+    'service', 'support', 'team',
+})
 
 
 def normalize_public_text(value):
@@ -142,6 +177,50 @@ def _contact_probe(text):
     return _AT_WORD.sub('@', probe)
 
 
+def _has_domain_contact(text):
+    """Reject arbitrary domain-like tokens without maintaining a TLD list.
+
+    A deliberately narrow exception preserves common technology names such as
+    ``React.js developer``.  Domains with paths, ports or URI syntax are
+    rejected by the earlier unconditional detectors.
+    """
+    if _DOMAIN_WITH_PATH.search(text):
+        return True
+    has_contact_intent = bool(_CONTACT_INTENT.search(text))
+    for match in _SPACED_BROAD_DOMAIN.finditer(text):
+        token = re.sub(r'\s+', '', match.group(0)).strip('.!?').casefold()
+        if re.match(r'\s*[?#/:]', text[match.end():]):
+            return True
+        if (
+            token in _SAFE_DOTTED_TECH_NAMES
+            or token in _SAFE_DOTTED_ABBREVIATIONS
+        ) and not has_contact_intent:
+            continue
+        return True
+    fixed_matches = list(_DOMAIN.finditer(text))
+    broad_matches = list(_BROAD_DOMAIN.finditer(text))
+    for match in fixed_matches:
+        token = re.sub(r'\s+', '', match.group(0)).strip('.!?').casefold()
+        if re.match(r'\s*[?#/:]', text[match.end():]):
+            return True
+        if token in _SAFE_DOTTED_TECH_NAMES and not has_contact_intent:
+            continue
+        return True
+    for match in broad_matches:
+        token = match.group(0).casefold()
+        if re.match(r'\s*[?#/:]', text[match.end():]):
+            return True
+        if token in _SAFE_DOTTED_TECH_NAMES and not has_contact_intent:
+            continue
+        if token.strip('.!?') in _SAFE_DOTTED_ABBREVIATIONS:
+            continue
+        # A contiguous dotted token is domain-shaped regardless of TLD case or
+        # surrounding prose. Human abbreviations with whitespace after the dot
+        # ("Dr. Cohen", "Ltd. Company") do not match _BROAD_DOMAIN.
+        return True
+    return False
+
+
 def contains_public_contact(value, *, allow_work_hours=False):
     """Conservative contact/link detector used before snapshot persistence."""
     text = normalize_public_text(value)
@@ -162,7 +241,7 @@ def contains_public_contact(value, *, allow_work_hours=False):
         return True
     if _UNICODE_URI.search(without_hours) or _PROTOCOL_RELATIVE.search(without_hours):
         return True
-    if _DOMAIN.search(probe) or _IPV4.search(probe):
+    if _has_domain_contact(probe) or _IPV4.search(probe):
         return True
     if (_MESSENGER_DIRECTION.search(without_hours)
             or _AMBIGUOUS_MESSENGER.search(without_hours)
@@ -188,20 +267,84 @@ def _private_identifier_tokens(values):
     tokens = set()
     for value in values or ():
         text = normalize_public_text(value).casefold()
-        if '@' in text:
-            local = text.split('@', 1)[0]
-            tokens.update(re.findall(r'[\w.-]{4,}', local))
-        raw_tokens = re.findall(r'[\w.-]{4,}', text.lstrip('@'))
-        tokens.update(raw_tokens)
-        tokens.update(
-            re.sub(r'[\W_]+', '', token)
-            for token in raw_tokens
-            if len(re.sub(r'[\W_]+', '', token)) >= 4
-        )
+        split_components = False
         digits = ''.join(char for char in text if char.isdecimal())
         if len(digits) >= 4:
             tokens.add(digits)
-    return {token.strip('._-') for token in tokens if len(token.strip('._-')) >= 4}
+        email_match = _EMAIL.search(text)
+        handle_tokens = re.findall(r'@\s*([\w][\w._-]*)', text)
+        if email_match:
+            split_components = True
+            # Labels such as "Email:" are not identity.  Only the mailbox
+            # local-part immediately before @ can correlate a public profile.
+            local_tokens = re.findall(
+                r'[\w.-]{1,}', email_match.group(0).split('@', 1)[0],
+            )
+            raw_tokens = local_tokens[-1:]
+            if raw_tokens and raw_tokens[0].strip('._-') in _GENERIC_MAILBOX_LOCALS:
+                raw_tokens = []
+        elif handle_tokens:
+            split_components = True
+            # Handles may be prefixed by labels ("Telegram: @name").  The
+            # token after @ is the private identifier, never the label.
+            raw_tokens = handle_tokens
+        else:
+            label_match = _PRIVATE_LABEL_PREFIX.match(text)
+            candidate = text[label_match.end():] if label_match else text
+            if '://' in candidate:
+                candidate = candidate.split('://', 1)[1]
+            minimum = 3 if label_match else 4
+            raw_tokens = re.findall(
+                rf'[\w.-]{{{minimum},}}', candidate,
+            )[-1:]
+        tokens.update(raw_tokens)
+        tokens.update(
+            compact for token in raw_tokens
+            if len(compact := re.sub(r'[\W_]+', '', token)) >= 4
+        )
+        # Meaningful alphabetic components remain correlation identifiers when
+        # a private handle/mailbox mixes letters with digits or punctuation.
+        if split_components:
+            for token in raw_tokens:
+                tokens.update(
+                    component for component in re.findall(r'[^\W\d_]{3,}', token)
+                    if component not in _GENERIC_MAILBOX_LOCALS
+                )
+    return {
+        stripped for token in tokens
+        if len(stripped := token.strip('._-')) >= 3
+    }
+
+
+def _projection_is_safe(prepared, private_values):
+    aggregate = ' '.join((
+        prepared['display_name'], prepared['description'],
+        prepared['pricing_details'],
+        _HOURS.sub('', prepared['working_hours']),
+    ))
+    if contains_public_contact(aggregate):
+        return False
+    public_folded = normalize_public_text(aggregate).casefold()
+    public_compact = re.sub(r'[\W_]+', '', public_folded)
+    public_digits = ''.join(char for char in public_folded if char.isdecimal())
+    display_folded = normalize_public_text(prepared['display_name']).casefold()
+    display_words = set(re.findall(r'[\w.-]+', display_folded))
+    display_compact_words = {
+        re.sub(r'[\W_]+', '', word) for word in display_words
+    }
+    for token in _private_identifier_tokens(private_values):
+        if token.isdecimal():
+            if token in public_digits:
+                return False
+        elif len(token) == 3:
+            # Three-character identifiers are meaningful only as an exact
+            # public-name component. Comparing them to arbitrary prose would
+            # reject common words based on a private short mailbox/handle.
+            if token in display_words or token in display_compact_words:
+                return False
+        elif token in public_folded or token in public_compact:
+            return False
+    return True
 
 
 def build_profile_snapshot(*, display_name, description,
@@ -219,22 +362,8 @@ def build_profile_snapshot(*, display_name, description,
         return None
     # A contact may be deliberately split between separately valid fields.
     # Evaluate their public composition as it will be exposed on one page.
-    aggregate = ' '.join((
-        prepared['display_name'], prepared['description'],
-        prepared['pricing_details'],
-        _HOURS.sub('', prepared['working_hours']),
-    ))
-    if contains_public_contact(aggregate):
+    if not _projection_is_safe(prepared, private_values):
         return None
-    public_folded = normalize_public_text(aggregate).casefold()
-    public_compact = re.sub(r'[\W_]+', '', public_folded)
-    public_digits = ''.join(char for char in public_folded if char.isdecimal())
-    for token in _private_identifier_tokens(private_values):
-        if token.isdecimal():
-            if token in public_digits:
-                return None
-        elif token in public_folded or token in public_compact:
-            return None
     return prepared
 
 
@@ -256,18 +385,9 @@ def build_fail_closed_profile_snapshot(*, display_name, description,
         ),
     }
     projected = {key: value or '' for key, value in values.items()}
-    if any(value is None for value in values.values()):
-        return projected
-    strict = build_profile_snapshot(
-        display_name=display_name,
-        description=description,
-        pricing_details=pricing_details,
-        working_hours=working_hours,
-        private_values=private_values,
-    )
-    if strict is None:
+    if not _projection_is_safe(projected, private_values):
         return {key: '' for key in values}
-    return strict
+    return projected
 
 
 def build_caption_snapshot(caption):

@@ -1,6 +1,8 @@
-from django.contrib.auth.models import AbstractUser
+from contextvars import ContextVar
+
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, router, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from .public_text import (
@@ -9,6 +11,69 @@ from .public_text import (
     build_caption_snapshot,
     build_fail_closed_profile_snapshot,
 )
+
+
+_PROFILE_BULK_SNAPSHOT_WRITE = ContextVar(
+    'profile_bulk_snapshot_write', default=False,
+)
+_USER_BULK_IDENTITY_WRITE = ContextVar(
+    'user_bulk_identity_write', default=False,
+)
+
+
+class SafeUserQuerySet(models.QuerySet):
+    """Invalidate public projections after supported bulk identity changes."""
+
+    def _invalidate_profiles(self, user_ids):
+        profiles = WorkerProfile.objects.using(self.db).filter(
+            user_id__in=user_ids,
+        )
+        profile_ids = list(
+            profiles.select_for_update().order_by('pk').values_list('pk', flat=True),
+        )
+        WorkerProfile.objects.using(self.db).filter(pk__in=profile_ids).update(
+            public_content_safe=False,
+            public_content_policy_version=0,
+        )
+
+    def update(self, **kwargs):
+        identity_change = (
+            bool(set(kwargs) & {'email', 'phone'})
+            and not _USER_BULK_IDENTITY_WRITE.get()
+        )
+        if not identity_change:
+            return super().update(**kwargs)
+        with transaction.atomic(using=self.db):
+            user_ids = list(
+                self.select_for_update().order_by('pk').values_list('pk', flat=True),
+            )
+            result = super().update(**kwargs)
+            if user_ids:
+                self._invalidate_profiles(user_ids)
+            return result
+
+    def bulk_update(self, objs, fields, **kwargs):
+        objs = tuple(objs)
+        identity_change = bool(set(fields) & {'email', 'phone'})
+        user_ids = [obj.pk for obj in objs if obj.pk] if identity_change else ()
+        if not user_ids:
+            return super().bulk_update(objs, fields, **kwargs)
+        with transaction.atomic(using=self.db):
+            list(
+                self.model._base_manager.using(self.db).select_for_update()
+                .filter(pk__in=user_ids).order_by('pk').values_list('pk', flat=True),
+            )
+            token = _USER_BULK_IDENTITY_WRITE.set(True)
+            try:
+                result = super().bulk_update(objs, fields, **kwargs)
+            finally:
+                _USER_BULK_IDENTITY_WRITE.reset(token)
+            self._invalidate_profiles(user_ids)
+            return result
+
+
+class SafeUserManager(UserManager.from_queryset(SafeUserQuerySet)):
+    use_in_migrations = False
 
 
 class User(AbstractUser):
@@ -56,6 +121,7 @@ class User(AbstractUser):
     last_active = models.DateTimeField(
         auto_now=True, verbose_name='Последняя активность'
     )
+    objects = SafeUserManager()
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -67,13 +133,35 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         updates = kwargs.get('update_fields')
-        result = super().save(*args, **kwargs)
-        if updates is None or set(updates) & {'email', 'phone'}:
-            profile = WorkerProfile.objects.filter(user_id=self.pk).first()
+        identity_change = updates is None or bool(set(updates) & {'email', 'phone'})
+        if not identity_change:
+            return super().save(*args, **kwargs)
+        using = kwargs.get('using') or router.db_for_write(type(self), instance=self)
+        with transaction.atomic(using=using):
+            if self.pk:
+                type(self).objects.using(using).select_for_update().filter(
+                    pk=self.pk,
+                ).exists()
+            result = super().save(*args, **kwargs)
+            persisted_identity = type(self).objects.using(using).only(
+                'email', 'phone',
+            ).get(pk=self.pk)
+            profile = WorkerProfile.objects.using(using).select_for_update().filter(
+                user_id=self.pk,
+            ).first()
             if profile is not None:
-                profile._refresh_public_snapshot()
-                profile.save(update_fields=profile.PUBLIC_DERIVED_FIELDS)
-        return result
+                profile._refresh_public_snapshot(private_values=(
+                    profile.contact,
+                    persisted_identity.email,
+                    persisted_identity.phone,
+                ))
+                # Only derived fields are written, so bypassing the profile
+                # override here cannot publish unvalidated source text.
+                super(WorkerProfile, profile).save(
+                    using=using,
+                    update_fields=profile.PUBLIC_DERIVED_FIELDS,
+                )
+            return result
 
     @property
     def is_client(self):
@@ -122,37 +210,68 @@ class WorkerProfileQuerySet(models.QuerySet):
 
     def bulk_create(self, objs, **kwargs):
         objs = list(objs)
-        identities = {
-            row.pk: (row.email, row.phone)
-            for row in User.objects.filter(
-                pk__in={obj.user_id for obj in objs if obj.user_id},
-            ).only('pk', 'email', 'phone')
-        }
-        for obj in objs:
-            email, phone = identities.get(obj.user_id, ('', ''))
-            obj._refresh_public_snapshot(private_values=(obj.contact, email, phone))
-        return super().bulk_create(objs, **kwargs)
-
-    def bulk_update(self, objs, fields, **kwargs):
-        fields = set(fields)
-        objs = list(objs)
-        if fields & WorkerProfile.PUBLIC_SOURCE_FIELDS:
+        using = self.db
+        with transaction.atomic(using=using):
             identities = {
                 row.pk: (row.email, row.phone)
-                for row in User.objects.filter(
+                for row in User.objects.using(using).select_for_update().filter(
                     pk__in={obj.user_id for obj in objs if obj.user_id},
-                ).only('pk', 'email', 'phone')
+                ).order_by('pk').only('pk', 'email', 'phone')
             }
             for obj in objs:
                 email, phone = identities.get(obj.user_id, ('', ''))
                 obj._refresh_public_snapshot(
                     private_values=(obj.contact, email, phone),
                 )
-            fields.update(WorkerProfile.PUBLIC_DERIVED_FIELDS)
-        return super().bulk_update(objs, list(fields), **kwargs)
+            return super().bulk_create(objs, **kwargs)
+
+    def bulk_update(self, objs, fields, **kwargs):
+        fields = set(fields)
+        objs = list(objs)
+        using = self.db
+        with transaction.atomic(using=using):
+            if fields & WorkerProfile.PUBLIC_SOURCE_FIELDS:
+                identities = {
+                    row.pk: (row.email, row.phone)
+                    for row in User.objects.using(using).select_for_update().filter(
+                        pk__in={obj.user_id for obj in objs if obj.user_id},
+                    ).order_by('pk').only('pk', 'email', 'phone')
+                }
+                persisted_profiles = {
+                    row.pk: row
+                    for row in self.select_for_update().filter(
+                        pk__in={obj.pk for obj in objs if obj.pk},
+                    ).order_by('pk')
+                }
+                for obj in objs:
+                    persisted = persisted_profiles.get(obj.pk)
+                    source_values = {
+                        name: getattr(persisted, name)
+                        for name in WorkerProfile.PUBLIC_SNAPSHOT_SOURCE_FIELDS
+                    } if persisted is not None else {}
+                    source_values.update({
+                        name: getattr(obj, name)
+                        for name in fields & WorkerProfile.PUBLIC_SNAPSHOT_SOURCE_FIELDS
+                    })
+                    email, phone = identities.get(obj.user_id, ('', ''))
+                    obj._refresh_public_snapshot(
+                        private_values=(
+                            source_values.get('contact', obj.contact), email, phone,
+                        ),
+                        source_values=source_values,
+                    )
+                fields.update(WorkerProfile.PUBLIC_DERIVED_FIELDS)
+            token = _PROFILE_BULK_SNAPSHOT_WRITE.set(True)
+            try:
+                return super().bulk_update(objs, list(fields), **kwargs)
+            finally:
+                _PROFILE_BULK_SNAPSHOT_WRITE.reset(token)
 
     def update(self, **kwargs):
-        if set(kwargs) & WorkerProfile.PUBLIC_SOURCE_FIELDS:
+        if (
+            set(kwargs) & WorkerProfile.PUBLIC_SOURCE_FIELDS
+            and not _PROFILE_BULK_SNAPSHOT_WRITE.get()
+        ):
             kwargs.update({
                 'public_display_name_snapshot': '',
                 'public_description_snapshot': '',
@@ -170,6 +289,10 @@ class WorkerProfile(models.Model):
     """One professional/company card. Draft until explicit owner publication."""
 
     PUBLIC_SOURCE_FIELDS = frozenset({
+        'display_name', 'description', 'pricing_details', 'working_hours',
+        'contact', 'user', 'user_id',
+    })
+    PUBLIC_SNAPSHOT_SOURCE_FIELDS = frozenset({
         'display_name', 'description', 'pricing_details', 'working_hours',
         'contact',
     })
@@ -342,18 +465,22 @@ class WorkerProfile(models.Model):
             and self.public_content_policy_version == POLICY_VERSION
         )
 
-    def _refresh_public_snapshot(self, *, private_values=None):
+    def _refresh_public_snapshot(self, *, private_values=None, source_values=None):
+        source_values = source_values or {}
+
+        def source(name):
+            return source_values.get(name, getattr(self, name))
         if private_values is None:
             private_values = (
-                self.contact,
+                source('contact'),
                 getattr(self.user, 'email', ''),
                 getattr(self.user, 'phone', ''),
             )
         snapshot = build_fail_closed_profile_snapshot(
-            display_name=self.display_name,
-            description=self.description,
-            pricing_details=self.pricing_details,
-            working_hours=self.working_hours,
+            display_name=source('display_name'),
+            description=source('description'),
+            pricing_details=source('pricing_details'),
+            working_hours=source('working_hours'),
             private_values=private_values,
         )
         self.public_display_name_snapshot = snapshot['display_name'][:120]
@@ -374,16 +501,43 @@ class WorkerProfile(models.Model):
         uses a safe name plus curated categories/services. QuerySet.update and
         bulk_create bypass save; the migration backfills legacy rows.
         """
-        updates = kwargs.get('update_fields')
-        if updates is None:
-            self._refresh_public_snapshot()
-        else:
-            updates = set(updates)
-            if updates & self.PUBLIC_SOURCE_FIELDS:
-                self._refresh_public_snapshot()
-                updates.update(self.PUBLIC_DERIVED_FIELDS)
-            kwargs['update_fields'] = updates
-        return super().save(*args, **kwargs)
+        using = kwargs.get('using') or router.db_for_write(type(self), instance=self)
+        with transaction.atomic(using=using):
+            identity = User.objects.using(using).select_for_update().only(
+                'email', 'phone',
+            ).get(pk=self.user_id)
+            persisted = None
+            if self.pk:
+                persisted = type(self).objects.using(using).select_for_update().filter(
+                    pk=self.pk,
+                ).first()
+            updates = kwargs.get('update_fields')
+            if updates is None:
+                self._refresh_public_snapshot(private_values=(
+                    self.contact, identity.email, identity.phone,
+                ))
+            else:
+                updates = set(updates)
+                if updates & self.PUBLIC_SOURCE_FIELDS:
+                    source_values = {
+                        name: getattr(persisted, name)
+                        for name in self.PUBLIC_SNAPSHOT_SOURCE_FIELDS
+                    } if persisted is not None else {}
+                    source_values.update({
+                        name: getattr(self, name)
+                        for name in updates & self.PUBLIC_SNAPSHOT_SOURCE_FIELDS
+                    })
+                    self._refresh_public_snapshot(
+                        private_values=(
+                            source_values.get('contact', self.contact),
+                            identity.email,
+                            identity.phone,
+                        ),
+                        source_values=source_values,
+                    )
+                    updates.update(self.PUBLIC_DERIVED_FIELDS)
+                kwargs['update_fields'] = updates
+            return super().save(*args, **kwargs)
 
     def __str__(self):
         return f'Мастер: {self.user}'

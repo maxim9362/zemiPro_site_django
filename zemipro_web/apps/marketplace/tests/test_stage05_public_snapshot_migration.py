@@ -48,10 +48,12 @@ class PublicSnapshotMigrationTests(TransactionTestCase):
             ).apps
             old_profile = old_apps.get_model('accounts', 'WorkerProfile')
             old_profile.objects.filter(pk=profile.pk).update(
-                display_name='john-at-example-dot-com',
-                description='t_e_l_e_g_r_a_m contacthandle',
-                searchable_display_name='john-at-example-dot-com',
-                searchable_description='contacthandle',
+                contact='@uniqueprivatehandle',
+                display_name='uniqueprivatehandle',
+                description='Contact john@example.com',
+                pricing_details='Quote 54321',
+                searchable_display_name='uniqueprivatehandle',
+                searchable_description='john@example.com',
                 public_content_safe=True,
             )
 
@@ -70,9 +72,10 @@ class PublicSnapshotMigrationTests(TransactionTestCase):
                 ),
                 originals,
             )
-            self.assertEqual(migrated.display_name, 'john-at-example-dot-com')
+            self.assertEqual(migrated.contact, '@uniqueprivatehandle')
+            self.assertEqual(migrated.display_name, 'uniqueprivatehandle')
             self.assertEqual(
-                migrated.description, 't_e_l_e_g_r_a_m contacthandle',
+                migrated.description, 'Contact john@example.com',
             )
             self.assertEqual(migrated.searchable_display_name, '')
             self.assertEqual(migrated.searchable_description, '')
