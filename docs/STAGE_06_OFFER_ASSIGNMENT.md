@@ -92,6 +92,41 @@ CI also runs isolated PostgreSQL 17 and Chromium stage02 and stage06
 browser scripts. Tests never touch production or real orders. Browser smoke
 is emulation; actual Android manual acceptance remains a separate gate.
 
+## Independent failure-injection findings and remediation (2026-11-13)
+
+**Initial independent verdict:** `STAGE06_CODE_REVIEW_FAIL` on
+`b83b341b811f7e13eac4ae0e4da1758779285d0c`; ZP-06-001 and ZP-06-002
+are both blocking MEDIUM (no CRITICAL/HIGH). Independently verified main
+remains `82aea1b374c15f2715fe4326c7472f1f2a2f993f`.
+
+The remedy deliberately uses **one outer PostgreSQL transaction**, not a
+new queue/outbox, for already local in-app notifications:
+
+- `order_respond_view`: create Response + ResponseRevision + customer
+  `new_response` notification in one transaction.
+- `order_accept_response_view`: select single winner, save agreement and
+  order status audit, then create winner **and every loser** notification in
+  that same transaction; a failure at any recipient rolls back all writes.
+- `order_work_action_view`: work transition, OrderWorkEvent and the other
+  party's in-app notification share the same transaction (start, result,
+  problem). Existing owner-completion transaction remains unchanged.
+- `propose_agreement_change` and `decide_agreement_change`: create a
+  localized, PII-free notice for the counterparty **before the transaction
+  commits**, once per new immutable version/decision. Replay of the exact
+  operation key returns a no-op without a second notification.
+- Existing permission and privacy gates for inactive/blocked/unverified users
+  continue to suppress delivery to ineligible accounts; no raw price,
+  free-text terms or private contacts are copied into notices.
+- No network send is performed; these are database-backed internal
+  notifications. Future external push/email requires a separate outbox.
+
+**New synthetic regression:** `apps.marketplace.tests.test_stage06_notification_atomicity`.
+It injects notification failures at first and second recipients and verifies
+full rollback, replay and absence of partially committed histories, quotas
+and notifications. It covers all six user-facing action types plus both
+agreement change transitions. The independent baseline FAIL remains in force
+until a new independent review on the final exact HEAD.
+
 ## Independent Codex Cloud review assignment (read-only)
 
 Review the **final SHA** of the single stage-06 Draft PR against the
