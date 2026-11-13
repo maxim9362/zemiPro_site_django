@@ -985,6 +985,19 @@ def order_detail_view(request, pk):
         if snapshot is not None:
             private_question_answers = present_order_answers(snapshot)
 
+    agreement_context = private_agreement_context(order, request.user)
+    work_party = bool(agreement_context['agreement_current'])
+    work_started = False
+    work_result_submitted = False
+    if work_party:
+        from .models import OrderWorkEvent
+        work_started = OrderWorkEvent.objects.filter(
+            order=order, action=OrderWorkEvent.Action.STARTED,
+        ).exists()
+        work_result_submitted = OrderWorkEvent.objects.filter(
+            order=order, action=OrderWorkEvent.Action.RESULT_SUBMITTED,
+        ).exists()
+
     return render(request, 'pages/order_detail.html', {
         'order': order,
         'private_question_answers': private_question_answers,
@@ -994,7 +1007,9 @@ def order_detail_view(request, pk):
         'responses': responses,
         'offer_cards': owner_offer_cards(order, responses) if is_owner else [],
         'offer_copy': offer_copy(),
-        **private_agreement_context(order, request.user),
+        **agreement_context,
+        'work_started': work_started,
+        'work_result_submitted': work_result_submitted,
         'existing_rating': existing_rating,
         'can_view_private_details': can_read_private,
         'order_photos': list(visible_order_photos(order, request.user)),
@@ -1198,6 +1213,63 @@ def order_complete_view(request, pk):
         elif order.status != Order.Status.COMPLETED:
             messages.error(request, wizard_copy()['complete_conflict'])
     return redirect('marketplace:order_detail', pk=pk)
+
+
+@login_required
+@require_POST
+@never_cache
+def order_work_action_view(request, pk, action):
+    """Authenticated single-action POST; service rechecks live persisted parties."""
+    from .work_services import (
+        report_work_problem, start_work, submit_work_result,
+    )
+    if action not in ('start', 'result', 'problem'):
+        raise Http404
+    order = get_object_or_404(
+        Order.objects.filter(
+            Q(client_id=request.user.pk) | Q(worker_id=request.user.pk),
+        ), pk=pk,
+    )
+    try:
+        if action == 'start':
+            _, changed = start_work(
+                order_id=order.pk, actor=request.user,
+                operation_key=request.POST.get('operation_key'),
+            )
+        elif action == 'result':
+            _, changed = submit_work_result(
+                order_id=order.pk, actor=request.user,
+                operation_key=request.POST.get('operation_key'),
+            )
+        else:
+            _, changed = report_work_problem(
+                order_id=order.pk, actor=request.user,
+                problem_code=request.POST.get('problem_code'),
+                operation_key=request.POST.get('operation_key'),
+            )
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
+    except ValueError as error:
+        messages.error(request, str(error))
+        return redirect('marketplace:order_detail', pk=order.pk)
+    if changed:
+        recipient_id = (
+            order.client_id if request.user.pk == order.worker_id
+            else order.worker_id
+        )
+        if recipient_id:
+            from apps.accounts.models import User
+            recipient = User.objects.filter(pk=recipient_id).first()
+            if recipient:
+                create_notification(
+                    recipient=recipient,
+                    title='Обновление выполнения заказа',
+                    message=f'Изменён этап выполнения заявки №{order.pk}.',
+                    notification_type='order_updated',
+                    related_order=order,
+                )
+        messages.success(request, _('Статус выполнения обновлён.'))
+    return redirect('marketplace:order_detail', pk=order.pk)
 
 
 @login_required
