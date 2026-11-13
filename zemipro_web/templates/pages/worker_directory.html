@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans 'Поиск специалистов' %} — ZemiPro{% endblock %}
+{% block meta_description %}{% trans 'Поиск опубликованных специалистов и их реальных услуг.' %}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>{% trans 'Поиск специалистов' %}</h1>
+        <p>{% trans 'Только опубликованные анкеты; цены и доступность указаны самими специалистами.' %}</p>
+    </div>
+</section>
+<section class="category-content">
+    <div class="container">
+        <form method="get" class="form" role="search">
+            {% if form.errors %}
+            <div class="form__errors" role="alert">
+                <p>{% trans 'Проверьте параметры поиска. Результаты не показаны, пока ошибки не исправлены.' %}</p>
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end;">
+                {% for field in form %}
+                <div class="form__group">
+                    <label for="{{ field.id_for_label }}" class="form__label">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<span class="form__error">{{ error }}</span>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            <p class="form__hint">{% trans 'Фильтр цены применяется только к добровольно указанной числовой стартовой цене в шекелях.' %}</p>
+            <p class="form__hint">{% trans 'Онлайн означает формат услуги; расстояние в километрах без проверенных координат не рассчитывается.' %}</p>
+            <button type="submit" class="btn btn--primary">{% trans 'Найти специалистов' %}</button>
+            <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}" class="btn btn--secondary">{% trans 'Сбросить фильтры' %}</a>
+        </form>
+
+        <p style="margin-top:20px;">{% blocktrans count counter=page_obj.paginator.count %}Найден {{ counter }} специалист{% plural %}Найдено специалистов: {{ counter }}{% endblocktrans %}</p>
+        {% if page_obj.object_list %}
+        <div class="orders-list">
+            {% for worker in page_obj %}
+            <article class="order-card-sm">
+                <div class="order-card-sm__header">
+                    <strong>{{ worker.display_name }}</strong>
+                    {% if worker.review_count %}
+                    <span>★ {{ worker.avg_rating|floatformat:1 }} ({{ worker.review_count }} {% trans 'отзывов' %})</span>
+                    {% else %}
+                    <span>{% trans 'Пока нет отзывов' %}</span>
+                    {% endif %}
+                </div>
+                <div class="order-card-sm__body">
+                    <p>{{ worker.city.localized_name }}</p>
+                    {% for skill in worker.public_search_skills %}
+                    {% if skill.is_active %}
+                    <span class="tag">{{ skill.localized_name }}</span>
+                    {% endif %}
+                    {% endfor %}
+                    {% if worker.starting_price_ils is not None %}
+                    <p>{% trans 'Заявленная стартовая цена:' %} {{ worker.starting_price_ils }} ₪</p>
+                    {% endif %}
+                    <p>{% trans 'Доступность:' %} {{ worker.get_availability_display }}</p>
+                </div>
+                <div class="order-card-sm__actions">
+                    <a href="{% url 'marketplace:worker_public_profile' pk=worker.pk %}" class="btn btn--primary btn--sm">{% trans 'Открыть профиль' %}</a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% if page_obj.has_other_pages %}
+        <nav class="pagination" aria-label="{% trans 'Страницы результатов' %}">
+            {% if page_obj.has_previous %}
+            <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">{% trans 'Назад' %}</a>
+            {% endif %}
+            <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">{% trans 'Далее' %}</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+        {% else %}
+        <p class="empty-state">{% trans 'Подходящих опубликованных специалистов пока нет.' %}</p>
+        {% endif %}
+        <div class="cta-block">
+            <h2>{% trans 'Не нашли подходящего специалиста?' %}</h2>
+            <p>{% trans 'Можно создать заявку и дождаться откликов, не публикуя телефон и точный адрес.' %}</p>
+            <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

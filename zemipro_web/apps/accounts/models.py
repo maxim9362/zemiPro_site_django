@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -126,6 +127,12 @@ class WorkerProfile(models.Model):
         max_length=240, blank=True, default='',
         verbose_name=_('Цены или принцип расчёта'),
     )
+    starting_price_ils = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        validators=[MinValueValidator(0)], db_index=True,
+        verbose_name=_('Заявленная стартовая цена, ₪'),
+        help_text=_('Необязательная цена от мастера; текст не преобразуется в число.'),
+    )
     availability = models.CharField(
         max_length=12, choices=Availability.choices,
         default=Availability.AVAILABLE, verbose_name=_('Доступность'),
@@ -156,6 +163,10 @@ class WorkerProfile(models.Model):
         'marketplace.Category', blank=True,
         related_name='workers', verbose_name='Навыки'
     )
+    services = models.ManyToManyField(
+        'marketplace.Subcategory', blank=True,
+        related_name='workers', verbose_name=_('Конкретные услуги'),
+    )
     service_cities = models.ManyToManyField(
         'locations.City', blank=True,
         related_name='service_workers', verbose_name='Города обслуживания',
@@ -176,6 +187,12 @@ class WorkerProfile(models.Model):
         verbose_name = 'Профиль исполнителя'
         verbose_name_plural = 'Профили исполнителей'
         db_table = 'accounts_worker_profile'
+        indexes = [
+            models.Index(
+                fields=['is_published', 'city', 'availability'],
+                name='worker_public_search_idx',
+            ),
+        ]
 
     def __str__(self):
         return f'Мастер: {self.user}'

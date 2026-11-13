@@ -7,6 +7,7 @@ app_name = 'catalog_i18n'
 
 urlpatterns = [
     path('categories/', views.categories_list, name='categories_list'),
+    path('workers/', views.worker_directory_view, name='worker_directory'),
     path('sections/<slug:slug>/', views.section_detail, name='section_detail'),
     path('categories/<slug:slug>/', views.category_detail, name='category_detail'),
     path(

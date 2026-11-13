@@ -43,6 +43,14 @@
                     <span class="tag">{{ skill.emoji }} {{ skill.localized_name }}</span>
                     {% endfor %}
                 </div>
+                {% if profile.services.exists %}
+                <div class="order-card__field">
+                    <strong>{% trans 'Конкретные услуги:' %}</strong>
+                    {% for service in profile.services.all %}
+                    <span class="tag">{{ service.localized_name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 <div class="order-card__field"><strong>{% trans 'Тип исполнителя' %}:</strong> {{ profile.get_provider_type_display }}</div>
                 <div class="order-card__field"><strong>{% trans 'Языки общения' %}:</strong>
                     {% for language in profile.spoken_languages %}
@@ -50,6 +58,9 @@
                     {% endfor %}
                 </div>
                 <div class="order-card__field"><strong>{% trans 'Цены или принцип расчёта' %}:</strong> {{ profile.pricing_details }}</div>
+                {% if profile.starting_price_ils is not None %}
+                <div class="order-card__field"><strong>{% trans 'Заявленная стартовая цена:' %}</strong> {{ profile.starting_price_ils }} ₪</div>
+                {% endif %}
                 <div class="order-card__field"><strong>{% trans 'Доступность' %}:</strong> {{ profile.get_availability_display }}</div>
                 {% if profile.working_hours %}<div class="order-card__field"><strong>{% trans 'График работы' %}:</strong> {{ profile.working_hours }}</div>{% endif %}
                 {% if avg_rating > 0 %}

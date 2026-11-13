@@ -10,7 +10,7 @@ from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceFi
 
 from apps.locations.models import City
 from apps.locations.services import get_public_cities
-from apps.marketplace.models import Category, Rating
+from apps.marketplace.models import Category, Rating, Subcategory
 from .models import ClientProfile, User, WorkerProfile, VerifiedContact
 from .verification import contact_fingerprint, normalize_israeli_phone
 
@@ -184,6 +184,16 @@ class WorkerProfileForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
     )
 
+    services = LocalizedModelMultipleChoiceField(
+        queryset=Subcategory.objects.filter(
+            is_active=True, category__is_active=True,
+        ).filter(
+            Q(category__section__isnull=True) | Q(category__section__is_active=True)
+        ).order_by('category__sort_order', 'sort_order', 'pk'),
+        label=_('Конкретные услуги (только фактически оказываемые)'),
+        required=False, widget=forms.CheckboxSelectMultiple,
+    )
+
     service_cities = LocalizedModelMultipleChoiceField(
         queryset=City.objects.filter(is_active=True).order_by('name_ru', 'pk'),
         label=_('Города обслуживания (можно выбрать несколько)'),
@@ -206,8 +216,8 @@ class WorkerProfileForm(forms.ModelForm):
         model = WorkerProfile
         fields = [
             'provider_type', 'display_name', 'city', 'contact', 'description',
-            'skills', 'service_cities', 'offers_remote', 'spoken_languages',
-            'pricing_details', 'availability', 'working_hours',
+            'skills', 'services', 'service_cities', 'offers_remote', 'spoken_languages',
+            'pricing_details', 'starting_price_ils', 'availability', 'working_hours',
             'receive_notifications',
         ]
         labels = {
@@ -238,6 +248,14 @@ class WorkerProfileForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        services = data.get('services')
+        skills = data.get('skills')
+        if services is not None and skills is not None:
+            category_ids = set(skills.values_list('pk', flat=True))
+            if any(item.category_id not in category_ids for item in services):
+                raise forms.ValidationError(
+                    _('Выберите конкретные услуги только из своих категорий.')
+                )
         if data.get('offers_remote'):
             skills = data.get('skills')
             if skills is not None and not skills.filter(

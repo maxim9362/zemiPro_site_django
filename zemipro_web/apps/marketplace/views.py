@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -23,6 +24,9 @@ from apps.locations.models import CityAlias
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from apps.notifications.services import create_notification
 from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
+from .directory_search import (
+    WorkerDirectoryForm, active_categories, search_worker_profiles,
+)
 from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
@@ -89,6 +93,43 @@ def home(request):
         Q(section__isnull=True) | Q(section__is_active=True)
     ).order_by('sort_order', 'pk')
     return render(request, 'pages/home.html', {'categories': categories})
+
+
+@require_GET
+def worker_directory_view(request):
+    """Public read-only specialist directory; never render private contacts."""
+    form = WorkerDirectoryForm(request.GET)
+    workers = search_worker_profiles(form).select_related(
+        'user', 'city',
+    ).prefetch_related(Prefetch(
+        'skills',
+        queryset=active_categories().order_by('sort_order', 'pk'),
+        to_attr='public_search_skills',
+    ))
+    paginator = Paginator(workers, ITEMS_PER_PAGE)
+    page = paginator.get_page(request.GET.get('page'))
+    # Only verified filter names/values survive links; no arbitrary GET reflection.
+    preserved = {}
+    if form.is_valid():
+        for name in form.fields:
+            value = request.GET.get(name, '')
+            if value:
+                preserved[name] = value
+    safe_query = urlencode(preserved)
+    return render(request, 'pages/worker_directory.html', {
+        'form': form,
+        'page_obj': page,
+        'pagination_query': safe_query,
+        'language_switch_next': request.path + (
+            '?' + safe_query if safe_query else ''
+        ),
+        'catalog_localized': bool(
+            request.resolver_match
+            and request.resolver_match.namespace == 'catalog_i18n'
+        ),
+        # Until the separate SEO quality gate (05.6), filter pages are noindex.
+        'seo_noindex': True,
+    })
 
 
 def categories_list(request):

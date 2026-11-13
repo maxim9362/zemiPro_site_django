@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from apps.locations.services import city_is_public, get_public_cities
+from apps.marketplace.models import Subcategory
 
 from .models import User, ClientProfile, WorkerProfile
 
@@ -114,7 +115,8 @@ def create_or_update_worker_profile(user, form_data):
     profile, _ = WorkerProfile.objects.select_for_update().get_or_create(user=owner)
     fields = (
         'provider_type', 'display_name', 'city', 'contact', 'description',
-        'pricing_details', 'spoken_languages', 'availability', 'working_hours',
+        'pricing_details', 'starting_price_ils', 'spoken_languages',
+        'availability', 'working_hours',
         'receive_notifications',
     )
     for name in fields:
@@ -128,6 +130,23 @@ def create_or_update_worker_profile(user, form_data):
         profile.skills.set(form_data['skills'])
     if 'service_cities' in form_data:
         profile.service_cities.set(form_data['service_cities'])
+    if 'services' in form_data:
+        selected = list(form_data['services'])
+        selected_ids = {item.pk for item in selected}
+        valid_ids = set(Subcategory.objects.filter(
+            pk__in=selected_ids, is_active=True, category__is_active=True,
+            category__in=profile.skills.all(),
+        ).filter(
+            Q(category__section__isnull=True) | Q(category__section__is_active=True)
+        ).values_list('pk', flat=True))
+        if selected_ids != valid_ids:
+            raise ValueError(_('Выберите только активные услуги из своих категорий.'))
+        profile.services.set(selected_ids)
+    elif 'skills' in form_data:
+        # Legacy callers cannot retain an incompatible concrete service.
+        profile.services.remove(*profile.services.exclude(
+            category__in=profile.skills.all()
+        ).values_list('pk', flat=True))
     if profile.is_published and publication_issue(profile):
         profile.is_published = False
         profile.published_at = None
