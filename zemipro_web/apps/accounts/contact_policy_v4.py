@@ -81,13 +81,21 @@ _HANDLE = re.compile(r'(?<!\w)@\s*[\w][\w._-]*')
 # punctuation/whitespace rather than a hand-picked ASCII character list.
 _PHONE = re.compile(r'(?<!\w)\+?\d(?:[^\w]{0,5}\d){7,18}(?!\w)')
 _PHONE_QUERY = re.compile(r'(?<!\w)\+?\d(?:[^\w]{0,5}\d){4,18}(?!\w)')
+# Four pairs of digits may be a legitimate work schedule, not a phone.
+# The strict hour/minute ranges deliberately do not admit 050:7654321.
+_HOURS = re.compile(r'(?:[01]\d|2[0-3]):[0-5]\d\s*-\s*(?:[01]\d|2[0-3]):[0-5]\d')
 
 
 def redact_public_contact(value):
     """Do not publish entire contact/URI tokens or searchable fragments."""
     result = normalize_public_text(value)
-    for pattern in (_EMAIL, _URI, _DOMAIN, _HANDLE, _PHONE):
+    for pattern in (_EMAIL, _URI, _DOMAIN, _HANDLE):
         result = pattern.sub(MARKER, result)
+    result = _PHONE.sub(
+        lambda match: match.group() if _HOURS.fullmatch(match.group())
+        else MARKER,
+        result,
+    )
     return result
 
 
