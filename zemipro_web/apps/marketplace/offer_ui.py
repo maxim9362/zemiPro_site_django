@@ -28,6 +28,15 @@ _COPY = {
         'invalid_offer': 'Проверьте цену, сроки и условия.',
         'action_error': 'Действие недоступно. Обновите страницу.',
         'status_updated': 'Статус выполнения обновлён.',
+        'agreement_notice_proposed_title': 'Изменение договорённости',
+        'agreement_notice_proposed_message':
+            'По заявке №{order} предложена версия условий {version}. Требуется ваше решение.',
+        'agreement_notice_accepted_title': 'Изменение условий подтверждено',
+        'agreement_notice_accepted_message':
+            'По заявке №{order} согласована версия условий {version}.',
+        'agreement_notice_rejected_title': 'Изменение условий отклонено',
+        'agreement_notice_rejected_message':
+            'По заявке №{order} отклонена версия условий {version}.',
         'agreement': 'Согласованные условия', 'confirmed': 'Подтверждено',
         'change_agreement': 'Предложить изменения', 'pending_agreement': 'Ожидает решения',
         'agreement_history': 'История соглашения', 'accept_change': 'Подтвердить',
@@ -60,6 +69,15 @@ _COPY = {
         'invalid_offer': 'Please check price, timeline and terms.',
         'action_error': 'This action is unavailable. Refresh the page.',
         'status_updated': 'Work status updated.',
+        'agreement_notice_proposed_title': 'Agreement change proposed',
+        'agreement_notice_proposed_message':
+            'Request #{order}: terms version {version} awaits your decision.',
+        'agreement_notice_accepted_title': 'Agreement change accepted',
+        'agreement_notice_accepted_message':
+            'Request #{order}: terms version {version} has been accepted.',
+        'agreement_notice_rejected_title': 'Agreement change rejected',
+        'agreement_notice_rejected_message':
+            'Request #{order}: terms version {version} has been rejected.',
         'agreement': 'Agreed terms', 'confirmed': 'Confirmed',
         'change_agreement': 'Propose changes', 'pending_agreement': 'Awaiting decision',
         'agreement_history': 'Agreement history', 'accept_change': 'Accept terms',
@@ -92,6 +110,15 @@ _COPY = {
         'invalid_offer': 'יש לבדוק את המחיר, הזמן והתנאים.',
         'action_error': 'הפעולה אינה זמינה. יש לרענן את הדף.',
         'status_updated': 'מצב העבודה עודכן.',
+        'agreement_notice_proposed_title': 'הצעה לשינוי תנאי ההסכם',
+        'agreement_notice_proposed_message':
+            'בבקשה מס׳ {order} ממתינה להחלטתך גרסה {version} של התנאים.',
+        'agreement_notice_accepted_title': 'השינוי בתנאים אושר',
+        'agreement_notice_accepted_message':
+            'בבקשה מס׳ {order} אושרה גרסת התנאים {version}.',
+        'agreement_notice_rejected_title': 'השינוי בתנאים נדחה',
+        'agreement_notice_rejected_message':
+            'בבקשה מס׳ {order} נדחתה גרסת התנאים {version}.',
         'agreement': 'תנאים מוסכמים', 'confirmed': 'אושר',
         'change_agreement': 'הצעת שינוי', 'pending_agreement': 'ממתין להחלטה',
         'agreement_history': 'היסטוריית ההסכמות', 'accept_change': 'אישור השינוי',

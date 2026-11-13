@@ -2,10 +2,44 @@
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Max
+from django.utils.translation import override
+
+from apps.accounts.models import User
+from apps.notifications.services import create_notification
+from .offer_ui import offer_copy
 
 from .models import Order, OrderAgreementDecision, OrderAgreementVersion, Response
 from .offer_services import OFFER_FIELDS, _enabled, _key, normalize_offer
 from .order_quota import consume_order_quota
+
+
+def _notify_counterparty(order, *, recipient_id, action, version_number):
+    """Create a localized, PII-free internal notice in the agreement transaction.
+
+    A version/decision is created once under the Order lock; sending only on
+    the created path gives exact-once in-app notifications on retries. If
+    notification storage fails, the whole proposal/decision rolls back.
+    Inactive, blocked and unverified recipients do not receive notices.
+    """
+    if not transaction.get_connection().in_atomic_block:
+        raise RuntimeError('Agreement notification requires an atomic transaction.')
+    recipient = User.objects.filter(
+        pk=recipient_id, is_active=True, is_blocked=False,
+        email_verification_required=False,
+    ).first()
+    if recipient is None:
+        return None
+    with override(recipient.preferred_language):
+        copy = offer_copy()
+    return create_notification(
+        recipient=recipient,
+        title=copy[f'agreement_notice_{action}_title'],
+        message=copy[f'agreement_notice_{action}_message'].format(
+            order=order.pk, version=version_number,
+        ),
+        notification_type='system',
+        related_order=order,
+    )
 
 
 def effective_agreement(order):
@@ -91,6 +125,13 @@ def propose_agreement_change(*, order_id, actor, data, note, base_version,
         response_revision=response.revision, proposed_by=actor,
         operation_key=key, note=note, **payload,
     )
+    recipient_id = (
+        order.worker_id if actor.pk == order.client_id else order.client_id
+    )
+    _notify_counterparty(
+        order, recipient_id=recipient_id,
+        action='proposed', version_number=version.number,
+    )
     return version, True
 
 
@@ -131,5 +172,9 @@ def decide_agreement_change(*, agreement_id, actor, action, operation_key):
     consume_order_quota(actor, 'state')
     decision = OrderAgreementDecision.objects.create(
         agreement=version, actor=actor, result=wanted, operation_key=key,
+    )
+    _notify_counterparty(
+        order, recipient_id=version.proposed_by_id,
+        action=wanted, version_number=version.number,
     )
     return decision, True
