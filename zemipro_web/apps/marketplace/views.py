@@ -1117,41 +1117,42 @@ def client_dashboard_view(request):
     })
 
 @login_required
+@require_POST
 def order_accept_response_view(request, order_id, response_id):
-    if request.method != 'POST':
-        raise Http404
-
     order = get_object_or_404(Order, pk=order_id, client=request.user)
     response = get_object_or_404(Response, pk=response_id, order=order)
 
     try:
-        response = accept_response(response, actor=request.user)
+        # The choice, agreement snapshot, status history and ALL in-app
+        # notifications must commit together. An error on the second notice
+        # rolls the first notice and the winner selection back as well.
+        with transaction.atomic():
+            response = accept_response(response, actor=request.user)
+            if getattr(response, '_assignment_created', False):
+                create_notification(
+                    recipient=response.worker,
+                    title='Вас выбрали',
+                    message=f'Клиент выбрал вас исполнителем по заявке №{order.pk}.',
+                    notification_type='response_accepted',
+                    related_order=order,
+                    related_response=response,
+                )
+                from apps.accounts.models import User
+                for worker_id in response._rejected_worker_ids:
+                    worker_user = User.objects.filter(pk=worker_id).first()
+                    if worker_user:
+                        create_notification(
+                            recipient=worker_user,
+                            title='Выбран другой мастер',
+                            message=f'По заявке №{order.pk} клиент выбрал другого мастера.',
+                            notification_type='response_rejected',
+                            related_order=order,
+                        )
     except OrderQuotaExceeded as error:
         return _order_quota_response(error)
     except ValueError as error:
         messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
-
-    if getattr(response, '_assignment_created', False):
-        create_notification(
-            recipient=response.worker,
-            title='Вас выбрали',
-            message=f'Клиент выбрал вас исполнителем по заявке №{order.pk}.',
-            notification_type='response_accepted',
-            related_order=order,
-            related_response=response,
-        )
-        from apps.accounts.models import User
-        for worker_id in response._rejected_worker_ids:
-            worker_user = User.objects.filter(pk=worker_id).first()
-            if worker_user:
-                create_notification(
-                    recipient=worker_user,
-                    title='Выбран другой мастер',
-                    message=f'По заявке №{order.pk} клиент выбрал другого мастера.',
-                    notification_type='response_rejected',
-                    related_order=order,
-                )
 
     messages.success(request, _('Мастер %(worker)s выбран!') % {'worker': response.worker})
     return redirect('marketplace:order_detail', pk=order.pk)
@@ -1228,7 +1229,7 @@ def order_complete_view(request, pk):
 @require_POST
 @never_cache
 def order_work_action_view(request, pk, action):
-    """Authenticated single-action POST; service rechecks live persisted parties."""
+    """A work transition and its notice are a single PostgreSQL transaction."""
     from .work_services import (
         report_work_problem, start_work, submit_work_result,
     )
@@ -1240,43 +1241,45 @@ def order_work_action_view(request, pk, action):
         ), pk=pk,
     )
     try:
-        if action == 'start':
-            order, changed = start_work(
-                order_id=order.pk, actor=request.user,
-                operation_key=request.POST.get('operation_key'),
-            )
-        elif action == 'result':
-            order, changed = submit_work_result(
-                order_id=order.pk, actor=request.user,
-                operation_key=request.POST.get('operation_key'),
-            )
-        else:
-            order, changed = report_work_problem(
-                order_id=order.pk, actor=request.user,
-                problem_code=request.POST.get('problem_code'),
-                operation_key=request.POST.get('operation_key'),
-            )
+        with transaction.atomic():
+            if action == 'start':
+                order, changed = start_work(
+                    order_id=order.pk, actor=request.user,
+                    operation_key=request.POST.get('operation_key'),
+                )
+            elif action == 'result':
+                order, changed = submit_work_result(
+                    order_id=order.pk, actor=request.user,
+                    operation_key=request.POST.get('operation_key'),
+                )
+            else:
+                order, changed = report_work_problem(
+                    order_id=order.pk, actor=request.user,
+                    problem_code=request.POST.get('problem_code'),
+                    operation_key=request.POST.get('operation_key'),
+                )
+            if changed:
+                recipient_id = (
+                    order.client_id if request.user.pk == order.worker_id
+                    else order.worker_id
+                )
+                if recipient_id:
+                    from apps.accounts.models import User
+                    recipient = User.objects.filter(pk=recipient_id).first()
+                    if recipient:
+                        create_notification(
+                            recipient=recipient,
+                            title='Обновление выполнения заказа',
+                            message=f'Изменён этап выполнения заявки №{order.pk}.',
+                            notification_type='order_updated',
+                            related_order=order,
+                        )
     except OrderQuotaExceeded as error:
         return _order_quota_response(error)
     except ValueError:
         messages.error(request, offer_copy()['action_error'])
         return redirect('marketplace:order_detail', pk=order.pk)
     if changed:
-        recipient_id = (
-            order.client_id if request.user.pk == order.worker_id
-            else order.worker_id
-        )
-        if recipient_id:
-            from apps.accounts.models import User
-            recipient = User.objects.filter(pk=recipient_id).first()
-            if recipient:
-                create_notification(
-                    recipient=recipient,
-                    title='Обновление выполнения заказа',
-                    message=f'Изменён этап выполнения заявки №{order.pk}.',
-                    notification_type='order_updated',
-                    related_order=order,
-                )
         messages.success(request, offer_copy()['status_updated'])
     return redirect('marketplace:order_detail', pk=order.pk)
 
@@ -1384,21 +1387,24 @@ def order_respond_view(request, pk):
         form = ResponseCreateForm(request.POST)
         if form.is_valid():
             try:
-                response, created = submit_offer(
-                    order=order, actor=request.user,
-                    message=form.cleaned_data['message'],
-                    data=form.cleaned_data,
-                    operation_key=request.POST.get('operation_key'),
-                )
-
-                if created and order.client:
-                    create_notification(
-                        recipient=order.client,
-                        title='Новый отклик',
-                        message=f'Мастер откликнулся на вашу заявку №{order.pk}.',
-                        notification_type='new_response',
-                        related_order=order,
+                # The response/revision and customer notice share one commit.
+                # If notification creation fails, the response can be retried
+                # with the same operation_key without a ghost successful reply.
+                with transaction.atomic():
+                    response, created = submit_offer(
+                        order=order, actor=request.user,
+                        message=form.cleaned_data['message'],
+                        data=form.cleaned_data,
+                        operation_key=request.POST.get('operation_key'),
                     )
+                    if created and order.client:
+                        create_notification(
+                            recipient=order.client,
+                            title='Новый отклик',
+                            message=f'Мастер откликнулся на вашу заявку №{order.pk}.',
+                            notification_type='new_response',
+                            related_order=order,
+                        )
 
                 messages.success(request, _('Отклик отправлен!'))
                 return redirect('marketplace:order_detail', pk=pk)
