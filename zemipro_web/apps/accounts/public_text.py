@@ -1,5 +1,10 @@
-"""Active public contact policy; historical versions remain immutable."""
-from .contact_policy_v6 import (
+"""Active public snapshot policy; historical versions remain immutable."""
+from .public_snapshot_v1 import (
+    MARKER,
+    POLICY_VERSION,
+    build_caption_snapshot,
+    build_fail_closed_profile_snapshot,
+    build_profile_snapshot,
     contact_shaped_query,
     contains_public_contact,
     normalize_public_text,
@@ -10,6 +15,11 @@ from .contact_policy_v6 import (
 )
 
 __all__ = [
+    'MARKER',
+    'POLICY_VERSION',
+    'build_caption_snapshot',
+    'build_fail_closed_profile_snapshot',
+    'build_profile_snapshot',
     'contact_shaped_query',
     'contains_public_contact',
     'normalize_public_text',

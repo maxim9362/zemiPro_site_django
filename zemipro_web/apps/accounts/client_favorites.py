@@ -5,6 +5,7 @@ from django.db import transaction
 from apps.locations.services import get_public_cities, public_city_slug
 from apps.marketplace.services import workers_serving_city
 from .models import FavoriteWorker, User, WorkerProfile
+from .public_text import POLICY_VERSION
 
 
 def public_worker_queryset():
@@ -12,8 +13,8 @@ def public_worker_queryset():
         user__is_active=True, user__is_blocked=False,
         user__email_verification_required=False,
         is_published=True, city__in=get_public_cities(),
-    ).exclude(display_name='').exclude(description='').exclude(
-        pricing_details='',
+        public_content_safe=True,
+        public_content_policy_version=POLICY_VERSION,
     ).select_related('city', 'user')
     if public_city_slug():
         city = get_public_cities().first()

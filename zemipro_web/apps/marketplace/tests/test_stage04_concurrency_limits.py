@@ -50,13 +50,15 @@ class QuotaAndReplayTests(TestCase):
         cls.other = make_user('046-other')
         cls.worker = make_user('046-worker')
         ClientProfile.objects.create(user=cls.owner, city=cls.city)
-        WorkerProfile.objects.create(
+        worker_profile = WorkerProfile.objects.create(
             user=cls.worker, city=cls.city,
             display_name='Synthetic 046 worker',
             description='Synthetic worker available for repair requests.',
             pricing_details='Negotiable', spoken_languages=['ru'],
             is_published=True,
         )
+        worker_profile.skills.add(cls.category)
+        worker_profile.services.add(cls.service)
 
     def setUp(self):
         self.client.force_login(self.owner)

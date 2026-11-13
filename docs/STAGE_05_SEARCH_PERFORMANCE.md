@@ -204,3 +204,15 @@ bounded; a public staging/load run remains necessary before launch decisions.
 - Browser screenshots are emulator smoke, NOT physical device acceptance.
 
 No live database, secret, VPS, DNS, Cloudflare or deployment touched.
+
+## Persisted snapshot baseline (synthetic PostgreSQL 17)
+
+The root-cause privacy fix adds a versioned public-snapshot gate and one
+composite public index. Free-form descriptions remain excluded from keyword
+search; safe display names and curated category/service translations remain
+searchable. A local 300-profile diagnostic after the change retained bounded
+query counts: 10 queries unfiltered/keyword, 14 complex, 8 empty and 5 invalid;
+300 unfiltered and keyword results, 126 complex results. Observed p50 values
+were approximately 71/54/66/60/13 ms respectively. These are isolated
+test-client observations, not production SLOs; GitHub CI must independently
+repeat the baseline on the final commit.

@@ -344,6 +344,13 @@ class RatingCreateForm(forms.ModelForm):
             'review_text': _('Текст отзыва'),
         }
 
+    def clean_review_text(self):
+        value = self.cleaned_data.get('review_text', '').strip()
+        if contains_public_contact(value):
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_text'])
+        return value
+
 class ClientSettingsForm(forms.Form):
     """Edit only own User + ClientProfile data; no role/permission fields."""
 

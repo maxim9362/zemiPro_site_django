@@ -86,14 +86,15 @@ def publication_issue(profile):
         return _('Аккаунт недоступен.')
     if not profile.display_name.strip():
         return _('Укажите публичное имя или название компании.')
-    from .public_text import profile_public_content_is_safe
+    from .public_text import build_profile_snapshot
     from apps.marketplace.directory_ui import directory_copy
-    if not profile_public_content_is_safe(
+    if build_profile_snapshot(
         display_name=profile.display_name,
         description=profile.description,
         pricing_details=profile.pricing_details,
         working_hours=profile.working_hours,
-    ):
+        private_values=(profile.contact, profile.user.email, profile.user.phone),
+    ) is None:
         if (
             '@' in profile.display_name
             or profile.display_name != profile.public_display_name
@@ -214,7 +215,7 @@ def set_worker_publication(user, publish):
         error = publication_issue(profile)
         if error:
             raise ValueError(error)
-        profile.public_content_safe = True
+        profile._refresh_public_snapshot()
         profile.is_published = True
         if not profile.published_at:
             profile.published_at = timezone.now()
@@ -222,7 +223,11 @@ def set_worker_publication(user, publish):
         profile.is_published = False
         profile.published_at = None
     profile.save(update_fields=[
-        'is_published', 'published_at', 'public_content_safe', 'updated_at',
+        'is_published', 'published_at',
+        'public_display_name_snapshot', 'public_description_snapshot',
+        'public_pricing_details_snapshot', 'public_working_hours_snapshot',
+        'searchable_display_name', 'searchable_description',
+        'public_content_safe', 'public_content_policy_version', 'updated_at',
     ])
     return profile
 

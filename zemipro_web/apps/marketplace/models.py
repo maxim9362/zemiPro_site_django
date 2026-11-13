@@ -735,6 +735,13 @@ class Rating(models.Model):
         verbose_name='Оценка'
     )
     review_text = models.TextField(blank=True, default='', verbose_name='Текст отзыва')
+    public_review_text_snapshot = models.TextField(
+        blank=True, default='', editable=False,
+    )
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    public_content_policy_version = models.PositiveSmallIntegerField(
+        default=0, editable=False,
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
 
     class Meta:
@@ -745,6 +752,33 @@ class Rating(models.Model):
 
     def __str__(self):
         return f'{self.worker} — {self.rating}/5'
+
+    @property
+    def public_review_text(self):
+        from apps.accounts.public_text import MARKER, POLICY_VERSION
+        if (
+            self.public_content_safe
+            and self.public_content_policy_version == POLICY_VERSION
+        ):
+            return self.public_review_text_snapshot or (MARKER if self.review_text else '')
+        return MARKER if self.review_text else ''
+
+    def save(self, *args, **kwargs):
+        from apps.accounts.public_text import POLICY_VERSION, build_caption_snapshot
+        updates = kwargs.get('update_fields')
+        if updates is None or 'review_text' in set(updates):
+            snapshot = build_caption_snapshot(self.review_text)
+            self.public_review_text_snapshot = snapshot or ''
+            self.public_content_safe = True
+            self.public_content_policy_version = POLICY_VERSION
+            if updates is not None:
+                updates = set(updates)
+                updates.update({
+                    'public_review_text_snapshot', 'public_content_safe',
+                    'public_content_policy_version',
+                })
+                kwargs['update_fields'] = updates
+        return super().save(*args, **kwargs)
 
 
 class ServiceQuestionnaire(models.Model):

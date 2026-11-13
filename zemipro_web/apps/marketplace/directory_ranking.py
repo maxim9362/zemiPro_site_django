@@ -152,7 +152,7 @@ def add_directory_scores(workers, *, category, service, query, city,
                 When(starting_price_ils__isnull=False, then=_constant(2)),
             )
             + _score_when(
-                When(~Q(working_hours=''), then=_constant(2)),
+                When(~Q(public_working_hours_snapshot=''), then=_constant(2)),
             )
         ),
     )

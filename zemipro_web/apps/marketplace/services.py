@@ -321,15 +321,35 @@ def get_available_orders_for_worker(worker_profile):
         status=Order.Status.PUBLISHED, category__in=skills,
         city__in=get_public_cities(),
     ).exclude(client_id=worker_profile.user_id)
+    declared_services = worker_profile.services.filter(
+        is_active=True, category__is_active=True,
+    )
+    base_qs = base_qs.filter(
+        Q(subcategory__isnull=True) | Q(subcategory__in=declared_services),
+    )
 
     # A worker without an explicit area inherits only the historical home city;
     # no default nationwide visibility for new or legacy profiles.
     zones = worker_profile.service_cities.filter(is_active=True)
-    zone_filter = Q(city__in=zones)
+    onsite_zone = Q(city__in=zones)
     if not worker_profile.service_cities.exists() and worker_profile.city_id:
-        zone_filter = Q(city_id=worker_profile.city_id)
+        onsite_zone = Q(city_id=worker_profile.city_id)
+    onsite_order = (
+        Q(work_mode=Order.WorkMode.ONSITE)
+        | Q(
+            work_mode=Order.WorkMode.LEGACY,
+            category__work_mode__in=('onsite', 'both'),
+        )
+    )
+    zone_filter = onsite_order & onsite_zone
     if worker_profile.offers_remote:
-        zone_filter |= Q(category__work_mode__in=('online', 'both'))
+        zone_filter |= (
+            Q(work_mode=Order.WorkMode.ONLINE)
+            | Q(
+                work_mode=Order.WorkMode.LEGACY,
+                category__work_mode__in=('online', 'both'),
+            )
+        )
 
     return base_qs.filter(zone_filter).annotate(
         city_priority=Case(
@@ -345,7 +365,9 @@ def create_response(order, worker_user, message=''):
     with transaction.atomic():
         # Lock the order FIRST, just like acceptance and withdrawal.
         # This prevents inserting PENDING after winner was selected.
-        order = Order.objects.select_for_update().select_related('city').get(pk=order.pk)
+        order = Order.objects.select_for_update(of=('self',)).select_related(
+            'city', 'category__section', 'subcategory__category__section',
+        ).get(pk=order.pk)
         if not User.objects.filter(
             pk=worker_user.pk, is_active=True, is_blocked=False,
             email_verification_required=False,
@@ -367,6 +389,17 @@ def create_response(order, worker_user, message=''):
         if (not worker_profile.is_published
                 or worker_profile.availability == WorkerProfile.Availability.UNAVAILABLE):
             raise ValueError('Анкета мастера не опубликована или недоступна.')
+        mode = (
+            order.work_mode
+            if order.work_mode in (Order.WorkMode.ONSITE, Order.WorkMode.ONLINE)
+            else None
+        )
+        if not workers_serving_city(
+            WorkerProfile.objects.filter(pk=worker_profile.pk),
+            order.city, category=order.category,
+            service=order.subcategory, mode=mode,
+        ).exists():
+            raise ValueError('Заявка не соответствует услугам или зоне мастера.')
         if Response.objects.filter(order=order, worker_id=worker_user.pk).exists():
             raise ValueError('Вы уже откликались на этот заказ.')
         consume_order_quota(worker_user, 'response')

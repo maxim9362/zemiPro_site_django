@@ -4,9 +4,10 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from .public_text import (
-    profile_public_content_is_safe,
-    redact_public_contact,
-    searchable_public_name,
+    MARKER,
+    POLICY_VERSION,
+    build_caption_snapshot,
+    build_fail_closed_profile_snapshot,
 )
 
 
@@ -64,6 +65,16 @@ class User(AbstractUser):
     def __str__(self):
         return self.get_full_name() or self.username
 
+    def save(self, *args, **kwargs):
+        updates = kwargs.get('update_fields')
+        result = super().save(*args, **kwargs)
+        if updates is None or set(updates) & {'email', 'phone'}:
+            profile = WorkerProfile.objects.filter(user_id=self.pk).first()
+            if profile is not None:
+                profile._refresh_public_snapshot()
+                profile.save(update_fields=profile.PUBLIC_DERIVED_FIELDS)
+        return result
+
     @property
     def is_client(self):
         # Client access still requires authentication and order ownership.
@@ -106,8 +117,69 @@ class ClientProfile(models.Model):
         return f'Клиент: {self.user}'
 
 
+class WorkerProfileQuerySet(models.QuerySet):
+    """Keep public projections safe for supported bulk write paths."""
+
+    def bulk_create(self, objs, **kwargs):
+        objs = list(objs)
+        identities = {
+            row.pk: (row.email, row.phone)
+            for row in User.objects.filter(
+                pk__in={obj.user_id for obj in objs if obj.user_id},
+            ).only('pk', 'email', 'phone')
+        }
+        for obj in objs:
+            email, phone = identities.get(obj.user_id, ('', ''))
+            obj._refresh_public_snapshot(private_values=(obj.contact, email, phone))
+        return super().bulk_create(objs, **kwargs)
+
+    def bulk_update(self, objs, fields, **kwargs):
+        fields = set(fields)
+        objs = list(objs)
+        if fields & WorkerProfile.PUBLIC_SOURCE_FIELDS:
+            identities = {
+                row.pk: (row.email, row.phone)
+                for row in User.objects.filter(
+                    pk__in={obj.user_id for obj in objs if obj.user_id},
+                ).only('pk', 'email', 'phone')
+            }
+            for obj in objs:
+                email, phone = identities.get(obj.user_id, ('', ''))
+                obj._refresh_public_snapshot(
+                    private_values=(obj.contact, email, phone),
+                )
+            fields.update(WorkerProfile.PUBLIC_DERIVED_FIELDS)
+        return super().bulk_update(objs, list(fields), **kwargs)
+
+    def update(self, **kwargs):
+        if set(kwargs) & WorkerProfile.PUBLIC_SOURCE_FIELDS:
+            kwargs.update({
+                'public_display_name_snapshot': '',
+                'public_description_snapshot': '',
+                'public_pricing_details_snapshot': '',
+                'public_working_hours_snapshot': '',
+                'searchable_display_name': '',
+                'searchable_description': '',
+                'public_content_safe': False,
+                'public_content_policy_version': 0,
+            })
+        return super().update(**kwargs)
+
+
 class WorkerProfile(models.Model):
     """One professional/company card. Draft until explicit owner publication."""
+
+    PUBLIC_SOURCE_FIELDS = frozenset({
+        'display_name', 'description', 'pricing_details', 'working_hours',
+        'contact',
+    })
+    PUBLIC_DERIVED_FIELDS = frozenset({
+        'public_display_name_snapshot', 'public_description_snapshot',
+        'public_pricing_details_snapshot', 'public_working_hours_snapshot',
+        'searchable_display_name', 'searchable_description',
+        'public_content_safe', 'public_content_policy_version',
+    })
+    objects = WorkerProfileQuerySet.as_manager()
 
     class ProviderType(models.TextChoices):
         INDIVIDUAL = 'individual', _('Частный мастер')
@@ -137,6 +209,21 @@ class WorkerProfile(models.Model):
     public_content_safe = models.BooleanField(
         default=False, editable=False, db_index=True,
         verbose_name=_('Публичный текст прошёл защитную проверку'),
+    )
+    public_content_policy_version = models.PositiveSmallIntegerField(
+        default=0, editable=False, db_index=True,
+    )
+    public_display_name_snapshot = models.CharField(
+        max_length=120, blank=True, default='', editable=False,
+    )
+    public_description_snapshot = models.TextField(
+        blank=True, default='', editable=False,
+    )
+    public_pricing_details_snapshot = models.CharField(
+        max_length=240, blank=True, default='', editable=False,
+    )
+    public_working_hours_snapshot = models.CharField(
+        max_length=200, blank=True, default='', editable=False,
     )
     spoken_languages = models.JSONField(
         default=list, blank=True, verbose_name=_('Языки общения'),
@@ -215,24 +302,70 @@ class WorkerProfile(models.Model):
                 fields=['is_published', 'city', 'availability'],
                 name='worker_public_search_idx',
             ),
+            models.Index(
+                fields=[
+                    'is_published', 'public_content_safe',
+                    'public_content_policy_version', 'city',
+                ],
+                name='worker_safe_public_idx',
+            ),
         ]
 
     @property
     def public_display_name(self):
-        """The one canonical public representation (templates, SEO, invitations)."""
-        return redact_public_contact(self.display_name)
+        """Canonical persisted representation for every public consumer."""
+        if self._has_current_public_snapshot():
+            return self.public_display_name_snapshot or (MARKER if self.display_name else '')
+        return MARKER
 
     @property
     def public_description(self):
-        return redact_public_contact(self.description)
+        if not self._has_current_public_snapshot():
+            return MARKER
+        return self.public_description_snapshot or (MARKER if self.description else '')
 
     @property
     def public_pricing_details(self):
-        return redact_public_contact(self.pricing_details)
+        if not self._has_current_public_snapshot():
+            return MARKER
+        return self.public_pricing_details_snapshot or (MARKER if self.pricing_details else '')
 
     @property
     def public_working_hours(self):
-        return redact_public_contact(self.working_hours, allow_work_hours=True)
+        if not self._has_current_public_snapshot():
+            return MARKER
+        return self.public_working_hours_snapshot or (MARKER if self.working_hours else '')
+
+    def _has_current_public_snapshot(self):
+        return bool(
+            self.public_content_safe
+            and self.public_content_policy_version == POLICY_VERSION
+        )
+
+    def _refresh_public_snapshot(self, *, private_values=None):
+        if private_values is None:
+            private_values = (
+                self.contact,
+                getattr(self.user, 'email', ''),
+                getattr(self.user, 'phone', ''),
+            )
+        snapshot = build_fail_closed_profile_snapshot(
+            display_name=self.display_name,
+            description=self.description,
+            pricing_details=self.pricing_details,
+            working_hours=self.working_hours,
+            private_values=private_values,
+        )
+        self.public_display_name_snapshot = snapshot['display_name'][:120]
+        self.public_description_snapshot = snapshot['description']
+        self.public_pricing_details_snapshot = snapshot['pricing_details'][:240]
+        self.public_working_hours_snapshot = snapshot['working_hours'][:200]
+        self.searchable_display_name = ' '.join(
+            self.public_display_name_snapshot.split(),
+        )[:120]
+        self.searchable_description = ''
+        self.public_content_safe = True
+        self.public_content_policy_version = POLICY_VERSION
 
     def save(self, *args, **kwargs):
         """Synchronize public search fields on normal edits and owner services.
@@ -243,33 +376,12 @@ class WorkerProfile(models.Model):
         """
         updates = kwargs.get('update_fields')
         if updates is None:
-            self.searchable_display_name = searchable_public_name(self.display_name)
-            self.searchable_description = ''
-            self.public_content_safe = profile_public_content_is_safe(
-                display_name=self.display_name,
-                description=self.description,
-                pricing_details=self.pricing_details,
-                working_hours=self.working_hours,
-            )
+            self._refresh_public_snapshot()
         else:
             updates = set(updates)
-            if 'display_name' in updates:
-                self.searchable_display_name = searchable_public_name(self.display_name)
-                updates.add('searchable_display_name')
-            if 'description' in updates:
-                self.searchable_description = ''
-                updates.add('searchable_description')
-            public_fields = {
-                'display_name', 'description', 'pricing_details', 'working_hours',
-            }
-            if updates & public_fields:
-                self.public_content_safe = profile_public_content_is_safe(
-                    display_name=self.display_name,
-                    description=self.description,
-                    pricing_details=self.pricing_details,
-                    working_hours=self.working_hours,
-                )
-                updates.add('public_content_safe')
+            if updates & self.PUBLIC_SOURCE_FIELDS:
+                self._refresh_public_snapshot()
+                updates.update(self.PUBLIC_DERIVED_FIELDS)
             kwargs['update_fields'] = updates
         return super().save(*args, **kwargs)
 
@@ -284,6 +396,13 @@ class WorkerPortfolioPhoto(models.Model):
     )
     file_key = models.CharField(max_length=96, unique=True)
     caption = models.CharField(max_length=300, blank=True, default='')
+    public_caption_snapshot = models.CharField(
+        max_length=300, blank=True, default='', editable=False,
+    )
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    public_content_policy_version = models.PositiveSmallIntegerField(
+        default=0, editable=False,
+    )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_public = models.BooleanField(default=False)
     rights_confirmed_at = models.DateTimeField()
@@ -291,7 +410,28 @@ class WorkerPortfolioPhoto(models.Model):
 
     @property
     def public_caption(self):
-        return redact_public_contact(self.caption)
+        if (
+            self.public_content_safe
+            and self.public_content_policy_version == POLICY_VERSION
+        ):
+            return self.public_caption_snapshot or (MARKER if self.caption else '')
+        return MARKER
+
+    def save(self, *args, **kwargs):
+        updates = kwargs.get('update_fields')
+        if updates is None or 'caption' in set(updates):
+            snapshot = build_caption_snapshot(self.caption)
+            self.public_caption_snapshot = snapshot or ''
+            self.public_content_safe = True
+            self.public_content_policy_version = POLICY_VERSION
+            if updates is not None:
+                updates = set(updates)
+                updates.update({
+                    'public_caption_snapshot', 'public_content_safe',
+                    'public_content_policy_version',
+                })
+                kwargs['update_fields'] = updates
+        return super().save(*args, **kwargs)
 
     class Meta:
         db_table = 'accounts_worker_portfolio_photo'

@@ -155,8 +155,8 @@ class ContactPolicyV6Tests(TestCase):
                 self.worker.refresh_from_db()
 
     def test_stale_import_cannot_leak_to_html_seo_or_private_surfaces(self):
-        # Simulate a legacy/direct SQL edit which bypassed Model.save().  The
-        # prior safe flag remains true, so render-time protection is also tested.
+        # Supported QuerySet.update() edits fail closed until a snapshot is
+        # rebuilt through Model.save/service publication.
         WorkerProfile.objects.filter(pk=self.worker.pk).update(
             display_name='Service 050x7654321',
             description='telegram contacthandle',
@@ -182,11 +182,9 @@ class ContactPolicyV6Tests(TestCase):
                 response = self.client.get(
                     profile_url, HTTP_ACCEPT_LANGUAGE=language,
                 )
-                self.assertEqual(response.status_code, 200)
-                self.assertContains(response, '<title>')
-                self.assertContains(response, 'name="description"')
+                self.assertEqual(response.status_code, 404)
                 for secret in secrets:
-                    self.assertNotContains(response, secret)
+                    self.assertNotContains(response, secret, status_code=404)
 
         self.client.force_login(self.client_user)
         invite_url = reverse(
@@ -194,24 +192,21 @@ class ContactPolicyV6Tests(TestCase):
         )
         self.assertEqual(self.client.post(
             invite_url, {'order_id': self.order.pk},
-        ).status_code, 302)
-        self.assertEqual(OrderInvitation.objects.count(), 1)
+        ).status_code, 404)
+        self.assertEqual(OrderInvitation.objects.count(), 0)
         favorite_url = reverse(
             'marketplace:toggle_favorite_worker', args=[self.worker.pk],
         )
         self.assertEqual(self.client.post(
             favorite_url, {'action': 'add'},
-        ).status_code, 302)
-        for url in (
-            invite_url,
-            reverse('marketplace:client_dashboard'),
-        ):
+        ).status_code, 404)
+        for url in (reverse('marketplace:client_dashboard'),):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             for secret in secrets:
                 self.assertNotContains(response, secret)
 
-    def test_unsafe_historical_profile_is_visible_only_as_markers(self):
+    def test_unsafe_historical_profile_is_removed_from_public_surfaces(self):
         WorkerProfile.objects.filter(pk=self.worker.pk).update(
             description='Call 050x7654321',
             searchable_display_name='Reliable Pipe Service',
@@ -230,13 +225,12 @@ class ContactPolicyV6Tests(TestCase):
                 normal = self.client.get(
                     directory, {'q': 'Reliable'}, HTTP_ACCEPT_LANGUAGE=language,
                 )
-                self.assertEqual(normal.context['page_obj'].paginator.count, 1)
+                self.assertEqual(normal.context['page_obj'].paginator.count, 0)
         profile = self.client.get(reverse(
             'marketplace:worker_public_profile', args=[self.worker.pk],
         ))
-        self.assertEqual(profile.status_code, 200)
-        self.assertNotContains(profile, '050x7654321')
-        self.assertContains(profile, '[…]')
+        self.assertEqual(profile.status_code, 404)
+        self.assertNotContains(profile, '050x7654321', status_code=404)
 
     def test_search_uses_safe_name_and_curated_services_not_description(self):
         self.worker.refresh_from_db()
@@ -271,7 +265,8 @@ class ContactPolicyV6Tests(TestCase):
         self.worker.pricing_details = '050x7654321'
         self.worker.save(update_fields=['pricing_details'])
         self.worker.refresh_from_db()
-        self.assertFalse(self.worker.public_content_safe)
+        self.assertTrue(self.worker.public_content_safe)
+        self.assertIsNotNone(publication_issue(self.worker))
         self.assertEqual(self.worker.public_pricing_details, '[…]')
         self.worker.pricing_details = 'Quotation after inspection'
         self.worker.save(update_fields=['pricing_details'])

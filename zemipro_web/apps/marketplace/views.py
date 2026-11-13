@@ -1281,15 +1281,17 @@ def order_respond_view(request, pk):
         raise Http404
 
     order = get_object_or_404(
-        Order.objects.select_related('category', 'city').filter(
-            city__in=get_public_cities()
-        ),
-        pk=pk, status=Order.Status.PUBLISHED,
+        Order.objects.select_related('category', 'subcategory', 'city').filter(
+            city__in=get_public_cities(), status=Order.Status.PUBLISHED,
+        ), pk=pk,
     )
 
     if order.client_id == request.user.pk:
         messages.error(request, _('Нельзя откликнуться на собственную заявку.'))
         return redirect('marketplace:order_detail', pk=order.pk)
+
+    if not get_available_orders_for_worker(profile).filter(pk=order.pk).exists():
+        raise Http404
 
     existing = Response.objects.filter(order=order, worker=request.user).first()
     if existing:
