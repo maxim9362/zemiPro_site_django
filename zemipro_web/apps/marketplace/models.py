@@ -803,6 +803,62 @@ class OrderAgreementDecision(models.Model):
         raise ValidationError('Agreement decisions cannot be deleted.')
 
 
+class OrderWorkEvent(models.Model):
+    """Append-only confirmation and dispute evidence, no free-text PII."""
+
+    class Action(models.TextChoices):
+        STARTED = 'started', 'Начало работы'
+        RESULT_SUBMITTED = 'result_submitted', 'Результат передан'
+        RESULT_CONFIRMED = 'result_confirmed', 'Результат подтверждён'
+        PROBLEM = 'problem', 'Сообщено о проблеме'
+
+    class ProblemCode(models.TextChoices):
+        NONE = '', 'Нет'
+        TIMING = 'timing', 'Сроки'
+        QUALITY = 'quality', 'Качество'
+        OTHER = 'other', 'Другая проблема'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='work_events',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='order_work_events',
+    )
+    action = models.CharField(max_length=20, choices=Action.choices)
+    problem_code = models.CharField(
+        max_length=8, choices=ProblemCode.choices, default=ProblemCode.NONE,
+    )
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_order_work_event'
+        ordering = ['occurred_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'operation_key'], name='work_event_operation_unique',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(action='problem', problem_code__in=['timing', 'quality', 'other'])
+                    | (models.Q(
+                        action__in=['started', 'result_submitted', 'result_confirmed'],
+                        problem_code='',
+                    ))
+                ),
+                name='work_event_action_problem_valid',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Work events are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Work events cannot be deleted.')
+
+
 class OrderInvitation(models.Model):
     """One registered specialist may be invited once to an existing order.
 
