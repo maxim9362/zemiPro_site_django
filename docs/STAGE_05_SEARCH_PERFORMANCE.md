@@ -51,9 +51,9 @@ were switched from raw description/display_name to server-maintained,
 contact-free columns. Original pre-remediation numbers above are retained
 for traceability, **not** presented as current code measurements.
 
-- Code SHA: \`abeebd96e6703e8e9bc2a7aaaf1e2227a97b4348\`
+- Code SHA: `abeebd96e6703e8e9bc2a7aaaf1e2227a97b4348`
 - Isolated [GitHub Actions #43406092323](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43406092323): SUCCESS, 404/404 Django; PostgreSQL 17, same 300 synthetic worker fixtures, same five scenarios, three warm-cache sequential samples each.
-- \`STAGE05_SEARCH_BASELINE\` measurements:
+- `STAGE05_SEARCH_BASELINE` measurements:
 
 | Scenario | SQL queries | p50 (ms) | Matches |
 |---|---:|---:|---:|
@@ -63,10 +63,32 @@ for traceability, **not** presented as current code measurements.
 | No results | 8 | 74.50 | 0 |
 | Invalid parameters | 5 | 17.82 | 0 |
 
-EXPLAIN root: \`Sort (cost=193.02..193.02 rows=1 width=4714)\`;
+EXPLAIN root: `Sort (cost=193.02..193.02 rows=1 width=4714)`;
 an index scan occurs in the plan; this does not establish selection of
-\`worker_public_search_idx\` specifically. Additional negative tests ensure
+`worker_public_search_idx` specifically. Additional negative tests ensure
 hidden email and phone substrings are NOT keyword matches.
+
+## Contact-policy v2 remediation baseline (isolated CI)
+
+Independent review ZP-05-003 HIGH led to a second contact-free
+keyword normalization pass for `@handles` and slash-delimited phone numbers.
+[GitHub CI #43411640036](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43411640036)
+SUCCESS on code SHA `40e69324919220df80db87879718b2ab3e545ead`.
+Same 300 synthetic published profiles / 10-per-page / PostgreSQL 17 /
+single CI runner / three serial post-warmup samples:
+
+| Scenario | SQL query count | p50 (ms) | Matches |
+|---|---:|---:|---:|
+| Unfiltered | 10 | 109.56 | 300 |
+| Complex filters | 14 | 96.34 | 126 |
+| Keyword + real-rating sort | 10 | 76.79 | 300 |
+| Empty | 8 | 96.93 | 0 |
+| Invalid filters | 5 | 25.36 | 0 |
+
+The query-count baseline remained constant; p50 differs across runners
+and is not an SLO. Index scan present in EXPLAIN, but a specific worker
+index cannot be inferred from that boolean alone. 413 Django tests
+(including 9 added privacy checks) and 90 browser emulation cases passed.
 
 ## Known limits and interpretation
 
