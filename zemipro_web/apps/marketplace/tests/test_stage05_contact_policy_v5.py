@@ -304,7 +304,7 @@ class ContactPolicyV5Tests(TestCase):
             originals,
         )
         self.assertEqual(self.worker.searchable_display_name, 'Service')
-        self.assertEqual(self.worker.searchable_description, 'Call or Contact')
+        self.assertEqual(self.worker.searchable_description, 'Call or Contact .')
 
     def test_model_save_update_fields_keeps_search_and_html_safe(self):
         self.worker.display_name = 'New 050------7654321'
