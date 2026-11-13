@@ -1117,8 +1117,10 @@ def client_dashboard_view(request):
     })
 
 @login_required
-@require_POST
 def order_accept_response_view(request, order_id, response_id):
+    if request.method != 'POST':
+        raise Http404
+
     order = get_object_or_404(Order, pk=order_id, client=request.user)
     response = get_object_or_404(Response, pk=response_id, order=order)
 
