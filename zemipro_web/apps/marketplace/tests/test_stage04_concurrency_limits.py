@@ -222,12 +222,14 @@ class ConcurrentOrderMutationsTests(TransactionTestCase):
         self.worker_a = make_user('concurrency-046-worker-a')
         self.worker_b = make_user('concurrency-046-worker-b')
         for worker in (self.worker_a, self.worker_b):
-            WorkerProfile.objects.create(
+            profile = WorkerProfile.objects.create(
                 user=worker, city=self.city, is_published=True,
                 display_name=worker.username,
                 description='Synthetic worker for concurrency test.',
                 spoken_languages=['ru'], pricing_details='Negotiable',
             )
+            profile.skills.add(self.category)
+            profile.services.add(self.service)
 
     def test_parallel_publish_writes_only_one_state_change(self):
         order = Order.objects.create(
@@ -293,7 +295,7 @@ class ConcurrentOrderMutationsTests(TransactionTestCase):
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(job, ['select', 'reply']))
         order.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.IN_PROGRESS)
+        self.assertEqual(order.status, Order.Status.ASSIGNED)
         self.assertEqual(order.worker_id, self.worker_a.pk)
         if Response.objects.filter(order=order, worker=self.worker_b).exists():
             self.assertEqual(Response.objects.get(

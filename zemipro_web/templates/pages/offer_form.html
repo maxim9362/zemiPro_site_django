@@ -7,6 +7,11 @@
     <h1>{{ page_title }}</h1>
 </div></section>
 <section class="order-detail"><div class="container">
+    <div class="order-card" style="max-width:720px;margin-inline:auto;margin-bottom:16px;">
+        <div class="order-card__body">
+            <p><strong>{% trans 'Бюджет:' %}</strong> <bdi dir="auto">{{ order.price }}</bdi></p>
+        </div>
+    </div>
     <div class="order-card" style="max-width:720px;margin-inline:auto;">
         <div class="order-card__body">
             <form method="post" class="form" dir="auto">
