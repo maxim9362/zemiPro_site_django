@@ -43,10 +43,10 @@ def add_directory_scores(workers, *, category, service, query, city,
     if query:
         # Alias names are created only by the keyword filter in directory_search.
         keyword = _score_when(
-            When(display_name__icontains=query, then=_constant(16)),
+            When(searchable_display_name__icontains=query, then=_constant(16)),
             When(_search_service_text=True, then=_constant(12)),
             When(_search_category_text=True, then=_constant(8)),
-            When(description__icontains=query, then=_constant(4)),
+            When(searchable_description__icontains=query, then=_constant(4)),
         )
     else:
         keyword = _constant(0)

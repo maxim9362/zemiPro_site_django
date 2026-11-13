@@ -11,6 +11,7 @@ from core.forms import LocalizedModelChoiceField, LocalizedModelMultipleChoiceFi
 from apps.locations.models import City, Neighborhood
 from apps.locations.services import get_public_cities
 from apps.marketplace.models import Category, Rating, Subcategory
+from .public_text import contains_public_contact
 from .models import ClientProfile, User, WorkerProfile, VerifiedContact
 from .verification import contact_fingerprint, normalize_israeli_phone
 
@@ -294,13 +295,18 @@ class WorkerProfileForm(forms.ModelForm):
                 or self.instance.availability or WorkerProfile.Availability.AVAILABLE)
 
     def clean_display_name(self):
-        return self.cleaned_data.get('display_name', '').strip()
+        value = self.cleaned_data.get('display_name', '').strip()
+        if contains_public_contact(value) or '@' in value:
+            from apps.marketplace.directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_name'])
+        return value
 
     def clean_description(self):
         return self.cleaned_data.get('description', '').strip()
 
     def clean_pricing_details(self):
         return self.cleaned_data.get('pricing_details', '').strip()
+
 
 
 class RatingCreateForm(forms.ModelForm):

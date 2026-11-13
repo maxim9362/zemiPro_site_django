@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.accounts.client_favorites import public_worker_queryset
 from apps.accounts.models import WorkerProfile
+from apps.accounts.public_text import contact_shaped_query
 from apps.locations.models import City, Neighborhood
 from apps.locations.services import get_public_cities, public_city_slug
 from .models import Category, Subcategory
@@ -107,6 +108,13 @@ class WorkerDirectoryForm(forms.Form):
             is_active=True, city__in=get_public_cities(),
         ).order_by('city_id', 'slug')
 
+    def clean_q(self):
+        query = self.cleaned_data['q']
+        if contact_shaped_query(query):
+            from .directory_ui import directory_copy
+            raise forms.ValidationError(directory_copy()['privacy_query'])
+        return query
+
     def clean(self):
         data = super().clean()
         category, service = data.get('category'), data.get('service')
@@ -177,8 +185,8 @@ def search_worker_profiles(form):
             _search_category_text=Exists(matching_categories),
             _search_service_text=Exists(matching_services),
         ).filter(
-            Q(display_name__icontains=query)
-            | Q(description__icontains=query)
+            Q(searchable_display_name__icontains=query)
+            | Q(searchable_description__icontains=query)
             | Q(_search_category_text=True)
             | Q(_search_service_text=True)
         )
@@ -245,7 +253,7 @@ def search_worker_profiles(form):
     if sort == 'price_desc':
         return workers.order_by(F('starting_price_ils').desc(nulls_last=True), 'pk')
     if sort == 'name':
-        return workers.order_by(Lower('display_name'), 'pk')
+        return workers.order_by(Lower('searchable_display_name'), 'pk')
     if sort == 'newest':
         return workers.order_by(F('published_at').desc(nulls_last=True), 'pk')
     return workers.order_by(F('avg_rating').desc(nulls_last=True), 'pk')

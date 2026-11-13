@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from .public_text import redact_public_contact, searchable_public_text
 
 
 class User(AbstractUser):
@@ -121,6 +122,14 @@ class WorkerProfile(models.Model):
         max_length=120, blank=True, default='',
         verbose_name=_('Публичное имя или компания'),
     )
+    # Denormalized contact-free search data. Never query raw display_name or
+    # description for anonymous directory keywords (including ranking).
+    searchable_display_name = models.CharField(
+        max_length=120, blank=True, default='', editable=False,
+    )
+    searchable_description = models.TextField(
+        blank=True, default='', editable=False,
+    )
     spoken_languages = models.JSONField(
         default=list, blank=True, verbose_name=_('Языки общения'),
     )
@@ -199,6 +208,32 @@ class WorkerProfile(models.Model):
                 name='worker_public_search_idx',
             ),
         ]
+
+    @property
+    def public_display_name(self):
+        """The one canonical public representation (templates, SEO, invitations)."""
+        return redact_public_contact(self.display_name)
+
+    def save(self, *args, **kwargs):
+        """Synchronize public search fields on normal edits and owner services.
+
+        QuerySet.update/bulk_create bypass save. The migration backfills legacy
+        rows and bulk data importers must explicitly provide sanitized fields.
+        """
+        updates = kwargs.get('update_fields')
+        if updates is None:
+            self.searchable_display_name = searchable_public_text(self.display_name)
+            self.searchable_description = searchable_public_text(self.description)
+        else:
+            updates = set(updates)
+            if 'display_name' in updates:
+                self.searchable_display_name = searchable_public_text(self.display_name)
+                updates.add('searchable_display_name')
+            if 'description' in updates:
+                self.searchable_description = searchable_public_text(self.description)
+                updates.add('searchable_description')
+            kwargs['update_fields'] = updates
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f'Мастер: {self.user}'

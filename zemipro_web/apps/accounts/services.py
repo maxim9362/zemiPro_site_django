@@ -79,12 +79,22 @@ def _locked_worker_owner(user):
 
 
 def publication_issue(profile):
+
     """Shared publication criteria; reused after editing a published profile."""
     if (not profile.user.is_active or profile.user.is_blocked
             or profile.user.email_verification_required):
         return _('Аккаунт недоступен.')
     if not profile.display_name.strip():
         return _('Укажите публичное имя или название компании.')
+    from .public_text import contains_public_contact
+    from apps.marketplace.directory_ui import directory_copy
+    if (contains_public_contact(profile.display_name)
+            or '@' in profile.display_name):
+        return directory_copy()['privacy_name']
+    if any(contains_public_contact(value) for value in (
+        profile.description, profile.pricing_details, profile.working_hours,
+    )):
+        return directory_copy()['privacy_text']
     if not profile.city_id or not city_is_public(profile.city):
         return _('Выберите обслуживаемый город.')
     if len(profile.description.strip()) < 20:

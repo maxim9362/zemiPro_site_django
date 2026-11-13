@@ -3,6 +3,9 @@ from django.utils.translation import get_language
 
 COPY = {
     'ru': {
+        'privacy_query': 'Нельзя искать по телефону или email. Используйте название услуги или имя.',
+        'privacy_name': 'Уберите email или номер телефона из публичного имени.',
+        'privacy_text': 'Уберите email и телефоны из публичного описания, цен и графика.',
         'views_opt_in': 'Сохранять историю просмотренных специалистов только в моём кабинете',
         'history_heading': 'Недавно просмотренные специалисты',
         'history_empty': 'История просмотров пока пуста.',
@@ -16,6 +19,9 @@ COPY = {
         'privacy_hint': 'Не указывайте личные контакты и точный адрес в публичном описании.',
     },
     'en': {
+        'privacy_query': 'Searching by phone or email is not permitted. Search by a service or name.',
+        'privacy_name': 'Remove emails and phone numbers from the public name.',
+        'privacy_text': 'Remove emails and phones from public descriptions, prices and hours.',
         'views_opt_in': 'Save my viewed specialists only in my account',
         'history_heading': 'Recently viewed specialists',
         'history_empty': 'No viewing history yet.',
@@ -29,6 +35,9 @@ COPY = {
         'privacy_hint': 'Do not include personal contacts or exact addresses in public descriptions.',
     },
     'he': {
+        'privacy_query': 'אין לחפש לפי מספר טלפון או אימייל. חפשו שירות או שם.',
+        'privacy_name': 'יש להסיר אימייל ומספרי טלפון מהשם הציבורי.',
+        'privacy_text': 'יש להסיר אימייל ומספרי טלפון מהתיאור, מהמחירים ומהשעות.',
         'views_opt_in': 'שמירת בעלי המקצוע שבהם צפיתי בחשבון שלי בלבד',
         'history_heading': 'בעלי מקצוע שנצפו לאחרונה',
         'history_empty': 'אין עדיין היסטוריית צפייה.',
