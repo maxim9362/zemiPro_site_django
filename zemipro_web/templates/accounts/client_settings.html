@@ -27,6 +27,13 @@
         <button type="submit" class="btn btn--primary">{% trans 'Сохранить настройки' %}</button>
     </form>
     <section class="dashboard__section">
+        <h2>{{ directory_copy.history_heading }}</h2>
+        <form method="post" action="{% url 'accounts:clear_worker_history' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn--secondary">{{ directory_copy.history_clear }}</button>
+        </form>
+    </section>
+    <section class="dashboard__section">
         <h2>{% trans 'Запросы по персональным данным' %}</h2>
         <p>{% trans 'Запросы рассматриваются вручную. Отправка запроса не удаляет аккаунт или историю заказов автоматически.' %}</p>
         <form method="post" action="{% url 'accounts:client_privacy_request' %}">

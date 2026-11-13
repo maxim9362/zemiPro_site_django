@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n public_text %}
 
 {% block title %}{% trans 'Кабинет клиента — ZemiPro' %}{% endblock %}
 
@@ -45,14 +45,28 @@
             <ul>
             {% for favorite in favorite_workers %}
                 <li>
-                    <a href="{% url 'marketplace:worker_public_profile' pk=favorite.worker.pk %}">{{ favorite.worker.display_name }}</a>
+                    <a href="{% url 'marketplace:worker_public_profile' pk=favorite.worker.pk %}">{{ favorite.worker.display_name|public_text }}</a>
+                    <form method="post" style="display:inline" action="{% url 'marketplace:toggle_favorite_worker' pk=favorite.worker.pk %}">
+                        {% csrf_token %}<input type="hidden" name="action" value="remove">
+                        <button type="submit" class="btn btn--secondary btn--sm">{% trans 'Убрать из избранного' %}</button>
+                    </form>
                     — {{ favorite.worker.city.localized_name }}
                 </li>
             {% endfor %}
             </ul>
         </div>
+        {% else %}<p class="empty-state">{{ directory_copy.favorites_empty }}</p>
         {% endif %}
 
+        <section class="dashboard__section">
+            <h2>{{ directory_copy.history_heading }}</h2>
+            {% if track_worker_views %}
+            {% for visit in viewed_workers %}
+            <p><a href="{% url 'marketplace:worker_public_profile' pk=visit.worker_id %}">{{ visit.worker.display_name|public_text }}</a> — {{ visit.last_viewed_at|date:"d.m.Y" }}</p>
+            {% empty %}<p class="empty-state">{{ directory_copy.history_empty }}</p>{% endfor %}
+            {% else %}<p>{{ directory_copy.history_disabled }}</p>{% endif %}
+            <a href="{% url 'accounts:client_settings' %}">{% trans 'Личные данные и приватность' %}</a>
+        </section>
 
         {% if draft_orders %}
         <section class="dashboard__section">

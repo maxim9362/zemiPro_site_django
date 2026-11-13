@@ -16,9 +16,10 @@ from django.utils.translation import gettext as _
 from apps.accounts.forms import RatingCreateForm
 from apps.accounts.models import FavoriteWorker
 from apps.accounts.client_favorites import (
-    own_visible_favorites, toggle_own_favorite, public_worker_queryset,
+    own_visible_favorites, set_own_favorite, public_worker_queryset,
 )
 from apps.accounts.models import WorkerProfile
+from apps.accounts.worker_views import record_worker_view, own_visible_worker_history
 from apps.accounts.services import get_client_profile, get_worker_profile
 from apps.locations.models import CityAlias, Neighborhood
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
@@ -28,6 +29,7 @@ from .directory_search import (
     WorkerDirectoryForm, active_categories, search_worker_profiles,
 )
 from .directory_ranking import ranking_audit_rows
+from .directory_ui import directory_copy
 from .invitation_ui import invitation_copy
 from .invitation_services import (
     InvitationConflict, create_invitation, act_on_invitation,
@@ -134,6 +136,7 @@ def worker_directory_view(request):
         'form': form,
         'page_obj': page,
         'pagination_query': safe_query,
+        'directory_copy': directory_copy(),
         'language_switch_next': request.path + (
             '?' + safe_query if safe_query else ''
         ),
@@ -430,7 +433,10 @@ def service_detail(request, category_slug, service_slug):
 
 def worker_public_profile_view(request, pk):
     workers = public_worker_queryset().prefetch_related(
-        'skills',
+        Prefetch('skills', queryset=active_categories().order_by('sort_order', 'pk')),
+        Prefetch('services', queryset=Subcategory.objects.filter(
+            is_active=True, category__is_active=True,
+        ).order_by('category_id', 'sort_order', 'pk')),
         Prefetch('service_cities', queryset=get_public_cities(),
                  to_attr='public_service_cities'),
         Prefetch('service_neighborhoods', queryset=Neighborhood.objects.filter(
@@ -444,9 +450,10 @@ def worker_public_profile_view(request, pk):
             if pilot_city is not None else workers.none()
         )
     profile = get_object_or_404(workers, pk=pk)
+    record_worker_view(request.user, profile)
     reviews = Rating.objects.filter(
-        worker=profile.user
-    ).select_related('client').order_by('-created_at')
+        worker_id=profile.user_id,
+    ).order_by('-created_at')
 
     review_stats = reviews.aggregate(avg=Avg('rating'), count=Count('pk'))
     avg_rating = review_stats['avg'] or 0
@@ -459,6 +466,11 @@ def worker_public_profile_view(request, pk):
         'avg_rating': round(avg_rating, 1),
         'review_count': review_count,
         'invite_copy': invitation_copy(),
+        'directory_copy': directory_copy(),
+        'seo_noindex': True,
+        'seo_canonical': request.build_absolute_uri(
+            reverse('marketplace:worker_public_profile', args=[profile.pk])
+        ),
         'is_favorite': (
             request.user.is_authenticated
             and FavoriteWorker.objects.filter(
@@ -540,6 +552,7 @@ def invitation_action_view(request, pk, action):
 
 
 @login_required
+@never_cache
 def toggle_favorite_worker_view(request, pk):
     """Add/remove the authenticated user's private favorite via POST only."""
     if request.method != 'POST':
@@ -547,8 +560,11 @@ def toggle_favorite_worker_view(request, pk):
     worker = get_object_or_404(
         WorkerProfile.objects.select_related('user'), pk=pk,
     )
+    action = request.POST.get('action', 'add')
+    if action not in ('add', 'remove'):
+        raise Http404
     try:
-        toggle_own_favorite(request.user, worker)
+        set_own_favorite(request.user, worker, saved=action == 'add')
     except ValueError:
         raise Http404 from None
     return redirect('marketplace:worker_public_profile', pk=pk)
@@ -1045,6 +1061,10 @@ def client_dashboard_view(request):
         'cancelled_orders': cancelled_orders,
         'orders_with_responses': orders_with_responses,
         'favorite_workers': own_visible_favorites(request.user)[:12],
+        'viewed_workers': own_visible_worker_history(request.user)[:12]
+            if profile.track_worker_views else [],
+        'track_worker_views': profile.track_worker_views,
+        'directory_copy': directory_copy(),
         'client_invitations': OrderInvitation.objects.filter(
             client_id=request.user.pk,
         ).select_related(

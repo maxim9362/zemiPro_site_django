@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n public_text %}
 
 {% block title %}{% trans 'Поиск специалистов' %} — ZemiPro{% endblock %}
 {% block meta_description %}{% trans 'Поиск опубликованных специалистов и их реальных услуг.' %}{% endblock %}
@@ -42,7 +42,7 @@
             {% for worker in page_obj %}
             <article class="order-card-sm">
                 <div class="order-card-sm__header">
-                    <strong>{{ worker.display_name }}</strong>
+                    <strong>{{ worker.display_name|public_text }}</strong>
                     {% if worker.review_count %}
                     <span>★ {{ worker.avg_rating|floatformat:1 }} ({{ worker.review_count }} {% trans 'отзывов' %})</span>
                     {% else %}
@@ -88,6 +88,7 @@
         {% endif %}
         {% else %}
         <p class="empty-state">{% trans 'Подходящих опубликованных специалистов пока нет.' %}</p>
+        <p role="status">{% if form.errors %}{{ directory_copy.invalid_help }}{% else %}{{ directory_copy.empty_help }}{% endif %}</p>
         {% endif %}
         <div class="cta-block">
             <h2>{% trans 'Не нашли подходящего специалиста?' %}</h2>
