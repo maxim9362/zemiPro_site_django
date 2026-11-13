@@ -44,6 +44,30 @@ RTL, published profile, invitation CTA and search form — PASS.
 Source line identifier: STAGE05_SEARCH_BASELINE. These are synthetic
 CI observations, not guaranteed response times or SLOs.
 
+## Post-review privacy-remediation baseline (separate runner)
+
+After independent review found a contact-search oracle, search and ranking
+were switched from raw description/display_name to server-maintained,
+contact-free columns. Original pre-remediation numbers above are retained
+for traceability, **not** presented as current code measurements.
+
+- Code SHA: \`abeebd96e6703e8e9bc2a7aaaf1e2227a97b4348\`
+- Isolated [GitHub Actions #43406092323](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43406092323): SUCCESS, 404/404 Django; PostgreSQL 17, same 300 synthetic worker fixtures, same five scenarios, three warm-cache sequential samples each.
+- \`STAGE05_SEARCH_BASELINE\` measurements:
+
+| Scenario | SQL queries | p50 (ms) | Matches |
+|---|---:|---:|---:|
+| Unfiltered | 10 | 77.94 | 300 |
+| Complex filters | 14 | 70.26 | 126 |
+| Keyword / real-rating sort | 10 | 57.73 | 300 |
+| No results | 8 | 74.50 | 0 |
+| Invalid parameters | 5 | 17.82 | 0 |
+
+EXPLAIN root: \`Sort (cost=193.02..193.02 rows=1 width=4714)\`;
+an index scan occurs in the plan; this does not establish selection of
+\`worker_public_search_idx\` specifically. Additional negative tests ensure
+hidden email and phone substrings are NOT keyword matches.
+
 ## Known limits and interpretation
 
 - Django test client timings exclude network transfer, actual browser paint
