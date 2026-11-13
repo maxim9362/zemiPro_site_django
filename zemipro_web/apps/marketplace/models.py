@@ -591,10 +591,22 @@ class Response(models.Model):
     """Отклик исполнителя на заказ."""
 
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Ожидает'
-        ACCEPTED = 'accepted', 'Принят'
-        REJECTED = 'rejected', 'Отклонён'
-        CANCELLED = 'cancelled', 'Отменён'
+        # Legacy pending/cancelled values remain readable for pre-stage-06 rows.
+        PENDING = 'pending', 'Исторический отклик'
+        CANCELLED = 'cancelled', 'Исторически отменён'
+        SENT = 'sent', 'Отправлено'
+        VIEWED = 'viewed', 'Просмотрено'
+        NEGOTIATING = 'negotiating', 'Обсуждение'
+        ACCEPTED = 'accepted', 'Принято'
+        REJECTED = 'rejected', 'Отклонено'
+        WITHDRAWN = 'withdrawn', 'Отозвано'
+        EXPIRED = 'expired', 'Истекло'
+
+    class PriceKind(models.TextChoices):
+        NEGOTIABLE = 'negotiable', 'По договорённости'
+        FIXED = 'fixed', 'Фиксированная цена'
+        RANGE = 'range', 'Диапазон'
+        METHOD = 'method', 'Способ расчёта'
 
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE,
@@ -605,6 +617,19 @@ class Response(models.Model):
         related_name='responses', verbose_name='Исполнитель'
     )
     message = models.TextField(blank=True, default='', verbose_name='Сообщение')
+    price_kind = models.CharField(
+        max_length=12, choices=PriceKind.choices, default=PriceKind.NEGOTIABLE,
+    )
+    amount_min_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True,
+    )
+    amount_max_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True,
+    )
+    pricing_method = models.CharField(max_length=240, blank=True, default='')
+    estimated_timeline = models.CharField(max_length=160, blank=True, default='')
+    terms = models.TextField(blank=True, default='')
+    revision = models.PositiveIntegerField(default=1, editable=False)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING,
         verbose_name='Статус'
@@ -623,13 +648,80 @@ class Response(models.Model):
                 name='unique_response_per_worker_per_order'
             ),
             models.CheckConstraint(
-                condition=models.Q(status__in=['pending', 'accepted', 'rejected', 'cancelled']),
+                condition=models.Q(status__in=[
+                    'pending', 'cancelled', 'sent', 'viewed', 'negotiating',
+                    'accepted', 'rejected', 'withdrawn', 'expired',
+                ]),
                 name='response_status_allowed',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        price_kind__in=['negotiable', 'method'],
+                        amount_min_ils__isnull=True, amount_max_ils__isnull=True,
+                    )
+                    | models.Q(
+                        price_kind='fixed', amount_min_ils__gte=0,
+                        amount_max_ils__isnull=True,
+                    )
+                    | models.Q(
+                        price_kind='range', amount_min_ils__gte=0,
+                        amount_max_ils__gte=models.F('amount_min_ils'),
+                    )
+                ),
+                name='response_price_valid',
             ),
         ]
 
     def __str__(self):
         return f'Отклик {self.worker} на заказ #{self.order_id}'
+
+
+class ResponseRevision(models.Model):
+    """Append-only private offer snapshot and idempotency record."""
+
+    response = models.ForeignKey(
+        Response, on_delete=models.PROTECT, related_name='revisions',
+    )
+    number = models.PositiveIntegerField()
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='offer_actions',
+    )
+    operation_key = models.UUIDField(default=uuid.uuid4, editable=False)
+    action = models.CharField(max_length=16)
+    status = models.CharField(max_length=20)
+    message = models.TextField(blank=True, default='')
+    price_kind = models.CharField(max_length=12)
+    amount_min_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True,
+    )
+    amount_max_ils = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True,
+    )
+    pricing_method = models.CharField(max_length=240, blank=True, default='')
+    estimated_timeline = models.CharField(max_length=160, blank=True, default='')
+    terms = models.TextField(blank=True, default='')
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_response_revision'
+        ordering = ['number', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['response', 'number'], name='offer_revision_number_unique',
+            ),
+            models.UniqueConstraint(
+                fields=['response', 'operation_key'], name='offer_revision_operation_unique',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Offer revisions are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Offer revisions cannot be deleted.')
 
 
 

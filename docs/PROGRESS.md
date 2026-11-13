@@ -1000,3 +1000,10 @@
 - **Атомарность и схема:** порядок блокировок детерминирован как `User(pk) → WorkerProfile(pk)`; persisted state перечитывается под `select_for_update`. Добавлена state-only `accounts.0022_user_safe_runtime_manager`, фиксирующая runtime manager в migration state без изменения таблиц или пользовательских данных.
 - **Фактические проверки текущего дерева:** PostgreSQL 17 clean migrations, `migrate --check`, `makemigrations --check --dry-run`, Django check, Ruff, compileall, `pip check`, `git diff --check` — PASS; адресные snapshot/privacy/concurrency 21/21 PASS; полный Django suite **474/474 PASS**; Ashdod-only 13/13 PASS; Compose development/staging config PASS; Chromium RU/EN/HE/RTL **180/180 PASS**, 54 screenshots, widths 320/360/375/390/768/1440. Физические Android/iPhone — NOT_RUN.
 - **Статус:** `IMPLEMENTED / VERIFIED / INDEPENDENT_REVIEW_PERFORMED / PR_12_DRAFT / MERGE_PENDING / DEPLOYMENT_NOT_PERFORMED`. Это не объявляет Stage 05 `DONE`: GitHub Actions финального pushed SHA, решение владельца о merge и все production/release gates остаются отдельными условиями.
+
+
+## 2026-11-13 — этап 06.1, расширение Response
+
+- Ветка: `stage-06-offers-assignment` от `82aea1b`; PR #12 подтверждён MERGED, merge SHA `82aea1b374c15f2715fe4326c7472f1f2a2f993f`. Stage 05 не означает DEPLOYED; отдельные production-гейты открыты.
+- `06.1 IMPLEMENTED / CI_PENDING`: сохранены legacy pending/cancelled и уникальность (order,worker), добавлены фиксированная цена/диапазон/метод, сроки, условия, статусы sent/viewed/negotiating/accepted/rejected/withdrawn/expired. Новая `ResponseRevision` хранит приватную версию и ключ операции; все сервисные изменения — под order-row lock и атомарно; обновление с expected_revision, запрет записи чужого предложения, общий quota.
+- Изменены models/services, новый offer_services, миграция marketplace.0017 и синтетические regression tests; независимая проверка, PostgreSQL 17, полный suite, RU/EN/HE и GitHub Actions ещё не подтверждены. Production и реальные данные не затронуты.

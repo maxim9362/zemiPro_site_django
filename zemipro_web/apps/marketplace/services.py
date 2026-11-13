@@ -358,7 +358,7 @@ def get_available_orders_for_worker(worker_profile):
         )
     ).order_by('city_priority', '-created_at', '-pk')
 
-def create_response(order, worker_user, message=''):
+def create_response(order, worker_user, message='', *, offer_data=None, operation_key=None):
     """Serialize worker reply against assignment/cancellation and reply quota."""
     if not getattr(worker_user, 'is_authenticated', False):
         raise ValueError('Для отклика требуется авторизация.')
@@ -402,10 +402,20 @@ def create_response(order, worker_user, message=''):
             raise ValueError('Заявка не соответствует услугам или зоне мастера.')
         if Response.objects.filter(order=order, worker_id=worker_user.pk).exists():
             raise ValueError('Вы уже откликались на этот заказ.')
+        from .offer_services import normalize_offer, record_response_revision
+        offer = normalize_offer(offer_data) if offer_data is not None else {}
+        if len(message) > 1000:
+            raise ValueError('Слишком длинное сообщение.')
         consume_order_quota(worker_user, 'response')
-        return Response.objects.create(
+        response = Response.objects.create(
             order=order, worker_id=worker_user.pk, message=message,
+            status=Response.Status.SENT if offer_data is not None else Response.Status.PENDING,
+            **offer,
         )
+        record_response_revision(
+            response, actor=worker_user, action='submitted', operation_key=operation_key,
+        )
+        return response
 
 
 def accept_response(response, *, actor):
