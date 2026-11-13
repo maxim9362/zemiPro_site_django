@@ -141,6 +141,31 @@ EXPLAIN root: `Sort (cost=626.95..626.96 rows=1 width=4714)`; one
 index scan present, not a guarantee of a specific worker index.
 These figures are GitHub-runner measurements, not performance SLOs.
 
+## Contact-policy v5 remediation baseline (synthetic CI)
+
+ZP-05-006/007 required full phone-token suppression across long separators,
+one-letter messenger URIs and obfuscated email local-parts. v5 rebuilt
+contact-free search copies with forward migration accounts.0019. Older
+measurements above are historical and are not v5 production timings.
+
+Confirmed source: [GitHub Actions #43438235499](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43438235499),
+commit `6870abe8edd33f6493cc30e5a85e4d87f1543b3b`,
+SUCCESS, 442/442 Django, PostgreSQL 17 migrations, Ruff and 90 Chrome
+RU/EN/HE viewport cases. Three warmed serial synthetic test-client samples
+per scenario with 300 synthetic worker records:
+
+| Scenario | SQL queries | p50 (ms) | Results |
+|---|---:|---:|---:|
+| Unfiltered | 10 | 109.91 | 300 |
+| Complex combined filters | 14 | 95.64 | 126 |
+| Keyword/rating | 10 | 79.70 | 300 |
+| Empty | 8 | 97.16 | 0 |
+| Invalid | 5 | 28.18 | 0 |
+
+EXPLAIN root: `Sort (cost=656.46..656.47 rows=1 width=4714)`.
+An index scan was present, without proof of choosing one specific index.
+These timings are isolated CI observations, NOT a production SLO.
+
 ## Known limits and interpretation
 
 - Django test client timings exclude network transfer, actual browser paint
