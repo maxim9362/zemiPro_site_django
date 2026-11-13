@@ -1212,3 +1212,161 @@ msgstr "Verify your email to complete registration."
 
 msgid "Google-вход недоступен для этого аккаунта. Войдите по email и паролю."
 msgstr "Google sign-in is unavailable for this account. Sign in with your username or email and password."
+
+msgid "Все конкретные услуги"
+msgstr "All specific services"
+
+msgid "Выберите конкретные услуги только из своих категорий."
+msgstr "Choose specific services only from your selected categories."
+
+msgid "Выбирайте только услуги из отмеченных категорий. Поиск по конкретной услуге показывает только тех, кто её указал."
+msgstr "Select only services from the categories you checked. Searching for a specific service shows only professionals who listed it."
+
+msgid "Выезд / локально"
+msgstr "On-site / local"
+
+msgid "Город пилота"
+msgstr "Pilot city"
+
+msgid "Доступность (по заявлению мастера)"
+msgstr "Availability (self-reported)"
+
+msgid "Доступность:"
+msgstr "Availability:"
+
+msgid "Заявленная стартовая цена (₪, необязательно)"
+msgstr "Declared starting price (₪, optional)"
+
+msgid "Заявленная стартовая цена, ₪"
+msgstr "Declared starting price, ₪"
+
+msgid "Заявленная стартовая цена:"
+msgstr "Declared starting price:"
+
+msgid "Имя или специализация"
+msgstr "Name or specialty"
+
+msgid "Имя по алфавиту"
+msgstr "Name A–Z"
+
+msgid "Ключевые слова"
+msgstr "Keywords"
+
+msgid "Конкретная услуга"
+msgstr "Specific service"
+
+msgid "Конкретные услуги"
+msgstr "Specific services"
+
+msgid "Конкретные услуги (только фактически оказываемые)"
+msgstr "Specific services (only those you provide)"
+
+msgid "Конкретные услуги, которые вы выполняете"
+msgstr "Specific services you provide"
+
+msgid "Конкретные услуги:"
+msgstr "Specific services:"
+
+msgid "Любая доступность"
+msgstr "Any availability"
+
+msgid "Любой формат"
+msgstr "Any service mode"
+
+msgid "Любой язык"
+msgstr "Any language"
+
+msgid "Минимальный реальный рейтинг"
+msgstr "Minimum rating from real reviews"
+
+msgid "Можно создать заявку и дождаться откликов, не публикуя телефон и точный адрес."
+msgstr "You can create a request and wait for replies without publishing your phone number or exact address."
+
+msgid "Найти специалистов"
+msgstr "Find professionals"
+
+msgid "Не нашли подходящего специалиста?"
+msgstr "Couldn't find a suitable professional?"
+
+msgid "Недавно опубликованные"
+msgstr "Recently published"
+
+msgid "Необязательная цена от мастера; текст не преобразуется в число."
+msgstr "Optional price supplied by the professional; text is not converted into a number."
+
+msgid "Онлайн"
+msgstr "Online"
+
+msgid "Онлайн означает формат услуги; расстояние в километрах без проверенных координат не рассчитывается."
+msgstr "Online describes how the service is delivered; we do not calculate distances without verified coordinates."
+
+msgid "Описание услуг"
+msgstr "Description of services"
+
+msgid "Подходящих опубликованных специалистов пока нет."
+msgstr "No matching published professionals yet."
+
+msgid "Поиск опубликованных специалистов и их реальных услуг."
+msgstr "Find published professionals and the services they actually provide."
+
+msgid "Поиск специалистов"
+msgstr "Find professionals"
+
+msgid "Пока нет отзывов"
+msgstr "No reviews yet"
+
+msgid "Проверьте параметры поиска. Результаты не показаны, пока ошибки не исправлены."
+msgstr "Please correct the search filters. No results are shown until the errors are fixed."
+
+msgid "Рейтинг (реальные отзывы)"
+msgstr "Rating (real reviews)"
+
+msgid "Сбросить фильтры"
+msgstr "Clear filters"
+
+msgid "Сортировка"
+msgstr "Sort by"
+
+msgid "Специалисты"
+msgstr "Professionals"
+
+msgid "Стартовая цена до (₪)"
+msgstr "Starting price up to (₪)"
+
+msgid "Стартовая цена от (₪)"
+msgstr "Starting price from (₪)"
+
+msgid "Стартовая цена: по возрастанию"
+msgstr "Starting price: low to high"
+
+msgid "Стартовая цена: по убыванию"
+msgstr "Starting price: high to low"
+
+msgid "Страницы результатов"
+msgstr "Result pages"
+
+msgid "Только опубликованные анкеты; цены и доступность указаны самими специалистами."
+msgstr "Published profiles only; prices and availability are self-reported."
+
+msgid "Услуга не принадлежит выбранной категории."
+msgstr "The service does not belong to the selected category."
+
+msgid "Фильтр цены применяется только к добровольно указанной числовой стартовой цене в шекелях."
+msgstr "The price filter applies only to voluntarily supplied numeric starting prices in shekels."
+
+msgid "Формат работы"
+msgstr "Service mode"
+
+msgid "Цена до должна быть не меньше цены от."
+msgstr "The maximum price must be at least the minimum price."
+
+msgid "Число используется только для фильтра стартовой цены. Из текстового описания сумма не извлекается."
+msgstr "This number is used only for the starting-price filter. No amount is extracted from free text."
+
+msgid "Язык общения"
+msgstr "Spoken language"
+
+msgid "Найден %(counter)s специалист"
+msgid_plural "Найдено специалистов: %(counter)s"
+msgstr[0] "Found %(counter)s professional"
+msgstr[1] "Found %(counter)s professionals"
