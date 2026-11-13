@@ -3,7 +3,7 @@
 {% block content %}
 <section class="dashboard"><div class="container" style="max-width:760px">
     <h1>{{ invite_copy.heading }}</h1>
-    <p>{{ invite_copy.chosen }}: <strong>{{ worker.display_name }}</strong></p>
+    <p>{{ invite_copy.chosen }}: <strong>{{ worker.public_display_name }}</strong></p>
     <p>{{ invite_copy.hint }}</p>
     <form method="post" class="form">
         {% csrf_token %}

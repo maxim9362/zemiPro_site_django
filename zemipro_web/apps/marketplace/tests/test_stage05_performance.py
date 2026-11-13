@@ -44,6 +44,8 @@ class Stage05SearchBaselineTests(TestCase):
             WorkerProfile(
                 user_id=user.pk, city=cls.city, is_published=True,
                 display_name=f'Synthetic Specialist {i:04}',
+                searchable_display_name=f'Synthetic Specialist {i:04}',
+                searchable_description='Synthetic directory benchmark service description.',
                 description='Synthetic directory benchmark service description.',
                 pricing_details='Quotation on request',
                 starting_price_ils=100 + (i % 125),

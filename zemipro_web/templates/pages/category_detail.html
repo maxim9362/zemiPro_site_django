@@ -48,7 +48,7 @@
             {% for wp in page_obj %}
             <div class="order-card-sm">
                 <div class="order-card-sm__header">
-                    <span class="order-card__category">{{ wp.display_name|public_text }}</span>
+                    <span class="order-card__category">{{ wp.public_display_name }}</span>
                     {% if wp.avg_rating %}
                     <span style="font-size: 0.875rem;">★ {{ wp.avg_rating|floatformat:1 }} ({{ wp.review_count }})</span>
                     {% endif %}

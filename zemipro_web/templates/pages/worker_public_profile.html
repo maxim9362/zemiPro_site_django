@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load i18n public_text %}
 
-{% block title %}{{ profile.display_name|public_text }} — ZemiPro{% endblock %}
-{% block meta_description %}{% trans 'Профиль мастера' %} {{ profile.display_name|public_text }}. {% trans 'Город:' %} {{ profile.city.localized_name }}. {% trans 'Категории:' %} {% for s in profile.skills.all %}{{ s.localized_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
+{% block title %}{{ profile.public_display_name }} — ZemiPro{% endblock %}
+{% block meta_description %}{% trans 'Профиль мастера' %} {{ profile.public_display_name }}. {% trans 'Город:' %} {{ profile.city.localized_name }}. {% trans 'Категории:' %} {% for s in profile.skills.all %}{{ s.localized_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
-        <h1>{{ profile.display_name|public_text }}</h1>
+        <h1>{{ profile.public_display_name }}</h1>
         <p>{{ profile.city.localized_name }} · {% if review_count %}{{ review_count }} {% trans 'отзывов' %} · {{ avg_rating }}/5{% else %}{{ directory_copy.no_reviews }}{% endif %}</p>
     </div>
 </section>
