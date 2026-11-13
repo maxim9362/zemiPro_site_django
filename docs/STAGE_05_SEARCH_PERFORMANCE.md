@@ -90,6 +90,31 @@ and is not an SLO. Index scan present in EXPLAIN, but a specific worker
 index cannot be inferred from that boolean alone. 413 Django tests
 (including 9 added privacy checks) and 90 browser emulation cases passed.
 
+## Unicode/contact URL remediation baseline (contact policy v3)
+
+After ZP-05-004 HIGH was independently reproduced, the search copies were
+re-scrubbed using NFKC and contact-policy v3. Historical numbers above remain
+preserved and are NOT results for the current v3 code.
+
+Code commit `30da440f00f522c807658636bb65f36085ceaf50`:
+[GitHub Actions #43418780544](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43418780544)
+SUCCESS (423/423 Django; PostgreSQL 17; Ruff; 90 headless Chrome cases).
+Same 300 synthetic profiles and five scenarios with three warm-cache
+sequential samples. No live data.
+
+| Scenario | SQL queries | p50 (ms) | Results |
+|---|---:|---:|---:|
+| Unfiltered | 10 | 85.24 | 300 |
+| Complex combined filters | 14 | 74.92 | 126 |
+| Keyword + real-rating sort | 10 | 57.32 | 300 |
+| Empty query | 8 | 75.39 | 0 |
+| Invalid filters | 5 | 21.10 | 0 |
+
+Queries have not increased due to v3 on this data; these timings are NOT
+production latency guarantees. SQL EXPLAIN still indicates an index scan
+somewhere in the query plan, not proof of a specific chosen worker index.
+Independent security re-review is REQUIRED before merge.
+
 ## Known limits and interpretation
 
 - Django test client timings exclude network transfer, actual browser paint
