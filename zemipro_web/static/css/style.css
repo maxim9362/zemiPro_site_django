@@ -838,3 +838,29 @@ html[dir="rtl"] .order-card__field strong { text-align: start; }
     min-width: 0;
     max-width: 100%;
 }
+
+
+/* Stage 05.6: native select intrinsic widths must never widen the 320px
+   specialist search viewport (including longer RU/EN/HE options). */
+.worker-directory__form { min-width: 0; max-width: 100%; }
+.worker-directory__filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+    gap: 12px;
+    align-items: end;
+    min-width: 0;
+}
+.worker-directory__filters .form__group { min-width: 0; }
+.worker-directory__filters input,
+.worker-directory__filters select {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.worker-directory__form .form__hint,
+.worker-directory__form .form__errors { overflow-wrap: anywhere; }
+.worker-directory__form [aria-invalid="true"] {
+    border-color: var(--color-danger, #ad233a);
+}

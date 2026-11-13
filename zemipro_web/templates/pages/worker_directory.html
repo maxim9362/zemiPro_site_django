@@ -13,14 +13,14 @@
 </section>
 <section class="category-content">
     <div class="container">
-        <form method="get" class="form" role="search">
+        <form method="get" class="form worker-directory__form" role="search">
             {% if form.errors %}
             <div class="form__errors" role="alert">
                 <p>{% trans 'Проверьте параметры поиска. Результаты не показаны, пока ошибки не исправлены.' %}</p>
                 {{ form.non_field_errors }}
             </div>
             {% endif %}
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end;">
+            <div class="worker-directory__filters">
                 {% for field in form %}
                 <div class="form__group">
                     <label for="{{ field.id_for_label }}" class="form__label">{{ field.label }}</label>
