@@ -23,6 +23,7 @@ ORDER_WRITE_LIMITS = {
     'response': (86400, 50),
     'photo': (86400, 30),
     'state': (3600, 60),
+    'invite': (86400, 20),
 }
 
 

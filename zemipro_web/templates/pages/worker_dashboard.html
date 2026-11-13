@@ -35,6 +35,17 @@
             {% if not profile.is_published %}<p>{% trans 'Анкета пока не опубликована.' %}</p>{% endif %}
         </div>
 
+        <section class="dashboard__section">
+            <h2>{{ invite_copy.invitations_worker }}</h2>
+            {% for invitation in worker_invitations %}
+            <article class="order-card-sm">
+                <strong>{{ invitation.order.category.localized_name }}</strong> ·
+                {{ invitation.order.city.localized_name }}
+                <p>{{ invitation.localized_status }}</p>
+                <a class="btn btn--secondary btn--sm" href="{% url 'marketplace:invitation_detail' pk=invitation.pk %}">{{ invite_copy.details }}</a>
+            </article>
+            {% empty %}<p class="empty-state">{{ invite_copy.no_invitations }}</p>{% endfor %}
+        </section>
         <div class="dashboard__section">
             <h2>{% trans 'Подходящие заявки' %}</h2>
 

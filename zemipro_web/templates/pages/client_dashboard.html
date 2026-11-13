@@ -31,6 +31,14 @@
             <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary" style="margin-inline-start: 8px;">{% trans 'Создать заявку' %}</a>
         </div>
 
+        <section class="dashboard__section">
+            <h2>{{ invite_copy.invitations_client }}</h2>
+            {% for invitation in client_invitations %}
+            <p><a href="{% url 'marketplace:invitation_detail' pk=invitation.pk %}">
+                {{ invitation.worker.display_name }} · #{{ invitation.order_id }}
+            </a> — {{ invitation.localized_status }}</p>
+            {% empty %}<p class="empty-state">{{ invite_copy.no_invitations }}</p>{% endfor %}
+        </section>
         {% if favorite_workers %}
         <div class="dashboard__section">
             <h2>{% trans 'Избранные мастера' %}</h2>

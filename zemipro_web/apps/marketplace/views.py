@@ -28,11 +28,16 @@ from .directory_search import (
     WorkerDirectoryForm, active_categories, search_worker_profiles,
 )
 from .directory_ranking import ranking_audit_rows
+from .invitation_ui import invitation_copy
+from .invitation_services import (
+    InvitationConflict, create_invitation, act_on_invitation,
+    invitable_orders, worker_matches_order,
+)
 from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
 from .models import (
-    Category, ServiceSection, Subcategory, Order, Response, Rating,
+    Category, ServiceSection, Subcategory, Order, Response, Rating, OrderInvitation,
     ServiceQuestionnaire, OrderQuestionnaireAnswer,
 )
 from .services import (
@@ -453,6 +458,7 @@ def worker_public_profile_view(request, pk):
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),
         'review_count': review_count,
+        'invite_copy': invitation_copy(),
         'is_favorite': (
             request.user.is_authenticated
             and FavoriteWorker.objects.filter(
@@ -460,6 +466,77 @@ def worker_public_profile_view(request, pk):
             ).exists()
         ),
     })
+
+
+
+@login_required
+@never_cache
+def worker_invitation_select_view(request, pk):
+    """Registered specialist → owned published request, with POST confirmation."""
+    worker = get_object_or_404(public_worker_queryset(), pk=pk)
+    copy = invitation_copy()
+    if request.method == 'POST':
+        try:
+            order_id = int(request.POST.get('order_id', ''))
+        except (TypeError, ValueError):
+            raise Http404 from None
+        try:
+            invitation, created = create_invitation(
+                actor=request.user, order_id=order_id, worker_id=worker.pk,
+            )
+        except OrderQuotaExceeded as error:
+            return _order_quota_response(error)
+        except (InvitationConflict, ValueError, PermissionDenied):
+            # Never reveal whether someone else's order ID exists.
+            raise Http404 from None
+        messages.success(request, copy['sent'] if created else copy['existing'])
+        return redirect('marketplace:invitation_detail', pk=invitation.pk)
+    if request.method != 'GET':
+        raise Http404
+    orders = invitable_orders(request.user, worker)
+    selected_order = request.GET.get('order', '')
+    return render(request, 'pages/worker_invitation_select.html', {
+        'worker': worker, 'orders': orders, 'selected_order': selected_order,
+        'invite_copy': copy, 'seo_noindex': True,
+    })
+
+
+@login_required
+@never_cache
+def invitation_detail_view(request, pk):
+    invitation = get_object_or_404(
+        OrderInvitation.objects.select_related(
+            'order', 'order__category', 'order__subcategory', 'order__city',
+            'worker', 'worker__user',
+        ).filter(Q(client_id=request.user.pk) | Q(worker__user_id=request.user.pk)),
+        pk=pk,
+    )
+    if not request.user.is_active or request.user.is_blocked or request.user.email_verification_required:
+        raise Http404
+    return render(request, 'pages/invitation_detail.html', {
+        'invitation': invitation,
+        'is_client': invitation.client_id == request.user.pk,
+        'invite_copy': invitation_copy(),
+        'seo_noindex': True,
+    })
+
+
+@login_required
+@require_POST
+@never_cache
+def invitation_action_view(request, pk, action):
+    if action not in ('accept', 'decline', 'withdraw'):
+        raise Http404
+    try:
+        invite, _ = act_on_invitation(
+            actor=request.user, invitation_id=pk, action=action,
+        )
+    except (PermissionDenied, OrderInvitation.DoesNotExist):
+        raise Http404 from None
+    except (InvitationConflict, ValueError):
+        messages.warning(request, invitation_copy()['conflict'])
+        return redirect('marketplace:invitation_detail', pk=pk)
+    return redirect('marketplace:invitation_detail', pk=invite.pk)
 
 
 @login_required
@@ -533,6 +610,8 @@ def order_create_view(request):
 def _wizard_render(request, *, step, form, order=None, token='', drafts=None):
     t = wizard_copy()
     return render(request, 'pages/order_wizard.html', {
+        'invite_copy': invitation_copy(),
+        'invite_worker_pk': getattr(request, '_invite_worker_pk', None),
         'copy': t, 'form': form, 'step': step, 'order': order,
         'previous_step': max(1, step - 1),
         'wizard_steps': [
@@ -580,6 +659,11 @@ def order_wizard_start_view(request):
             raise Http404
         form = ServiceStepForm(request.POST)
         token = request.POST.get('token', '')
+        invite_worker_value = request.POST.get('invite_worker', '')
+        try:
+            invite_worker_id = int(invite_worker_value) if invite_worker_value else None
+        except (TypeError, ValueError):
+            raise Http404 from None
         if form.is_valid():
             # Per-session token prevents accidental repeat creation across taps.
             if token != request.session.get('order_wizard_token'):
@@ -587,6 +671,7 @@ def order_wizard_start_view(request):
             try:
                 order = start_order_wizard(
                     actor=request.user, form=form, token=token,
+                    invite_worker_id=invite_worker_id,
                 )
             except OrderQuotaExceeded as error:
                 return _order_quota_response(error)
@@ -598,7 +683,25 @@ def order_wizard_start_view(request):
     else:
         token = str(uuid.uuid4())
         request.session['order_wizard_token'] = token
-        form = ServiceStepForm()
+        initial = {}
+        worker_id = request.GET.get('worker', '')
+        if worker_id:
+            worker = get_object_or_404(public_worker_queryset(), pk=worker_id)
+            if worker.user_id == request.user.pk:
+                raise Http404
+            selected_service = worker.services.filter(
+                is_active=True, category__is_active=True,
+                category__in=worker.skills.all(),
+            ).order_by('pk').first()
+            if selected_service:
+                initial = {
+                    'category': selected_service.category_id,
+                    'subcategory': selected_service.pk,
+                }
+            request._invite_worker_pk = worker.pk
+        form = ServiceStepForm(initial=initial)
+    if request.method == 'POST':
+        request._invite_worker_pk = invite_worker_id
     drafts = Order.objects.filter(
         client=request.user, status=Order.Status.DRAFT,
         wizard_token__isnull=False,
@@ -646,6 +749,12 @@ def order_wizard_edit_view(request, pk):
                         confirmation_form=form,
                     )
                     _flush_order_events(published)
+                    invite_id = (published.wizard_data or {}).get('invite_worker_id')
+                    if invite_id and worker_matches_order(invite_id, published):
+                        return redirect(
+                            reverse('marketplace:worker_invitation_select', args=[invite_id])
+                            + f'?order={published.pk}'
+                        )
                     return redirect('marketplace:order_detail', pk=published.pk)
                 saved = save_order_wizard_step(
                     order_id=order.pk, actor=request.user,
@@ -936,6 +1045,12 @@ def client_dashboard_view(request):
         'cancelled_orders': cancelled_orders,
         'orders_with_responses': orders_with_responses,
         'favorite_workers': own_visible_favorites(request.user)[:12],
+        'client_invitations': OrderInvitation.objects.filter(
+            client_id=request.user.pk,
+        ).select_related(
+            'order', 'order__category', 'order__city', 'worker', 'worker__user',
+        )[:20],
+        'invite_copy': invitation_copy(),
     })
 
 @login_required
@@ -1112,6 +1227,13 @@ def worker_dashboard_view(request):
         'profile': profile,
         'page_obj': orders_page,
         'my_responses': my_responses,
+        'worker_invitations': OrderInvitation.objects.filter(
+            worker=profile,
+        ).select_related(
+            'order', 'order__category', 'order__subcategory',
+            'order__city', 'worker', 'worker__user',
+        )[:20],
+        'invite_copy': invitation_copy(),
     })
 
 

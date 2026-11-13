@@ -472,6 +472,7 @@ class OrderWriteQuota(models.Model):
         RESPONSE = 'response', 'Отклики исполнителей'
         PHOTO = 'photo', 'Новые фотографии'
         STATE = 'state', 'Переходы статусов'
+        INVITE = 'invite', 'Приглашения мастерам'
 
     owner = models.ForeignKey(
         'accounts.User', on_delete=models.PROTECT, related_name='order_write_quotas',
@@ -628,6 +629,85 @@ class Response(models.Model):
 
     def __str__(self):
         return f'Отклик {self.worker} на заказ #{self.order_id}'
+
+
+
+class OrderInvitation(models.Model):
+    """One registered specialist may be invited once to an existing order.
+
+    An invitation is not an assignment and cannot grant private order access.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает'
+        ACCEPTED = 'accepted', 'Принято'
+        DECLINED = 'declined', 'Отклонено'
+        WITHDRAWN = 'withdrawn', 'Отозвано'
+        EXPIRED = 'expired', 'Истекло'
+        UNAVAILABLE = 'unavailable', 'Недоступно'
+
+    order = models.ForeignKey(
+        Order, on_delete=models.PROTECT, related_name='specialist_invitations',
+    )
+    client = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='sent_order_invitations',
+    )
+    worker = models.ForeignKey(
+        'accounts.WorkerProfile', on_delete=models.PROTECT,
+        related_name='order_invitations',
+    )
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.PENDING,
+    )
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'marketplace_order_invitation'
+        ordering = ['-created_at', '-pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'worker'],
+                name='market_order_worker_invite_unique',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=Status.values),
+                name='market_order_invite_status_allowed',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['worker', 'status', '-created_at'],
+                name='market_inv_worker_status_idx',
+            ),
+            models.Index(
+                fields=['client', '-created_at'],
+                name='market_inv_client_created_idx',
+            ),
+        ]
+
+    @property
+    def effective_status(self):
+        """Present expired/cancelled/unavailable pending invites truthfully."""
+        if self.status != self.Status.PENDING:
+            return self.status
+        if self.expires_at <= timezone.now():
+            return self.Status.EXPIRED
+        if self.order.status != Order.Status.PUBLISHED or self.order.worker_id is not None:
+            return self.Status.UNAVAILABLE
+        if (not self.worker.is_published
+                or self.worker.availability == self.worker.Availability.UNAVAILABLE
+                or not self.worker.user.is_active
+                or self.worker.user.is_blocked
+                or self.worker.user.email_verification_required):
+            return self.Status.UNAVAILABLE
+        return self.Status.PENDING
+
+    @property
+    def localized_status(self):
+        from .invitation_ui import invitation_copy
+        return invitation_copy()[self.effective_status]
 
 
 class Rating(models.Model):

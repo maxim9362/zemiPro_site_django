@@ -79,6 +79,12 @@
             </div>
         </div>
 
+        {% if user.pk != profile.user_id %}
+        <div class="order-card-sm__actions" style="margin-block:16px;display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn btn--primary" href="{% url 'marketplace:worker_invitation_select' pk=profile.pk %}">{{ invite_copy.heading }}</a>
+            <a class="btn btn--secondary" href="{% url 'marketplace:order_wizard_start' %}?worker={{ profile.pk }}">{{ invite_copy.create }}</a>
+        </div>
+        {% endif %}
         {% if user.is_authenticated and user.pk != profile.user_id %}
         <form method="post" action="{% url 'marketplace:toggle_favorite_worker' pk=profile.pk %}">
             {% csrf_token %}

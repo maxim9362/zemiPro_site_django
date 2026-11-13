@@ -37,6 +37,12 @@ urlpatterns = [
     path('worker/<int:pk>/', views.worker_public_profile_view, name='worker_public_profile'),
     path('worker/<int:pk>/favorite/', views.toggle_favorite_worker_view,
          name='toggle_favorite_worker'),
+    path('worker/<int:pk>/invite/', views.worker_invitation_select_view,
+         name='worker_invitation_select'),
+    path('invitations/<int:pk>/', views.invitation_detail_view,
+         name='invitation_detail'),
+    path('invitations/<int:pk>/<str:action>/', views.invitation_action_view,
+         name='invitation_action'),
     path('client/dashboard/', views.client_dashboard_view, name='client_dashboard'),
     path('worker/dashboard/', views.worker_dashboard_view, name='worker_dashboard'),
 ]
