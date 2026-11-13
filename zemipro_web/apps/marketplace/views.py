@@ -950,11 +950,11 @@ def order_cancel_view(request, pk):
             except OrderQuotaExceeded as error:
                 return _order_quota_response(error)
             except ValueError:
-                messages.error(request, _('Заявку нельзя отменить в текущем статусе.'))
+                messages.error(request, wizard_copy()['cancel_conflict'])
             else:
                 changed = True
         elif order.status != Order.Status.CANCELLED:
-            messages.error(request, _('Заявку нельзя отменить в текущем статусе.'))
+            messages.error(request, wizard_copy()['cancel_conflict'])
     if changed:
         _flush_order_events(order)
         messages.success(request, _('Заявка отменена.'))
@@ -978,7 +978,7 @@ def order_complete_view(request, pk):
             except OrderQuotaExceeded as error:
                 return _order_quota_response(error)
             except ValueError:
-                messages.error(request, _('Заявку нельзя завершить в текущем статусе.'))
+                messages.error(request, wizard_copy()['complete_conflict'])
             else:
                 if order.worker_id:
                     create_notification(
@@ -990,7 +990,7 @@ def order_complete_view(request, pk):
                     )
                 messages.success(request, _('Заявка отмечена как выполненная!'))
         elif order.status != Order.Status.COMPLETED:
-            messages.error(request, _('Заявку нельзя завершить в текущем статусе.'))
+            messages.error(request, wizard_copy()['complete_conflict'])
     return redirect('marketplace:order_detail', pk=pk)
 
 

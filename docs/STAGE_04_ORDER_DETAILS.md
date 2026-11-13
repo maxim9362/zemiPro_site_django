@@ -16,8 +16,10 @@ The response route `GET /orders/photos/<id>/` checks every read independently (4
 ## Disclosure
 
 - `private` by default: only owner, plus authorized complaint-moderation staff who satisfy current account checks.
-- `assignee`: only owner, authorized moderator and the **selected worker** after publication, only if the owner explicitly chose this visibility when uploading. Selecting a worker on its own never unlocks private photos.
-- `public`: opt-in visibility plus a distinct user consent checkbox. The image stays private until the order becomes published; subsequently any viewer with the unguessable/order-linked download URL may access it, so the UI warns against uploading PII visibly embedded in photos.
+- **Non-owner visibility gate:** the order must currently be in one of `published`, `in_discussion`, `assigned`, `in_progress`, `completed` or `disputed`, **and** there must be a persisted `OrderStatusEvent(new_status=published)` proving that publication occurred. In `draft` (including withdrawn), `cancelled` and `expired`, no photo is available to guests, other users or the selected worker, even if older public consent exists. The owner and active, authorized complaint-moderation staff remain entitled to access.
+- `assignee`: only owner, authorized moderator and the **selected worker** while the non-owner visibility gate holds, if the owner explicitly chose this visibility when uploading. Selecting a worker on its own never unlocks private photos.
+- `public`: opt-in visibility with an explicit consent timestamp. Any viewer may access a consented photo **only while the non-owner visibility gate holds**. Withdrawing or cancelling the order revokes this access automatically. The UI warns against uploading PII visibly embedded in photos.
+- **URL access is not a secret:** `GET /orders/photos/<id>/` uses a sequential database ID. Authorization is enforced by server-side checks for each list/stream request and never by the difficulty of guessing a URL; no private storage key is exposed.
 - In all cases, exact address, phone, raw order description and private questionnaire answers remain hidden from everyone but the owner/authorized moderator until voluntarily shared in future private chat.
 
 ## Operational requirements

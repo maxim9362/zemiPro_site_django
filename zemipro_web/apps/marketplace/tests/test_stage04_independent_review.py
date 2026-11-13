@@ -224,6 +224,51 @@ class Stage04IndependentReviewFixTests(TestCase):
                         Order.Status.PUBLISHED.label,
                     )
 
+    def test_007_conflicting_actions_render_localized_http_messages(self):
+        """Conflict POST -> redirect HTML must not fall back to Russian."""
+        cancelled = self.order(status=Order.Status.CANCELLED)
+        completed = self.order(status=Order.Status.COMPLETED)
+        messages_by_language = {
+            'ru': (
+                'Заявку нельзя завершить в текущем статусе.',
+                'Заявку нельзя отменить в текущем статусе.',
+            ),
+            'en': (
+                'This request cannot be completed in its current status.',
+                'This request cannot be cancelled in its current status.',
+            ),
+            'he': (
+                'לא ניתן לסיים את הבקשה במצבה הנוכחי.',
+                'לא ניתן לבטל את הבקשה במצבה הנוכחי.',
+            ),
+        }
+        for lang, (completion_error, cancellation_error) in messages_by_language.items():
+            with self.subTest(lang=lang), override(lang):
+                for action, order, expected in (
+                    ('marketplace:order_complete', cancelled, completion_error),
+                    ('marketplace:order_cancel', completed, cancellation_error),
+                ):
+                    response = self.client.post(
+                        reverse(action, args=[order.pk]),
+                        follow=True, HTTP_ACCEPT_LANGUAGE=lang,
+                    )
+                    self.assertEqual(response.status_code, 200)
+                    self.assertTrue(response.redirect_chain)
+                    self.assertContains(response, expected)
+                    if lang != 'ru':
+                        self.assertNotContains(
+                            response, 'Заявку нельзя завершить в текущем статусе.',
+                        )
+                        self.assertNotContains(
+                            response, 'Заявку нельзя отменить в текущем статусе.',
+                        )
+        cancelled.refresh_from_db()
+        completed.refresh_from_db()
+        self.assertEqual(cancelled.status, Order.Status.CANCELLED)
+        self.assertEqual(completed.status, Order.Status.COMPLETED)
+        self.assertFalse(cancelled.status_events.exists())
+        self.assertFalse(completed.status_events.exists())
+
     def test_006_all_dashboard_pagers_preserve_other_page_numbers(self):
         for i in range(12):
             self.order(status=Order.Status.DRAFT, wizard_token=uuid4())
