@@ -152,6 +152,9 @@ def save_order_wizard_step(*, order_id, actor, step, form, uploads=(),
         existing = dict((order.wizard_data or {}).get('steps') or {})
         if step > _next_step(existing):
             raise ValueError(wizard_copy()['incomplete'])
+        # Any changed or repeated wizard step invalidates prior final consent.
+        # A withdrawn/reopened order must be explicitly confirmed again.
+        existing.pop('8', None)
         if step == 1:
             previous = existing.get('1')
             if previous != values:
@@ -257,7 +260,14 @@ def validate_wizard_status_publication(order):
     those checks or publish a partially saved draft.
     """
     data = (order.wizard_data or {}).get('steps', {})
-    if _next_step(data) != 8 or not order.wizard_token:
+    if (
+        not isinstance(data, dict)
+        or _next_step(data) != 8
+        or not order.wizard_token
+        or data.get('8') != {'confirm': True}
+    ):
+        # Step 8 is set only by the validated confirmation service.
+        # Seven complete inputs alone must never authorize direct publication.
         raise ValueError(wizard_copy()['incomplete'])
     try:
         selection = data['1']
@@ -348,9 +358,17 @@ def validate_wizard_status_publication(order):
         raise ValueError(wizard_copy()['incomplete']) from exc
 
 
-def publish_order_wizard(*, order_id, actor):
-    """Verify all saved steps before atomically publishing exactly once."""
+def publish_order_wizard(*, order_id, actor, confirmation_form=None):
+    """Validate final confirmation and saved wizard before atomic publication."""
     ensure_wizard_owner(actor)
+    from .wizard_forms import ConfirmStepForm
+    if (
+        not isinstance(confirmation_form, ConfirmStepForm)
+        or not confirmation_form.is_bound
+        or not confirmation_form.is_valid()
+        or confirmation_form.cleaned_data.get('confirm') is not True
+    ):
+        raise ValueError(wizard_copy()['incomplete'])
     with transaction.atomic():
         order = get_owner_wizard(order_id, actor, for_update=True)
         if order is None:
@@ -447,6 +465,13 @@ def publish_order_wizard(*, order_id, actor):
                 schema_snapshot=version.schema,
                 answers=questions['answers'],
             )
+        # Record final confirmation in the same transaction as publication.
+        # No direct draft → published transition can omit this evidence.
+        order.wizard_data = {
+            **(order.wizard_data or {}),
+            'steps': {**steps, '8': {'confirm': True}},
+        }
+        order.save(update_fields=['wizard_data', 'updated_at'])
         order = transition_order_status(
             order, Order.Status.PUBLISHED, actor=actor,
         )

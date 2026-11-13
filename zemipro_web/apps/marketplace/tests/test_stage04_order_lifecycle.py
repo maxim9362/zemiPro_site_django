@@ -42,6 +42,7 @@ class OrderLifecycleTests(TestCase):
                   'amount_min': '', 'amount_max': ''},
             '6': {'description': description},
             '7': {'display_name': '', 'chat_only': True},
+            '8': {'confirm': True},  # synthetic, already-confirmed lifecycle fixture
         }
         return make_order(
             client=self.owner, category=self.category,
@@ -52,6 +53,34 @@ class OrderLifecycleTests(TestCase):
             work_mode=Order.WorkMode.ONSITE,
             urgency=Order.Urgency.NORMAL,
         )
+
+    def test_direct_publish_requires_final_confirmation(self):
+        order = self.make_draft()
+        data = dict(order.wizard_data)
+        data['steps'] = {k: v for k, v in data['steps'].items() if k != '8'}
+        order.wizard_data = data
+        order.save(update_fields=['wizard_data'])
+        with self.assertRaises(ValueError):
+            transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.DRAFT)
+        self.assertFalse(order.status_events.filter(
+            new_status=Order.Status.PUBLISHED,
+        ).exists())
+
+    def test_withdraw_requires_fresh_final_confirmation(self):
+        order = self.make_draft()
+        transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        transition_order_status(order, Order.Status.DRAFT, actor=self.owner)
+        order.refresh_from_db()
+        self.assertNotIn('8', order.wizard_data['steps'])
+        with self.assertRaises(ValueError):
+            transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.DRAFT)
+        self.assertEqual(order.status_events.filter(
+            new_status=Order.Status.PUBLISHED,
+        ).count(), 1)
 
     def test_declared_states_and_default_published(self):
         self.assertEqual(set(Order.Status.values), {

@@ -585,6 +585,7 @@ def order_wizard_edit_view(request, pk):
                 if step == 8:
                     published, created = publish_order_wizard(
                         order_id=order.pk, actor=request.user,
+                        confirmation_form=form,
                     )
                     _flush_order_events(published)
                     return redirect('marketplace:order_detail', pk=published.pk)

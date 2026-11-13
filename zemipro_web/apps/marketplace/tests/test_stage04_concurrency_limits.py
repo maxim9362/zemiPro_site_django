@@ -23,7 +23,7 @@ from apps.marketplace.order_quota import (
     ORDER_WRITE_LIMITS, OrderQuotaExceeded, consume_order_quota,
 )
 from apps.marketplace.services import accept_response, create_order, create_response
-from apps.marketplace.wizard_forms import DescriptionStepForm
+from apps.marketplace.wizard_forms import ConfirmStepForm, DescriptionStepForm
 from apps.marketplace.wizard_services import (
     publish_order_wizard, save_order_wizard_step,
 )
@@ -251,6 +251,7 @@ class ConcurrentOrderMutationsTests(TransactionTestCase):
                 barrier.wait(timeout=10)
                 _, created = publish_order_wizard(
                     order_id=order.pk, actor=self.owner,
+                    confirmation_form=ConfirmStepForm(data={'confirm': 'on'}),
                 )
                 return created
             finally:

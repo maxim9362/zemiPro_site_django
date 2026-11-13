@@ -78,10 +78,19 @@ def transition_order_status(order, target_status, *, actor, operation_key=None,
             return locked
         if target_status not in ALLOWED_ORDER_TRANSITIONS.get(locked.status, frozenset()):
             raise ValueError('Недопустимый переход статуса заявки.')
+        update_fields = ['status', 'updated_at']
         if target_status == Order.Status.DRAFT:
             from .models import Response
             if locked.worker_id is not None or Response.objects.filter(order=locked).exists():
                 raise ValueError('Нельзя снимать заявку с публикации после откликов.')
+            steps = (locked.wizard_data or {}).get('steps')
+            if isinstance(steps, dict) and '8' in steps:
+                # Withdrawn/reopened orders need a NEW final confirmation.
+                locked.wizard_data = {
+                    **locked.wizard_data,
+                    'steps': {k: val for k, val in steps.items() if k != '8'},
+                }
+                update_fields.append('wizard_data')
         if target_status == Order.Status.PUBLISHED and not city_is_public(locked.city):
             raise ValueError('Город пока не обслуживается.')
         if (locked.status == Order.Status.DRAFT
@@ -94,7 +103,7 @@ def transition_order_status(order, target_status, *, actor, operation_key=None,
         consume_order_quota(actor, 'state')
         previous = locked.status
         locked.status = target_status
-        locked.save(update_fields=['status', 'updated_at'])
+        locked.save(update_fields=update_fields)
         source = OrderStatusEvent.objects.create(
             order=locked, actor_id=actor.pk,
             previous_status=previous, new_status=target_status,
