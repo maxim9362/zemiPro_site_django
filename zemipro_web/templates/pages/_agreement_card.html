@@ -30,6 +30,43 @@
             {% endif %}
         </div>
         {% endif %}
+        {% if order.status == 'assigned' and order.worker_id == user.pk %}
+        <form method="post" action="{% url 'marketplace:order_work_action' pk=order.pk action='start' %}">
+            {% csrf_token %}
+            <input type="hidden" name="operation_key" value="{{ operation_withdraw }}">
+            <button type="submit" class="btn btn--primary">{{ offer_copy.work_start }}</button>
+        </form>
+        {% endif %}
+        {% if order.status == 'in_progress' %}
+            {% if order.worker_id == user.pk %}
+                {% if not work_result_submitted %}
+                <form method="post" action="{% url 'marketplace:order_work_action' pk=order.pk action='result' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="operation_key" value="{{ operation_withdraw }}">
+                    <button class="btn btn--primary">{{ offer_copy.work_result }}</button>
+                </form>
+                {% else %}
+                <p>{{ offer_copy.work_status_submitted }}</p>
+                {% endif %}
+            {% elif is_owner and work_result_submitted %}
+            <p>{{ offer_copy.work_status_submitted }}</p>
+            {% endif %}
+        {% endif %}
+        {% if order.status == 'disputed' %}
+            <p>{{ offer_copy.work_disputed }}</p>
+        {% elif order.status == 'assigned' or order.status == 'in_progress' %}
+            <form method="post" action="{% url 'marketplace:order_work_action' pk=order.pk action='problem' %}">
+                {% csrf_token %}
+                <input type="hidden" name="operation_key" value="{{ operation_duplicate }}">
+                <label class="form__label" for="work-problem-{{ order.pk }}">{{ offer_copy.work_problem }}</label>
+                <select id="work-problem-{{ order.pk }}" name="problem_code">
+                    <option value="timing">{{ offer_copy.problem_timing }}</option>
+                    <option value="quality">{{ offer_copy.problem_quality }}</option>
+                    <option value="other">{{ offer_copy.problem_other }}</option>
+                </select>
+                <button class="btn btn--secondary" type="submit">{{ offer_copy.work_problem }}</button>
+            </form>
+        {% endif %}
         <details style="margin-top:16px;">
             <summary>{{ offer_copy.agreement_history }}</summary>
             <ol style="padding-inline-start:24px">
