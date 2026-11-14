@@ -26,7 +26,6 @@ from apps.marketplace.models import (
     Response,
 )
 from apps.marketplace.offer_services import submit_offer
-from apps.marketplace.review_services import submit_review_reply
 from apps.marketplace.services import create_order, accept_response
 from apps.marketplace.tests.factories import (
     make_category, make_city, make_user, make_worker_profile,
