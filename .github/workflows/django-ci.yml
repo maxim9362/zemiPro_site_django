@@ -193,6 +193,7 @@ jobs:
           python manage.py test \
             apps.marketplace.tests.test_stage07_chat_permissions \
             apps.marketplace.tests.test_stage07_chat_http \
+            apps.marketplace.tests.test_stage07_chat_attachments \
             apps.marketplace.tests.test_stage07_notifications \
             apps.marketplace.tests.test_stage07_review \
             apps.marketplace.tests.test_stage07_moderation \
