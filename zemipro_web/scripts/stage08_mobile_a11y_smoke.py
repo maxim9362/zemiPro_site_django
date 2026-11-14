@@ -230,6 +230,33 @@ def check_keyboard_disclosure(page, lang):
         raise AssertionError(f"{lang}: focus not restored to disclosure")
 
 
+def check_text_resize(page, lang, role, label, path):
+    """At 320 CSS pixels, 200% text resize must not create horizontal loss."""
+    page.set_viewport_size({"width": 320, "height": 844})
+    response = page.goto(BASE + path, wait_until="domcontentloaded", timeout=30000)
+    identity = f"{lang}/{role}/{label}/200%-text"
+    if response is None or response.status != 200:
+        raise AssertionError(f"{identity}: unexpected response")
+    size = page.evaluate("""() => {
+      document.documentElement.style.fontSize = '200%';
+      return {
+        root: getComputedStyle(document.documentElement).fontSize,
+        inner: window.innerWidth,
+        doc: document.documentElement.scrollWidth,
+        body: document.body.scrollWidth
+      };
+    }""")
+    if float(size["root"].replace("px", "")) < 30:
+        raise AssertionError(f"{identity}: resize did not apply")
+    if max(size["doc"], size["body"]) > size["inner"] + 2:
+        OUT.mkdir(parents=True, exist_ok=True)
+        page.screenshot(
+            path=str(OUT / f"TEXT-OVERFLOW-{lang}-{role}-{label}.png"),
+            full_page=True,
+        )
+        raise AssertionError(f"{identity}: horizontal overflow {size}")
+
+
 def check_without_js(browser, lang, session_name, session_key):
     from django.conf import settings
     context = browser.new_context(
@@ -310,8 +337,22 @@ def main():
                                 check_page(page, lang, role, label, path, width)
                                 cases += 1
                         if role == "guest":
+                            for label, path in (
+                                ("home", "/"),
+                                ("directory", f"/{lang}/workers/"),
+                                ("login", "/accounts/login/"),
+                            ):
+                                check_text_resize(page, lang, role, label, path)
+                                cases += 1
                             check_keyboard_disclosure(page, lang)
                             cases += 1
+                        elif role == "client":
+                            for label, path in (
+                                ("wizard", "/orders/new/"),
+                                ("chat", f"/chat/{ids['chat']}/"),
+                            ):
+                                check_text_resize(page, lang, role, label, path)
+                                cases += 1
                     finally:
                         ctx.close()
                 check_without_js(
