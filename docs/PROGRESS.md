@@ -1162,3 +1162,11 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
   описания PR: `Post "https://api.github.com/graphql": Forbidden`; описание
   подготовлено вне репозитория. Технический финальный отчёт должен отдельно
   подтвердить Actions на последнем SHA и этот оставшийся внешний блокер.
+
+## 2026-11-14 — Stage 08.1: UI inventory and UX map
+
+- **DOC_IMPLEMENTED / SOURCE_VERIFIED / OWNER_APPROVAL_PENDING.** Working branch `stage-08-frontend` branched from verified Stage07 commit `8ab5839f4c633dd58f13bb84e6417b8ef11abc72`, while PR #16 remains `OPEN / DRAFT / NOT_MERGED` and `main` remained `576ef639e1b5944e333ac2829d47e16f51aa82a0` at branching.
+- Inventoried **47 Django HTML templates**, existing routes/views, roles, forms and scenario states; proposed role-aware navigation and 08.2–08.7 UX/E2E scope in [STAGE_08_UX_AUDIT.md](STAGE_08_UX_AUDIT.md).
+- Browser-visible `zemipro.co.il` is legacy content advertising Telegram and multiple regions; it is **not** proof of the Django frontend. Ashdod-only migration and production switch remain separately gated in Stage 09.
+- Findings: confusing Ashdod/address copy; busy wrapping navbar; inline styles; incomplete distinct status styles; chat polling lacks message actions provided on SSR; form/error/a11y inconsistency; notification deep-link and moderation return UX. Source-only checks: **6/6 PASS, 0 FAIL**. **Django/Playwright/device tests NOT RUN in 08.1**; no changed executable code.
+- Changes: documentation only (`docs/STAGE_08_UX_AUDIT.md`, `docs/ROADMAP.md`, `docs/PROGRESS.md`). No production, deployment, migrations, merge, or changes in Stage07 branch/main. Next step: owner approval and explicit command before 08.2.
