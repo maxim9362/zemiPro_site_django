@@ -14,13 +14,7 @@
 <section class="dashboard">
     <div class="container">
 
-        {% if messages %}
-        <div class="form__errors" style="background: #d1fae5; border-color: #6ee7b7; margin-bottom: 24px;">
-            {% for message in messages %}
-            <p class="form__error" style="color: #065f46;">{{ message }}</p>
-            {% endfor %}
-        </div>
-        {% endif %}
+        {% include 'components/flash_messages.html' %}
 
         <div class="dashboard__profile">
             <h2>{% trans 'Ваш профиль' %}</h2>

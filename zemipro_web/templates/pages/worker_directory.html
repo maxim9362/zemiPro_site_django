@@ -40,39 +40,7 @@
         {% if page_obj.object_list %}
         <div class="orders-list">
             {% for worker in page_obj %}
-            <article class="order-card-sm">
-                <div class="order-card-sm__header">
-                    <strong>{{ worker.public_display_name }}</strong>
-                    {% if worker.review_count %}
-                    <span>★ {{ worker.avg_rating|floatformat:1 }} ({{ worker.review_count }} {% trans 'отзывов' %})</span>
-                    {% else %}
-                    <span>{% trans 'Пока нет отзывов' %}</span>
-                    {% endif %}
-                </div>
-                <div class="order-card-sm__body">
-                    <p>{{ worker.city.localized_name }}</p>
-                    {% for skill in worker.public_search_skills %}
-                    {% if skill.is_active %}
-                    <span class="tag">{{ skill.localized_name }}</span>
-                    {% endif %}
-                    {% endfor %}
-                    {% if worker.starting_price_ils is not None %}
-                    <p>{% trans 'Заявленная стартовая цена:' %} {{ worker.starting_price_ils }} ₪</p>
-                    {% endif %}
-                    <p>{% trans 'Доступность:' %} {{ worker.get_availability_display }}</p>
-                    {% if worker.rank_reasons %}
-                    <div aria-label="{% trans 'Причины ранжирования' %}">
-                        <p class="form__hint">{% trans 'Почему этот специалист в результатах:' %}</p>
-                        <ul class="form__hint">
-                            {% for reason in worker.rank_reasons %}<li>{{ reason }}</li>{% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="order-card-sm__actions">
-                    <a href="{% url 'marketplace:worker_public_profile' pk=worker.pk %}" class="btn btn--primary btn--sm">{% trans 'Открыть профиль' %}</a>
-                </div>
-            </article>
+            {% include 'components/worker_card.html' with worker=worker %}
             {% endfor %}
         </div>
         {% if page_obj.has_other_pages %}
@@ -87,8 +55,12 @@
         </nav>
         {% endif %}
         {% else %}
-        <p class="empty-state">{% trans 'Подходящих опубликованных специалистов пока нет.' %}</p>
-        <p role="status">{% if form.errors %}{{ directory_copy.invalid_help }}{% else %}{{ directory_copy.empty_help }}{% endif %}</p>
+        {% trans 'Подходящих опубликованных специалистов пока нет.' as empty_title %}
+        {% if form.errors %}
+        {% include 'components/empty_state.html' with empty_title=empty_title empty_description=directory_copy.invalid_help %}
+        {% else %}
+        {% include 'components/empty_state.html' with empty_title=empty_title empty_description=directory_copy.empty_help %}
+        {% endif %}
         {% endif %}
         <div class="cta-block">
             <h2>{% trans 'Не нашли подходящего специалиста?' %}</h2>

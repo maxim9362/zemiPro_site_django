@@ -23,11 +23,7 @@
             </h2>
             <div class="categories-grid">
                 {% for cat in section.categories.all %}
-                <a href="{% if catalog_localized %}{% url 'catalog_i18n:category_detail' slug=cat.slug %}{% else %}{% url 'marketplace:category_detail' slug=cat.slug %}{% endif %}" class="category-card">
-                    <span class="category-card__emoji">{{ cat.emoji }}</span>
-                    <h3 class="category-card__title">{{ cat.localized_name }}</h3>
-                    <p class="category-card__desc">{{ cat.localized_description }}</p>
-                </a>
+                {% include 'components/service_card.html' with category=cat %}
                 {% endfor %}
             </div>
         </section>
@@ -39,11 +35,7 @@
             <h2>{% trans 'Другие категории' %}</h2>
             <div class="categories-grid">
                 {% for cat in unassigned_categories %}
-                <a href="{% if catalog_localized %}{% url 'catalog_i18n:category_detail' slug=cat.slug %}{% else %}{% url 'marketplace:category_detail' slug=cat.slug %}{% endif %}" class="category-card">
-                    <span class="category-card__emoji">{{ cat.emoji }}</span>
-                    <h3 class="category-card__title">{{ cat.localized_name }}</h3>
-                    <p class="category-card__desc">{{ cat.localized_description }}</p>
-                </a>
+                {% include 'components/service_card.html' with category=cat %}
                 {% endfor %}
             </div>
         </section>

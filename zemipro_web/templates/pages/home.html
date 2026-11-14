@@ -22,11 +22,7 @@
         <h2>{% trans 'Категории услуг' %}</h2>
         <div class="categories-grid">
             {% for cat in categories %}
-            <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
-                <span class="category-card__emoji">{{ cat.emoji }}</span>
-                <h3 class="category-card__title">{{ cat.localized_name }}</h3>
-                <p class="category-card__desc">{{ cat.localized_description }}</p>
-            </a>
+            {% include 'components/service_card.html' with category=cat %}
             {% endfor %}
         </div>
     </div>
