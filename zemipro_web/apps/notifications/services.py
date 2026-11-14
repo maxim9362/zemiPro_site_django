@@ -38,9 +38,13 @@ def get_user_notifications(user):
 
 def get_unread_count(user):
     """Количество непрочитанных уведомлений."""
-    if not _eligible_user(user):
+    if not getattr(user, 'is_authenticated', False):
         return 0
-    return Notification.objects.filter(recipient=user, is_read=False).count()
+    # Check persisted eligibility in the count query, without a second round trip.
+    return Notification.objects.filter(
+        recipient_id=user.pk, recipient__is_active=True, recipient__is_blocked=False,
+        recipient__email_verification_required=False, is_read=False,
+    ).count()
 
 
 def mark_notification_read(notification, user):

@@ -7,7 +7,7 @@
   <ol style="display:grid;gap:12px;padding-inline-start:20px">
     {% for case in cases %}
     <li style="border:1px solid #cbd5e1;padding:12px;border-radius:12px">
-      <p>#{{ case.pk }} · {{ case.get_reason_display }} · {{ case.get_status_display }}</p>
+      <p>#{{ case.pk }} · {% trans case.get_reason_display %} · {% trans case.get_status_display %}</p>
       {% if case.status != 'pending' %}
         <a href="{% url 'moderation:appeal' pk=case.pk %}">{% trans 'Апелляция' %}</a>
       {% endif %}

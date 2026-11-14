@@ -5,7 +5,7 @@ import re
 import uuid
 
 from django.core.exceptions import PermissionDenied
-from django.core.files.base import ContentFile
+from io import BytesIO
 from django.db import transaction
 from django.utils import timezone
 
@@ -57,18 +57,16 @@ def _authorize(conversation, actor):
 def _can_send(conversation):
     response = conversation.response
     order = response.order
+    # Serialize account revocation with the write, without blocking FK key-share.
+    users = list(User.objects.select_for_update(no_key=True).filter(
+        pk__in=(order.client_id, response.worker_id),
+    ).order_by('pk'))
     return (
         response.status in ACTIVE_RESPONSE
         and order.status in ACTIVE_ORDER
         and (order.worker_id is None or order.worker_id == response.worker_id)
-        and User.objects.filter(
-            pk=order.client_id, is_active=True, is_blocked=False,
-            email_verification_required=False,
-        ).exists()
-        and User.objects.filter(
-            pk=response.worker_id, is_active=True, is_blocked=False,
-            email_verification_required=False,
-        ).exists()
+        and len(users) == 2
+        and all(u.is_active and not u.is_blocked and not u.email_verification_required for u in users)
     )
 
 
@@ -193,6 +191,12 @@ def _attachment_message(*, message_id, actor):
 @transaction.atomic
 def attach_message_image(*, message_id, actor, upload):
     """Strip EXIF, rewrite as JPEG and store behind a permission-checked route."""
+    order_id = Message.objects.filter(pk=message_id).values_list(
+        'conversation__response__order_id', flat=True,
+    ).first()
+    if order_id is None:
+        raise PermissionDenied('Attachment unavailable.')
+    Order.objects.select_for_update().get(pk=order_id)
     message = _attachment_message(message_id=message_id, actor=actor)
     if message.sender_id != actor.pk:
         raise PermissionDenied('Attachment unavailable.')
@@ -214,18 +218,12 @@ def attach_message_image(*, message_id, actor, upload):
         return existing, False
     if MessageAttachment.objects.filter(message=locked).count() >= MAX_MESSAGE_PHOTOS:
         raise ChatConflict('Attachment limit reached.')
-    storage = private_portfolio_storage()
-    file_key = storage.save(
-        f'chat-attachments/{uuid.uuid4().hex}.jpg', ContentFile(cleaned),
+    # Store new private JPEGs in PostgreSQL so an enclosing transaction rollback
+    # cannot leave orphan files. Existing filesystem attachments remain readable.
+    item = MessageAttachment.objects.create(
+        message=locked, file_key=f'chat-attachments/{uuid.uuid4().hex}.jpg',
+        content_sha256=digest, byte_size=len(cleaned), jpeg_data=cleaned,
     )
-    try:
-        item = MessageAttachment.objects.create(
-            message=locked, file_key=file_key,
-            content_sha256=digest, byte_size=len(cleaned),
-        )
-    except Exception:
-        storage.delete(file_key)
-        raise
     return item, True
 
 
@@ -238,6 +236,8 @@ def open_message_image(*, attachment_id, actor):
     _authorize(attachment.message.conversation, actor)
     if not _ATTACHMENT_KEY.fullmatch(attachment.file_key):
         raise PermissionDenied('Attachment unavailable.')
+    if attachment.jpeg_data is not None:
+        return BytesIO(bytes(attachment.jpeg_data))
     return private_portfolio_storage().open(attachment.file_key, 'rb')
 
 

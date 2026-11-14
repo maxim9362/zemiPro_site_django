@@ -1133,3 +1133,25 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 - Targeted CI found a test-only locale mismatch (now using HTTP Accept-Language), and Ruff import duplication; fixes committed in the same branch. The complete final SHA checks and independent reviewer are NOT YET VERIFIED.
 - Stage07 security hardening: persisted notification read gate, explicit SMTP opt-in, review text and public snapshot immutability. A Stage05 tampering regression is strengthened to assert database denial.
 - **Do not claim stage acceptance or merge until all final gates pass.** No live customer data, production, SMTP, Gemini, VPS or deployment touched.
+
+
+## 2026-11-14 — Stage 07: Codex audit remediation
+
+- **REVIEW / LOCALLY_VERIFIED / FINAL_CI_PENDING**; existing Draft PR #16 only.
+- Audited base `53e5352afa2495d5ad50592b469835691e50c588`; main remained
+  `576ef639e1b5944e333ac2829d47e16f51aa82a0` at audit start.
+- Reproduced and fixed ZP-07-001–013: conversation/sender/read integrity,
+  outer-rollback JPEG leak, revoked email/moderator/translation authorization,
+  appeal audit/quota, history/read/image delivery, notification cache policy,
+  browser readiness, and the existing dashboard SQL regression (15 > 14).
+- Added forward migrations marketplace.0023 and moderation.0006 plus independent
+  adversarial, failure-injection, retry and concurrency tests. Prior-stage
+  migrations and existing test thresholds were preserved.
+- PostgreSQL 17 clean and Stage06 legacy upgrade/rollback PASS. Chromium:
+  Stage02 90/90, Stage06 18/18, Stage07 39/39, including no-JavaScript send/read.
+- Final local Django: **580/580 PASS**, Stage07 **56/56 PASS**, zero failures/skips;
+  coverage gate 89.6% for marketplace/services.py. Exact-head GitHub CI is required;
+  see the final audit handoff and PR checks. No remote failure log is claimed:
+  unauthenticated GitHub job pages required sign-in.
+- PR remains Draft; merge, deployment, Stage08, production data and real provider
+  calls are excluded. Historical implementation/failure entries above are retained.

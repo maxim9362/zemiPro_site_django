@@ -164,6 +164,8 @@ def translate_message(*, message_id, actor, target_language, consent=False,
     if not isinstance(translated, str) or not translated.strip() or len(translated) > 3500:
         raise TranslationUnavailable('Translation provider returned an invalid result.')
     with transaction.atomic():
+        # Permission may have been revoked while the external provider ran.
+        _message_for_user(message_id, actor)
         row, created = MessageTranslation.objects.get_or_create(
             message=message, target_language=target_language,
             defaults={

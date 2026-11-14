@@ -35,17 +35,23 @@ def fixtures():
         raise AssertionError('Ashdod-only test seed is required')
     users = {}
     sessions = {}
-    for role in ('customer', 'worker', 'outsider'):
+    for role in ('customer', 'worker', 'outsider', 'moderator'):
         user, _ = get_user_model().objects.get_or_create(
             username='stage07_ci_browser_' + role,
         )
+        user.is_staff = role == 'moderator'
         user.is_active = True
         user.is_blocked = False
         user.email_verification_required = False
         user.set_unusable_password()
         user.save(update_fields=[
-            'is_active', 'is_blocked', 'email_verification_required', 'password',
+            'is_active', 'is_blocked', 'email_verification_required', 'password', 'is_staff',
         ])
+        if role == 'moderator':
+            from django.contrib.auth.models import Permission
+            user.user_permissions.add(Permission.objects.get(
+                content_type__app_label='moderation', codename='review_complaints',
+            ))
         session = SessionStore()
         session['_auth_user_id'] = str(user.pk)
         session['_auth_user_backend'] = 'django.contrib.auth.backends.ModelBackend'
@@ -86,13 +92,14 @@ def fixtures():
 def check(page, *, lang, role, width, conversation_id):
     page.set_viewport_size({'width': width, 'height': 844})
     response = page.goto(BASE + '/chat/' + str(conversation_id) + '/',
-                         wait_until='networkidle')
+                         wait_until='domcontentloaded')
     if role == 'outsider':
         if response.status != 403 or 'Synthetic stored QA message' in page.content():
             raise AssertionError('Third-party chat access was not denied')
         return
     if response.status != 200:
         raise AssertionError('Authorized chat request failed')
+    page.locator('#chat-log').wait_for(state='visible')
     expected_dir = 'rtl' if lang == 'he' else 'ltr'
     html = page.locator('html')
     if html.get_attribute('lang') != lang or html.get_attribute('dir') != expected_dir:
@@ -116,8 +123,8 @@ def check(page, *, lang, role, width, conversation_id):
         page.locator('form').filter(
             has=page.locator('textarea[name="body"]'),
         ).locator('button[type="submit"]').click()
-        page.wait_for_load_state('networkidle')
-        page.reload(wait_until='networkidle')
+        page.wait_for_load_state('domcontentloaded')
+        page.reload(wait_until='domcontentloaded')
         if test_text not in page.locator('#chat-log').inner_text():
             raise AssertionError('Chat post lost after reload')
         poll = page.request.get(
@@ -157,6 +164,43 @@ def main():
                               conversation_id=conversation_id)
                         counter += 1
                     context.close()
+                for role, path, expected in (
+                    ('customer', '/notifications/preferences/',
+                     {'ru': 'Настройки уведомлений', 'en': 'Notification settings', 'he': 'הגדרות התראות'}),
+                    ('worker', '/notifications/preferences/',
+                     {'ru': 'Настройки уведомлений', 'en': 'Notification settings', 'he': 'הגדרות התראות'}),
+                    ('moderator', '/moderation/queue/',
+                     {'ru': 'Очередь модерации', 'en': 'Moderation queue', 'he': 'תור לבדיקה'}),
+                ):
+                    context = browser.new_context(locale=lang, viewport={'width': 320, 'height': 844})
+                    context.add_cookies([{'name': settings.SESSION_COOKIE_NAME,
+                                         'value': sessions[role], 'url': BASE}])
+                    page = context.new_page()
+                    response = page.goto(BASE + path, wait_until='domcontentloaded')
+                    if response.status != 200 or expected[lang] not in page.locator('h1').inner_text():
+                        raise AssertionError('Stage07 settings/moderation localization failed')
+                    if page.evaluate('document.documentElement.scrollWidth > innerWidth + 2'):
+                        raise AssertionError('Stage07 settings/moderation mobile overflow')
+                    counter += 1
+                    context.close()
+                # Server-rendered send/read must also work without JavaScript.
+                context = browser.new_context(locale=lang, java_script_enabled=False,
+                                              viewport={'width': 320, 'height': 844})
+                context.add_cookies([{'name': settings.SESSION_COOKIE_NAME,
+                                     'value': sessions['customer'], 'url': BASE}])
+                page = context.new_page()
+                check(page, lang=lang, role='customer', width=390,
+                      conversation_id=conversation_id)
+                page.locator('form[action$="/read/"] button').click()
+                page.wait_for_url(BASE + f'/chat/{conversation_id}/')
+                receipt = page.request.get(BASE + f'/chat/{conversation_id}/poll/?after=0')
+                me = int(page.locator('#chat-log').get_attribute('data-me'))
+                if receipt.status != 200 or any(
+                        not item['read'] for item in receipt.json()['messages']
+                        if item['sender_id'] != me):
+                    raise AssertionError('No-JavaScript read receipt was not persisted')
+                counter += 1
+                context.close()
         finally:
             browser.close()
     print(f'STAGE_07_BROWSER_PASS {counter} synthetic browser cases')

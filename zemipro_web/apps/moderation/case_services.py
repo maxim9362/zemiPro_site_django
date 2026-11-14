@@ -146,6 +146,7 @@ def file_appeal(*, actor, complaint_id, reason):
         if row.filed_by_id == user.pk and row.reason == reason:
             return row, False
         raise ComplaintConflict('The appeal has already been filed.')
+    _consume_limit(user)
     row = ComplaintAppeal.objects.create(
         complaint=complaint, filed_by=user, reason=reason,
     )

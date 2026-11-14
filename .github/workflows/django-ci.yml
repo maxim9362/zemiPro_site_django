@@ -199,7 +199,9 @@ jobs:
             apps.marketplace.tests.test_stage07_review \
             apps.marketplace.tests.test_stage07_moderation \
             apps.marketplace.tests.test_stage07_translation \
-            apps.marketplace.tests.test_stage07_e2e
+            apps.marketplace.tests.test_stage07_e2e \
+            apps.marketplace.tests.test_stage07_independent \
+            apps.marketplace.tests.test_stage07_appeal_integrity
 
       - name: Stage 07 Chromium mobile chat, privacy and RTL smoke
         env:

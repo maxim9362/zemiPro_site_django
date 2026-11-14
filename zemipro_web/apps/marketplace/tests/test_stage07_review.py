@@ -112,3 +112,27 @@ class Stage07ReviewTests(TestCase):
             submit_review_reply(
                 rating_id=self.rating.pk, actor=self.worker, body='Not completed',
             )
+
+    def test_reply_notification_failure_restores_original_rating_and_retry(self):
+        from unittest.mock import patch
+        from apps.notifications.models import Notification
+        original = (self.rating.rating, self.rating.review_text, self.rating.public_review_text_snapshot)
+        with patch('apps.marketplace.review_services.create_domain_notification',
+                   side_effect=RuntimeError('synthetic notification failure')):
+            with self.assertRaises(RuntimeError):
+                submit_review_reply(rating_id=self.rating.pk, actor=self.worker,
+                                    body='Synthetic safe response')
+        self.assertFalse(RatingReply.objects.exists())
+        self.assertFalse(RatingAuditEvent.objects.exists())
+        self.assertFalse(Notification.objects.exists())
+        self.rating.refresh_from_db()
+        self.assertEqual((self.rating.rating, self.rating.review_text,
+                          self.rating.public_review_text_snapshot), original)
+        reply, created = submit_review_reply(rating_id=self.rating.pk, actor=self.worker,
+                                             body='Synthetic safe response')
+        self.assertTrue(created)
+        retry, created = submit_review_reply(rating_id=self.rating.pk, actor=self.worker,
+                                             body='Synthetic safe response')
+        self.assertFalse(created)
+        self.assertEqual(reply.pk, retry.pk)
+        self.assertEqual(Notification.objects.count(), 1)

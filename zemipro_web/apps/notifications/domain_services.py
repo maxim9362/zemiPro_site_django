@@ -155,7 +155,8 @@ def process_email_outbox(*, limit=20, sender=None):
             # Serialize a delivery attempt across workers via row-level locking.
             user = row.notification.recipient
             pref = NotificationPreference.objects.filter(recipient=user).first()
-            if (not user.is_active or user.is_blocked or not user.email_verified_at
+            if (not user.is_active or user.is_blocked or user.email_verification_required
+                    or not user.email_verified_at
                     or not user.email or pref is None or not pref.email_optional):
                 row.status = NotificationDelivery.Status.SUPPRESSED
                 row.last_error_code = 'ineligible'

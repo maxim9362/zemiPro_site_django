@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.http import Http404
@@ -13,6 +14,7 @@ from .services import (
 
 
 @login_required
+@never_cache
 def notification_list_view(request):
     if not _eligible_user(request.user):
         raise PermissionDenied('Notification unavailable.')
@@ -25,6 +27,7 @@ def notification_list_view(request):
 
 
 @login_required
+@never_cache
 def notification_mark_read_view(request, pk):
     if not _eligible_user(request.user):
         raise PermissionDenied('Notification unavailable.')
@@ -40,6 +43,7 @@ def notification_mark_read_view(request, pk):
 
 
 @login_required
+@never_cache
 def notification_mark_all_read_view(request):
     if not _eligible_user(request.user):
         raise PermissionDenied('Notification unavailable.')
@@ -50,6 +54,7 @@ def notification_mark_all_read_view(request):
     return redirect('notifications:notification_list')
 
 @login_required
+@never_cache
 @require_http_methods(['GET', 'POST'])
 def notification_preferences_view(request):
     from apps.accounts.models import User

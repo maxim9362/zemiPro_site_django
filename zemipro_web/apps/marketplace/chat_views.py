@@ -3,10 +3,11 @@ from uuid import uuid4
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.db.models.query import prefetch_related_objects
 from django.http import FileResponse, Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import translation
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
@@ -16,7 +17,7 @@ from .chat_services import (
     mark_messages_read, open_conversation, open_message_image, send_message,
     take_poll_slot,
 )
-from .models import Conversation, Message
+from .models import Conversation, Message, MessageAttachment
 
 
 LABELS = {
@@ -25,7 +26,7 @@ LABELS = {
         'send': 'Отправить', 'message': 'Сообщение',
         'back': 'К диалогам', 'files': 'Прикрепить фото',
         'read': 'Прочитано', 'delivered': 'Доставлено',
-        'empty': 'Сообщений пока нет',
+        'empty': 'Сообщений пока нет', 'older': 'Ранее', 'latest': 'Последние сообщения', 'mark_read': 'Отметить прочитанным',
         'translate': 'Перевести', 'consent': 'Разрешаю передачу этого текста в Gemini',
         'privacy': 'Не переводите сообщения с личными данными.',
     },
@@ -34,7 +35,7 @@ LABELS = {
         'send': 'Send', 'message': 'Message',
         'back': 'Back to conversations', 'files': 'Attach photo',
         'read': 'Read', 'delivered': 'Delivered',
-        'empty': 'No messages yet',
+        'empty': 'No messages yet', 'older': 'Older messages', 'latest': 'Latest messages', 'mark_read': 'Mark as read',
         'translate': 'Translate', 'consent': 'I consent to sending this text to Gemini',
         'privacy': 'Do not translate messages containing personal information.',
     },
@@ -43,7 +44,7 @@ LABELS = {
         'send': 'שליחה', 'message': 'הודעה',
         'back': 'בחזרה לשיחות', 'files': 'צירוף תמונה',
         'read': 'נקרא', 'delivered': 'נמסר',
-        'empty': 'אין הודעות עדיין',
+        'empty': 'אין הודעות עדיין', 'older': 'הודעות קודמות', 'latest': 'הודעות אחרונות', 'mark_read': 'סימון כנקרא',
         'translate': 'תרגום', 'consent': 'אני מסכים לשליחת הטקסט הזה ל-Gemini',
         'privacy': 'אין לתרגם הודעות עם פרטים אישיים.',
     },
@@ -109,10 +110,18 @@ def chat_thread_view(request, conversation_id):
             return redirect('marketplace:chat_thread', conversation_id=conversation.pk)
     elif request.method != 'GET':
         raise Http404
-    rows = list_messages(conversation_id=conversation.pk, actor=request.user)
-    prefetch_related_objects(rows, 'attachments')
+    try:
+        before = _cursor(request.GET['before']) if 'before' in request.GET else None
+        rows = list_messages(conversation_id=conversation.pk, actor=request.user, before_id=before)
+    except ChatConflict as exc:
+        return HttpResponseBadRequest(str(exc))
+    prefetch_related_objects(rows, Prefetch(
+        'attachments', queryset=MessageAttachment.objects.defer('jpeg_data'),
+    ))
     return render(request, 'pages/chat_thread.html', {
         'conversation': conversation,
+        'older_cursor': rows[0].pk if rows and Message.objects.filter(conversation=conversation, pk__lt=rows[0].pk).exists() else None,
+        'history_page': before is not None,
         'rows': rows, 'last_id': rows[-1].pk if rows else 0,
         'nonce': str(uuid4()), 'copy': _label(), 'error': error,
         'can_send': (
@@ -136,7 +145,13 @@ def chat_poll_view(request, conversation_id):
     rows = Message.objects.filter(
         conversation=conversation, pk__gt=after,
     ).order_by('pk')[:60]
+    recent_ids = Message.objects.filter(conversation=conversation).order_by('-pk').values('pk')[:60]
+    attachments = MessageAttachment.objects.filter(message_id__in=recent_ids).values('pk', 'message_id')
     return JsonResponse({
+        'attachments': [{'id': item['pk'], 'message_id': item['message_id'],
+                         'url': reverse('marketplace:chat_attachment', args=[item['pk']])}
+                        for item in attachments],
+        'read_ids': list(Message.objects.filter(conversation=conversation, pk__lte=after, read_at__isnull=False).order_by('-pk').values_list('pk', flat=True)[:60]),
         'messages': [{
             'id': m.pk, 'sender_id': m.sender_id, 'body': m.body,
             'created_at': m.created_at.isoformat(), 'read': m.read_at is not None,
@@ -155,6 +170,8 @@ def chat_read_view(request, conversation_id):
         )
     except ChatConflict as exc:
         return HttpResponseBadRequest(str(exc))
+    if request.POST.get('return_to_thread') == '1':
+        return redirect('marketplace:chat_thread', conversation_id=conversation_id)
     return JsonResponse({'marked': changed})
 
 

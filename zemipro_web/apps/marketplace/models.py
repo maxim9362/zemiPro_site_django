@@ -1182,6 +1182,7 @@ class MessageAttachment(models.Model):
     message = models.ForeignKey(
         Message, on_delete=models.PROTECT, related_name='attachments',
     )
+    jpeg_data = models.BinaryField(null=True, editable=False)
     file_key = models.CharField(max_length=120, unique=True, editable=False)
     content_sha256 = models.CharField(max_length=64, editable=False)
     byte_size = models.PositiveIntegerField()

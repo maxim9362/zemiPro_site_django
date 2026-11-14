@@ -4,7 +4,7 @@ from threading import Barrier
 from uuid import uuid4
 
 from django.db import close_old_connections, connections
-from django.test import TransactionTestCase
+from django.test import TransactionTestCase, override_settings
 
 from apps.marketplace.chat_services import open_conversation, send_message
 from apps.marketplace.models import Message, Response
@@ -92,3 +92,28 @@ class Stage07ChatConcurrencyTests(TransactionTestCase):
                 dedupe_key__startswith='chat.message.',
             ).count(), 2,
         )
+
+    @override_settings(ZEMIPRO_STAGE07_EMAIL_ENABLED=True,
+                       DEFAULT_FROM_EMAIL='synthetic@example.invalid')
+    def test_parallel_outbox_workers_send_one_delivery(self):
+        from unittest.mock import Mock
+        from django.utils import timezone
+        from apps.notifications.domain_services import (
+            create_domain_notification, process_email_outbox, set_preferences,
+        )
+        from apps.notifications.models import NotificationDelivery
+
+        self.customer.email = 'synthetic-recipient@example.invalid'
+        self.customer.email_verified_at = timezone.now()
+        self.customer.save(update_fields=['email', 'email_verified_at'])
+        set_preferences(actor=self.customer, in_app_optional=True, email_optional=True)
+        create_domain_notification(
+            recipient_id=self.customer.pk, event_key='outbox.parallel', event='message',
+        )
+        sender = Mock(return_value=1)
+        results = self.parallel(lambda index: process_email_outbox(limit=1, sender=sender))
+        self.assertEqual(sum(result['sent'] for result in results), 1)
+        sender.assert_called_once()
+        row = NotificationDelivery.objects.get()
+        self.assertEqual(row.status, NotificationDelivery.Status.DELIVERED)
+        self.assertEqual(row.attempts, 1)

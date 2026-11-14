@@ -10,15 +10,15 @@
         style="list-style:none;display:grid;gap:10px;padding:0;margin:0"
         data-poll-url="{% url 'marketplace:chat_poll' conversation_id=conversation.pk %}"
         data-read-url="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}"
-        data-me="{{ request.user.pk }}" data-last-id="{{ last_id }}">
+        data-history="{{ history_page|yesno:'1,0' }}" data-read-label="{{ copy.read }}" data-delivered-label="{{ copy.delivered }}" data-files-label="{{ copy.files }}" data-me="{{ request.user.pk }}" data-last-id="{{ last_id }}">
       {% for item in rows %}
         <li data-message-id="{{ item.pk }}" style="padding:10px;border:1px solid #e2e8f0;border-radius:12px;overflow-wrap:anywhere;min-width:0">
           <small><bdi dir="ltr">{{ item.created_at|date:"d.m.Y H:i" }}</bdi> ·
-          {% if item.read_at %}{{ copy.read }}{% else %}{{ copy.delivered }}{% endif %}
+          <span data-read-state>{% if item.read_at %}{{ copy.read }}{% else %}{{ copy.delivered }}{% endif %}</span>
           </small>
           <p dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ item.body }}</p>
           {% for image in item.attachments.all %}
-            <a href="{% url 'marketplace:chat_attachment' pk=image.pk %}">
+            <a data-attachment-id="{{ image.pk }}" href="{% url 'marketplace:chat_attachment' pk=image.pk %}">
               <img src="{% url 'marketplace:chat_attachment' pk=image.pk %}"
                    width="160" height="120" loading="lazy" alt="{{ copy.files }}"
                    style="max-width:100%;object-fit:contain">
@@ -29,7 +29,7 @@
                   action="{% url 'marketplace:chat_image_upload' message_id=item.pk %}">
               {% csrf_token %}
               <label>{{ copy.files }} <input type="file" name="image"
-                accept="image/jpeg,image/png,image/webp" required></label>
+                accept="image/jpeg,image/png,image/webp" style="max-width:100%;min-width:0" required></label>
               <button class="btn btn--secondary" type="submit">{{ copy.files }}</button>
             </form>
           {% endif %}
@@ -55,6 +55,12 @@
       {% endfor %}
     </ol>
   </div>
+  <nav>{% if older_cursor %}<a href="?before={{ older_cursor }}">{{ copy.older }}</a>{% endif %}
+  {% if history_page %}<a href="?">{{ copy.latest }}</a>{% endif %}</nav>
+  {% if last_id %}<form method="post" action="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}">
+    {% csrf_token %}<input type="hidden" name="through_id" value="{{ last_id }}">
+    <input type="hidden" name="return_to_thread" value="1"><button type="submit">{{ copy.mark_read }}</button>
+  </form>{% endif %}
   {% if error %}<p role="alert">{{ error }}</p>{% endif %}
   {% if can_send %}
     <form method="post" style="display:grid;gap:12px;margin-top:16px">

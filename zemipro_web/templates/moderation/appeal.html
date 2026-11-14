@@ -6,7 +6,7 @@
   <h1>{% trans 'Апелляция по жалобе' %} #{{ complaint.pk }}</h1>
   {% if error %}<p role="alert">{{ error }}</p>{% endif %}
   {% if complaint.appeal %}
-    <p>{% trans 'Апелляция уже подана.' %} {{ complaint.appeal.get_status_display }}</p>
+    <p>{% trans 'Апелляция уже подана.' %} {% if complaint.appeal.status == 'pending' %}{% trans 'На рассмотрении' %}{% elif complaint.appeal.status == 'accepted' %}{% trans 'Апелляция удовлетворена' %}{% else %}{% trans 'Апелляция отклонена' %}{% endif %}</p>
   {% else %}
     <form method="post" style="display:grid;gap:12px">
       {% csrf_token %}
