@@ -1,6 +1,5 @@
 """07.4: owner-only response to a verified review."""
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect
 from django.views.decorators.cache import never_cache
