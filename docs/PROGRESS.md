@@ -1108,3 +1108,9 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 
 - **CODE_IMPLEMENTED / CI_PENDING:** optional recipient preferences; mandatory security notices; RU/EN/HE recipient-specific content; immutable message event dedup; durable outbound email queue with bounded retry/dead-letter and explicit disabled-by-default worker. Existing Stage04–06 notification service is reused without removing its compatibility contract.
 - All provider tests use synthetic email and injected failures. No external emails/deploy/production touched.
+
+
+## 2026-11-14 — Stage 07.4: verified reviews and public answers
+
+- **CODE_IMPLEMENTED / CI_PENDING:** retained existing Rating and computed aggregate; added one-time selected-worker public response with private original/PII-safe snapshot, protected score integrity by PostgreSQL trigger/check, append-only rating audit entries, client notification on response, negative tests. Public order details now render only safe rating snapshot.
+- Stage 08 global redesign deliberately excluded. Production untouched.
