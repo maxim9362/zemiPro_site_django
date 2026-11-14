@@ -1,9 +1,10 @@
 {% extends 'pages/app_base.html' %}
-{% load i18n %}
+{% load i18n static %}
+{% get_current_language as current_language %}
 {% block title %}{{ copy.heading }} — ZemiPro{% endblock %}
 {% block content %}
 
-<section class="zw-shell app-wizard" aria-label="{{ copy.heading }}">
+<section class="zw-shell app-wizard" aria-label="{{ copy.heading }}" data-unsaved-warning="{% if current_language == 'he' %}השינויים בשלב הזה טרם נשמרו. האם לצאת ולבטל את השינויים?{% elif current_language == 'en' %}Changes on this step are not saved yet. Leave and discard your changes?{% else %}Изменения на этом шаге ещё не сохранены. Выйти и потерять изменения?{% endif %}">
     <header>
         <h1>{{ copy.heading }}</h1>
         <p class="zw-muted">{{ copy.intro }}</p>
@@ -194,4 +195,5 @@
 }());
 </script>
 {% endif %}
+<script src="{% static 'js/wizard-navigation.js' %}" defer></script>
 {% endblock %}
