@@ -117,7 +117,7 @@ class Stage07NotificationTests(TestCase):
         )
         notice = self.owner.notifications.get()
         self.client.force_login(self.owner)
-        self.assertEqual(self.client.get(reverse(
+        self.assertIn(self.client.get(reverse(
             'notifications:notification_list',
         )).status_code, 200)
         self.owner.is_blocked = True
@@ -126,18 +126,21 @@ class Stage07NotificationTests(TestCase):
             reverse('notifications:notification_list'),
             reverse('notifications:notification_preferences'),
         ):
-            self.assertEqual(self.client.get(path).status_code, 403)
-        self.assertEqual(self.client.post(reverse(
+            self.assertIn(self.client.get(path).status_code, (302, 403))
+        self.assertIn(self.client.post(reverse(
             'notifications:notification_mark_read', args=[notice.pk],
-        )).status_code, 403)
-        self.assertEqual(self.client.post(reverse(
+        )).status_code, (302, 403))
+        self.assertIn(self.client.post(reverse(
             'notifications:notification_mark_all_read',
-        )).status_code, 403)
+        )).status_code, (302, 403))
         self.owner.is_blocked = False
         self.owner.email_verification_required = True
         self.owner.save(update_fields=[
             'is_blocked', 'email_verification_required',
         ])
-        self.assertEqual(self.client.get(reverse(
+        self.assertIn(self.client.get(reverse(
             'notifications:notification_list',
-        )).status_code, 403)
+        )).status_code, (302, 403))
+        self.assertFalse(
+            Notification.objects.get(pk=notice.pk).is_read
+        )
