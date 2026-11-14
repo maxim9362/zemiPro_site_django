@@ -139,9 +139,21 @@ def send_message(*, conversation_id, actor, body, client_nonce):
         conversation=conversation, sender=stored, created_at__gte=last_minute,
     ).count() >= MAX_MESSAGES_PER_MINUTE:
         raise ChatConflict('Message rate limit reached.')
-    return Message.objects.create(
+    message = Message.objects.create(
         conversation=conversation, sender=stored, body=body, client_nonce=nonce,
-    ), True
+    )
+    from apps.notifications.domain_services import create_domain_notification
+    other_id = (
+        conversation.response.worker_id
+        if stored.pk == conversation.response.order.client_id
+        else conversation.response.order.client_id
+    )
+    create_domain_notification(
+        recipient_id=other_id, event_key=f'chat.message.{message.pk}',
+        event='message', related_order=conversation.response.order,
+        related_response=conversation.response,
+    )
+    return message, True
 
 
 def list_messages(*, conversation_id, actor, before_id=None, limit=40):

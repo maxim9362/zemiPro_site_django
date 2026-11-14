@@ -13,6 +13,7 @@
 <section class="dashboard">
     <div class="container" style="max-width: 700px;">
 
+        <p><a href="{% url 'notifications:notification_preferences' %}">{% trans 'Настройки уведомлений' %}</a></p>
         {% if page_obj.object_list %}
         <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
             <form method="post" action="{% url 'notifications:notification_mark_all_read' %}">
