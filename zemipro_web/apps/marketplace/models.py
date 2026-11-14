@@ -1012,6 +1012,9 @@ class Rating(models.Model):
                 kwargs['update_fields'] = updates
         return super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Verified reviews cannot be deleted.')
+
 
 class ServiceQuestionnaire(models.Model):
     """Editable draft for exactly one concrete Subcategory."""
@@ -1169,6 +1172,9 @@ class Message(models.Model):
                 raise ValidationError('Original chat messages cannot be modified.')
         return super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Original chat messages cannot be deleted.')
+
 
 class MessageAttachment(models.Model):
     """Opaque private JPEG only; no direct URL, original filename or metadata."""
@@ -1190,6 +1196,14 @@ class MessageAttachment(models.Model):
                 name='chat_attachment_digest_unique',
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Private attachment evidence is immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Private attachment evidence is immutable.')
 
 
 class RatingReply(models.Model):

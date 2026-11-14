@@ -23,8 +23,16 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER stage07_message_original_guard BEFORE UPDATE
     ON marketplace_message FOR EACH ROW
     EXECUTE FUNCTION zemipro_stage07_message_original_guard();
+CREATE TRIGGER stage07_message_no_delete BEFORE DELETE
+    ON marketplace_message FOR EACH ROW
+    EXECUTE FUNCTION zemipro_stage06_immutable();
+CREATE TRIGGER stage07_attachment_immutable BEFORE UPDATE OR DELETE
+    ON marketplace_message_attachment FOR EACH ROW
+    EXECUTE FUNCTION zemipro_stage06_immutable();
 """
 REVERSE = """
+DROP TRIGGER IF EXISTS stage07_attachment_immutable ON marketplace_message_attachment;
+DROP TRIGGER IF EXISTS stage07_message_no_delete ON marketplace_message;
 DROP TRIGGER IF EXISTS stage07_message_original_guard ON marketplace_message;
 DROP FUNCTION IF EXISTS zemipro_stage07_message_original_guard();
 """

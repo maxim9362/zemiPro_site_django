@@ -94,6 +94,8 @@ class ChatPermissionTests(TestCase):
             first.save()
         with self.assertRaises(DatabaseError), transaction.atomic():
             Message.objects.filter(pk=first.pk).update(body='Tampered')
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            Message.objects.filter(pk=first.pk).delete()
         self.assertEqual(Message.objects.get(pk=first.pk).body, 'Synthetic private message')
 
     def test_blocked_and_verification_required_accounts_denied(self):

@@ -89,6 +89,8 @@ class Stage07ReviewTests(TestCase):
             )
         with self.assertRaises(DatabaseError), transaction.atomic():
             Rating.objects.filter(pk=self.rating.pk).update(rating=1)
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            Rating.objects.filter(pk=self.rating.pk).delete()
         self.rating.refresh_from_db()
         self.assertEqual(self.rating.rating, 5)
         with self.assertRaises(DatabaseError), transaction.atomic():

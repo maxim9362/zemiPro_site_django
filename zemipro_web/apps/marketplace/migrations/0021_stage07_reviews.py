@@ -22,6 +22,8 @@ END;
 $$ LANGUAGE plpgsql;
 CREATE TRIGGER stage07_rating_guard BEFORE UPDATE ON marketplace_rating
     FOR EACH ROW EXECUTE FUNCTION zemipro_stage07_rating_guard();
+CREATE TRIGGER stage07_rating_no_delete BEFORE DELETE ON marketplace_rating
+    FOR EACH ROW EXECUTE FUNCTION zemipro_stage06_immutable();
 CREATE TRIGGER stage07_rating_reply_guard BEFORE UPDATE OR DELETE
     ON marketplace_rating_reply FOR EACH ROW
     EXECUTE FUNCTION zemipro_stage06_immutable();
@@ -31,6 +33,7 @@ CREATE TRIGGER stage07_rating_audit_guard BEFORE UPDATE OR DELETE
 """
 REVERSE = """
 DROP TRIGGER IF EXISTS stage07_rating_guard ON marketplace_rating;
+DROP TRIGGER IF EXISTS stage07_rating_no_delete ON marketplace_rating;
 DROP TRIGGER IF EXISTS stage07_rating_reply_guard ON marketplace_rating_reply;
 DROP TRIGGER IF EXISTS stage07_rating_audit_guard ON marketplace_rating_audit;
 DROP FUNCTION IF EXISTS zemipro_stage07_rating_guard();
