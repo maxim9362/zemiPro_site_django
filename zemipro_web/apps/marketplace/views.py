@@ -773,7 +773,13 @@ def order_wizard_edit_view(request, pk):
             reverse('marketplace:order_wizard_edit', args=[pk]) + f'?step={latest}'
         )
     if request.method == 'POST':
-        if request.POST.get('action') != ('publish' if step == 8 else 'next'):
+        action = request.POST.get('action')
+        expected_action = 'publish' if step == 8 else 'next'
+        # Save-and-back reuses the same validated, owner-locked draft service.
+        # It never bypasses step ordering, publication confirmation or quota.
+        if action != expected_action and not (
+            2 <= step <= 7 and action == 'back'
+        ):
             raise Http404
         form = _wizard_form_for_step(order, step, request.POST)
         if form.is_valid():
@@ -804,7 +810,9 @@ def order_wizard_edit_view(request, pk):
                         if step == 6 else False
                     ),
                 )
-                next_step = min(step + 1, wizard_max_step(saved))
+                next_step = (step - 1) if action == 'back' else min(
+                    step + 1, wizard_max_step(saved),
+                )
                 return redirect(
                     reverse('marketplace:order_wizard_edit', args=[pk])
                     + f'?step={next_step}'

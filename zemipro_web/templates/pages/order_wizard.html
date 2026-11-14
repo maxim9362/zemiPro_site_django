@@ -24,7 +24,6 @@
         {% include 'components/flash_messages.html' %}
         <form method="post" {% if step == 6 %}enctype="multipart/form-data"{% endif %} action="{% if is_new_wizard %}{% url 'marketplace:order_wizard_start' %}{% else %}{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ step }}{% endif %}">
             {% csrf_token %}
-            <input type="hidden" name="action" value="{% if is_new_wizard %}start{% elif step == 8 %}publish{% else %}next{% endif %}">
             {% if is_new_wizard %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
             {% if is_new_wizard and invite_worker_pk %}
                 <input type="hidden" name="invite_worker" value="{{ invite_worker_pk }}">
@@ -49,6 +48,13 @@
                     {% endfor %}
                     </tbody>
                 </table>
+            {% endif %}
+            {% if step == 1 %}
+            <noscript><p class="app-notice" role="note">
+                {% if current_language == 'he' %}ללא JavaScript: בחרו קטגוריה ושלחו את הטופס כדי להציג את השירותים המתאימים; לאחר מכן בחרו שירות ושלחו שוב.
+                {% elif current_language == 'en' %}Without JavaScript, select a category and submit to display its services. Then select a service and submit again.
+                {% else %}Без JavaScript сначала выберите категорию и отправьте форму — появится список услуг. Затем выберите услугу и отправьте форму ещё раз.{% endif %}
+            </p></noscript>
             {% endif %}
             {% if step == 2 and not has_questions %}
                 <p>{{ copy.no_questions }}</p>
@@ -110,9 +116,15 @@
             </p>
             <div class="zw-actions">
                 {% if order and step > 1 %}
-                    <a class="btn btn--secondary" data-wizard-back href="{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ previous_step }}">{{ copy.back }}</a>
+                    {% if step < 8 %}
+                        <button type="submit" name="action" value="back" class="btn btn--secondary">
+                            {% if current_language == 'he' %}שמירה וחזרה{% elif current_language == 'en' %}Save and go back{% else %}Сохранить и назад{% endif %}
+                        </button>
+                    {% else %}
+                        <a class="btn btn--secondary" data-wizard-back href="{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ previous_step }}">{{ copy.back }}</a>
+                    {% endif %}
                 {% endif %}
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" name="action" value="{% if is_new_wizard %}start{% elif step == 8 %}publish{% else %}next{% endif %}" class="btn btn--primary">
                     {% if step == 8 %}{{ copy.publish }}{% else %}{{ copy.next }}{% endif %}
                 </button>
             </div>

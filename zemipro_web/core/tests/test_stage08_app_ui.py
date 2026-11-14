@@ -41,6 +41,8 @@ class AppShellSourceTests(SimpleTestCase):
                 self.assertIn(snippet, template)
         self.assertNotIn('<style>', template)
         self.assertIn('window.confirm(', js)
+        self.assertIn('name="action" value="back"', template)
+        self.assertIn("name=\"action\" value=\"{% if is_new_wizard %}", template)
         for secret_storage in ('localStorage.', 'sessionStorage.', 'innerHTML'):
             self.assertNotIn(secret_storage, js)
 
@@ -194,6 +196,39 @@ class AccountWorkflowUITests(TestCase):
         draft.refresh_from_db()
         self.assertEqual(draft.status, Order.Status.DRAFT)
         self.assertNotIn('3', draft.wizard_data.get('steps', {}))
+
+    def test_wizard_save_and_back_persists_current_step_without_js(self):
+        self.client.force_login(self.owner)
+        start = reverse('marketplace:order_wizard_start')
+        token = self.client.get(start).context['token']
+        self.assertEqual(self.client.post(start, {
+            'action': 'start', 'token': token,
+            'category': self.category.pk, 'subcategory': self.service.pk,
+        }).status_code, 302)
+        draft = Order.objects.get(client=self.owner)
+        edit = reverse('marketplace:order_wizard_edit', args=[draft.pk])
+        self.assertEqual(self.client.post(edit + '?step=2', {
+            'action': 'next', 'questionnaire_version': '',
+        }).status_code, 302)
+        self.assertEqual(self.client.post(edit + '?step=3', {
+            'action': 'next', 'city': self.city.pk,
+            'mode': 'onsite', 'area': 'City center',
+        }).status_code, 302)
+        saved_back = self.client.post(edit + '?step=4', {
+            'action': 'back', 'urgency': 'urgent', 'preferred_date': '',
+        })
+        self.assertEqual(saved_back.status_code, 302)
+        self.assertTrue(saved_back['Location'].endswith('?step=3'))
+        draft.refresh_from_db()
+        self.assertEqual(draft.wizard_data['steps']['4']['urgency'], 'urgent')
+        revisit = self.client.get(edit + '?step=4')
+        self.assertEqual(revisit.status_code, 200)
+        self.assertEqual(revisit.context['form'].initial['urgency'], 'urgent')
+        self.assertEqual(self.client.post(edit + '?step=4', {
+            'action': 'back', 'urgency': '',
+        }).status_code, 200)
+        draft.refresh_from_db()
+        self.assertEqual(draft.wizard_data['steps']['4']['urgency'], 'urgent')
 
     def test_offer_form_and_private_order_detail_keep_server_rights(self):
         order = make_order(
