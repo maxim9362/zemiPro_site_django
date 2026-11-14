@@ -171,6 +171,10 @@ def mark_messages_read(*, conversation_id, actor, through_id):
     conversation = get_conversation(conversation_id=conversation_id, actor=actor)
     if not isinstance(through_id, int) or through_id < 1:
         raise ChatConflict('Invalid read cursor.')
+    if not Message.objects.filter(
+        conversation=conversation, pk=through_id,
+    ).exists():
+        raise ChatConflict('Invalid read cursor.')
     return Message.objects.filter(
         conversation=conversation, pk__lte=through_id, read_at__isnull=True,
     ).exclude(sender_id=actor.pk).update(read_at=timezone.now())

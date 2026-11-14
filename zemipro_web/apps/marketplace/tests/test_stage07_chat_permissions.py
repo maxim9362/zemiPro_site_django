@@ -89,6 +89,11 @@ class ChatPermissionTests(TestCase):
                 through_id=first.pk,
             ), 0,
         )
+        with self.assertRaises(ChatConflict):
+            mark_messages_read(
+                conversation_id=conversation.pk, actor=self.client_user,
+                through_id=first.pk + 1000000,
+            )
         first.body = 'Tampered'
         with self.assertRaises(ValidationError):
             first.save()
