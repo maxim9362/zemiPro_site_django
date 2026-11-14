@@ -975,6 +975,12 @@ class Rating(models.Model):
         verbose_name_plural = 'Отзывы'
         db_table = 'marketplace_rating'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(rating__gte=1, rating__lte=5),
+                name='rating_score_five_point_valid',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.worker} — {self.rating}/5'
@@ -1184,3 +1190,74 @@ class MessageAttachment(models.Model):
                 name='chat_attachment_digest_unique',
             ),
         ]
+
+
+class RatingReply(models.Model):
+    """At most one public answer from the selected worker to a verified review."""
+
+    rating = models.OneToOneField(
+        Rating, on_delete=models.PROTECT, related_name='worker_reply',
+    )
+    worker = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='rating_replies',
+    )
+    body = models.TextField()
+    public_body_snapshot = models.TextField(blank=True, default='', editable=False)
+    policy_version = models.PositiveSmallIntegerField(default=0, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_rating_reply'
+
+    @property
+    def public_text(self):
+        from apps.accounts.public_text import MARKER, POLICY_VERSION
+        if self.policy_version == POLICY_VERSION:
+            return self.public_body_snapshot or MARKER
+        return MARKER
+
+    def save(self, *args, **kwargs):
+        from apps.accounts.public_text import POLICY_VERSION, build_caption_snapshot
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Review replies are append-only.')
+        self.public_body_snapshot = build_caption_snapshot(self.body) or ''
+        self.policy_version = POLICY_VERSION
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Review replies are append-only.')
+
+
+class RatingAuditEvent(models.Model):
+    """No mutable score history: a score and its creation/reply events are permanent."""
+
+    class Action(models.TextChoices):
+        CREATED = 'created', 'Review created'
+        REPLIED = 'replied', 'Worker replied'
+
+    rating = models.ForeignKey(
+        Rating, on_delete=models.PROTECT, related_name='audit_events',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='review_actions',
+    )
+    action = models.CharField(max_length=12, choices=Action.choices)
+    score = models.PositiveSmallIntegerField()
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_rating_audit'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['rating', 'action'], name='rating_audit_action_unique',
+            ),
+        ]
+        ordering = ['occurred_at', 'pk']
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Review audit entries are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Review audit entries are immutable.')
