@@ -115,6 +115,10 @@
                 {% else %}Текущий шаг сохраняется после нажатия «Сохранить и продолжить».{% endif %}
             </p>
             <div class="zw-actions">
+                {# Primary submit first: pressing Enter saves forward, not accidentally back. #}
+                <button type="submit" name="action" value="{% if is_new_wizard %}start{% elif step == 8 %}publish{% else %}next{% endif %}" class="btn btn--primary">
+                    {% if step == 8 %}{{ copy.publish }}{% else %}{{ copy.next }}{% endif %}
+                </button>
                 {% if order and step > 1 %}
                     {% if step < 8 %}
                         <button type="submit" name="action" value="back" class="btn btn--secondary">
@@ -124,9 +128,6 @@
                         <a class="btn btn--secondary" data-wizard-back href="{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ previous_step }}">{{ copy.back }}</a>
                     {% endif %}
                 {% endif %}
-                <button type="submit" name="action" value="{% if is_new_wizard %}start{% elif step == 8 %}publish{% else %}next{% endif %}" class="btn btn--primary">
-                    {% if step == 8 %}{{ copy.publish }}{% else %}{{ copy.next }}{% endif %}
-                </button>
             </div>
         </form>
         {% if saved_photos %}
