@@ -1,0 +1,5 @@
+<div class="empty-state ui-empty-state" role="status">
+    <p class="ui-empty-state__title">{{ empty_title }}</p>
+    {% if empty_description %}<p>{{ empty_description }}</p>{% endif %}
+    {% if empty_href and empty_action %}<a class="btn btn--secondary ui-empty-state__action" href="{{ empty_href }}">{{ empty_action }}</a>{% endif %}
+</div>

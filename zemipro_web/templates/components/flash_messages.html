@@ -1,0 +1,10 @@
+{% if messages %}
+<div class="ui-messages" aria-live="polite">
+    {% for message in messages %}
+    <div class="form__errors ui-alert {% if 'error' in message.tags %}ui-alert--error{% elif 'warning' in message.tags %}ui-alert--warning{% elif 'success' in message.tags %}ui-alert--success{% else %}ui-alert--info{% endif %}"
+         role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">
+        <p>{{ message }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,49 @@
+{% load i18n %}
+<nav class="nav site-nav" id="site-navigation"
+     aria-label="{% if current_language == 'he' %}ניווט ראשי{% elif current_language == 'en' %}Main navigation{% else %}Основная навигация{% endif %}">
+    <a href="{% if catalog_localized %}{% url 'catalog_i18n:categories_list' %}{% else %}{% url 'marketplace:categories_list' %}{% endif %}"
+       {% if request.resolver_match.url_name == 'categories_list' %}aria-current="page"{% endif %}>{% trans 'Категории' %}</a>
+    <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}"
+       {% if request.resolver_match.url_name == 'worker_directory' %}aria-current="page"{% endif %}>{% trans 'Специалисты' %}</a>
+    <a href="{% if catalog_localized %}{% url 'catalog_i18n:cities_list' %}{% else %}{% url 'marketplace:cities_list' %}{% endif %}"
+       {% if request.resolver_match.url_name == 'cities_list' %}aria-current="page"{% endif %}>{% trans 'Города' %}</a>
+    <a class="site-nav__primary" href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
+    {% if user.is_authenticated %}
+        {% if user.active_role == 'worker' %}
+        <a href="{% url 'marketplace:worker_dashboard' %}"
+           {% if request.resolver_match.url_name == 'worker_dashboard' %}aria-current="page"{% endif %}>{% trans 'Кабинет мастера' %}</a>
+        <a href="{% url 'accounts:worker_profile' %}">{% trans 'Профиль' %}</a>
+        {% else %}
+        <a href="{% url 'marketplace:client_dashboard' %}"
+           {% if request.resolver_match.url_name == 'client_dashboard' %}aria-current="page"{% endif %}>{% trans 'Кабинет клиента' %}</a>
+        <a href="{% url 'accounts:client_profile' %}">{% trans 'Профиль' %}</a>
+        {% endif %}
+        <a href="{% url 'marketplace:chat_index' %}">{% trans 'Переписка' %}</a>
+        <a href="{% url 'notifications:notification_list' %}" class="nav__notif">
+            {% trans 'Уведомления' %}
+            {% if unread_notifications_count %}<span class="notif-badge">{{ unread_notifications_count }}</span>{% endif %}
+        </a>
+        <a href="{% url 'accounts:contact_verification' %}">{% trans 'Подтверждение контактов' %}</a>
+        {% if perms.moderation.review_complaints %}
+        <a href="{% url 'moderation:queue' %}">
+            {% if current_language == 'he' %}תור הבקרה{% elif current_language == 'en' %}Moderation queue{% else %}Очередь модерации{% endif %}
+        </a>
+        {% endif %}
+        <form method="post" action="{% url 'accounts:switch_role' %}" class="nav__switch-role">
+            {% csrf_token %}
+            {% if user.active_role == 'worker' %}
+            <input type="hidden" name="role" value="client">
+            <button type="submit" aria-label="{% trans 'Кабинет клиента' %}">⇄ {% trans 'Кабинет клиента' %}</button>
+            {% else %}
+            <input type="hidden" name="role" value="worker">
+            <button type="submit" aria-label="{% trans 'Кабинет мастера' %}">⇄ {% trans 'Кабинет мастера' %}</button>
+            {% endif %}
+        </form>
+        <form method="post" action="{% url 'accounts:logout' %}" class="nav__logout">
+            {% csrf_token %}<button type="submit">{% trans 'Выйти' %}</button>
+        </form>
+    {% else %}
+        <a href="{% url 'accounts:login' %}">{% trans 'Войти' %}</a>
+        <a href="{% url 'accounts:register' %}">{% trans 'Регистрация' %}</a>
+    {% endif %}
+</nav>

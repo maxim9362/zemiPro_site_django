@@ -11,70 +11,45 @@
     {% if seo_canonical %}<link rel="canonical" href="{{ seo_canonical }}">{% endif %}
     {% for alternate in seo_alternates %}<link rel="alternate" hreflang="{{ alternate.language }}" href="{{ alternate.url }}">{% endfor %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
 </head>
 <body>
-    <header class="header">
-        <div class="container">
-            <a href="{% url 'marketplace:home' %}" class="logo">ZemiPro</a>
-            <nav class="nav">
-                <a href="{% if catalog_localized %}{% url 'catalog_i18n:categories_list' %}{% else %}{% url 'marketplace:categories_list' %}{% endif %}">{% trans 'Категории' %}</a>
-                <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}">{% trans 'Специалисты' %}</a>
-                <a href="{% if catalog_localized %}{% url 'catalog_i18n:cities_list' %}{% else %}{% url 'marketplace:cities_list' %}{% endif %}">{% trans 'Города' %}</a>
-                <a href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
-                {% if user.is_authenticated %}
-                <a href="{% url 'marketplace:client_dashboard' %}">{% trans 'Кабинет клиента' %}</a>
-                <a href="{% url 'marketplace:worker_dashboard' %}">{% trans 'Кабинет мастера' %}</a>
-                <form method="post" action="{% url 'accounts:switch_role' %}" class="nav__switch-role">
-                    {% csrf_token %}
-                    {% if user.active_role == 'worker' %}
-                    <input type="hidden" name="role" value="client">
-                    <button type="submit" aria-label="{% trans 'Кабинет клиента' %}">⇄ {% trans 'Кабинет клиента' %}</button>
-                    {% else %}
-                    <input type="hidden" name="role" value="worker">
-                    <button type="submit" aria-label="{% trans 'Кабинет мастера' %}">⇄ {% trans 'Кабинет мастера' %}</button>
-                    {% endif %}
-                </form>
-                <a href="{% url 'marketplace:chat_index' %}">{% trans 'Переписка' %}</a>
-                <a href="{% url 'notifications:notification_list' %}" class="nav__notif">
-                    {% trans 'Уведомления' %}
-                    {% if unread_notifications_count %}
-                    <span class="notif-badge">{{ unread_notifications_count }}</span>
-                    {% endif %}
-                </a>
-                <a href="{% url 'accounts:client_profile' %}">{% trans 'Профиль' %}</a>
-                <a href="{% url 'accounts:contact_verification' %}">{% trans 'Подтверждение контактов' %}</a>
-                <form method="post" action="{% url 'accounts:logout' %}" class="nav__logout">
-                    {% csrf_token %}
-                    <button type="submit">{% trans 'Выйти' %}</button>
-                </form>
-                {% else %}
-                <a href="{% url 'accounts:login' %}">{% trans 'Войти' %}</a>
-                <a href="{% url 'accounts:register' %}">{% trans 'Регистрация' %}</a>
-                {% endif %}
-            </nav>
-            <form method="post" action="{% url 'set_language' %}" class="language-switcher"
-                  aria-label="{% trans 'Язык сайта' %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{% if language_switch_next %}{{ language_switch_next }}{% else %}{{ request.get_full_path }}{% endif %}">
-                <label class="sr-only" for="language-choice">{% trans 'Язык сайта' %}</label>
-                <select id="language-choice" name="language" onchange="this.form.submit()">
-                    <option value="ru" {% if current_language == 'ru' %}selected{% endif %}>Русский</option>
-                    <option value="en" {% if current_language == 'en' %}selected{% endif %}>English</option>
-                    <option value="he" {% if current_language == 'he' %}selected{% endif %}>עברית</option>
-                </select>
-                <noscript><button type="submit">{% trans 'Применить' %}</button></noscript>
-            </form>
+    <a class="skip-link" href="#main-content">{% if current_language == 'he' %}דלג לתוכן הראשי{% elif current_language == 'en' %}Skip to main content{% else %}Перейти к содержимому{% endif %}</a>
+    <header class="header site-header">
+        <div class="container site-header__layout">
+            <div class="site-header__top">
+                <a href="{% url 'marketplace:home' %}" class="logo">ZemiPro</a>
+                <div class="site-header__tools">
+                    <span class="site-header__city">{% if current_language == 'he' %}אשדוד{% elif current_language == 'en' %}Ashdod{% else %}Ашдод{% endif %}</span>
+                    <form method="post" action="{% url 'set_language' %}" class="language-switcher" aria-label="{% trans 'Язык сайта' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% if language_switch_next %}{{ language_switch_next }}{% else %}{{ request.get_full_path }}{% endif %}">
+                        <label class="sr-only" for="language-choice">{% trans 'Язык сайта' %}</label>
+                        <select id="language-choice" name="language" onchange="this.form.submit()">
+                            <option value="ru" {% if current_language == 'ru' %}selected{% endif %}>Русский</option>
+                            <option value="en" {% if current_language == 'en' %}selected{% endif %}>English</option>
+                            <option value="he" {% if current_language == 'he' %}selected{% endif %}>עברית</option>
+                        </select>
+                        <noscript><button type="submit">{% trans 'Применить' %}</button></noscript>
+                    </form>
+                    <button id="site-menu-toggle" class="site-menu-toggle" type="button"
+                            aria-controls="site-navigation" aria-expanded="false">
+                        <span class="site-menu-toggle__glyph" aria-hidden="true" data-menu-glyph>☰</span>
+                        <span>{% if current_language == 'he' %}תפריט{% elif current_language == 'en' %}Menu{% else %}Меню{% endif %}</span>
+                    </button>
+                </div>
+            </div>
+            {% include 'components/site_navigation.html' %}
         </div>
     </header>
-
-    <main class="main">
+    <main class="main" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
-
     <footer class="footer">
         <div class="container">
             <p>&copy; 2026 ZemiPro — {% trans 'Сервис поиска мастеров по ремонту в Израиле' %}</p>
         </div>
     </footer>
+    <script src="{% static 'js/navigation.js' %}" defer></script>
 </body>
 </html>
