@@ -60,7 +60,7 @@ def complaint_create_view(request):
                 raise Http404 from None
             else:
                 messages.success(request, _('Жалоба отправлена. Спасибо!'))
-                return redirect('marketplace:home')
+                return redirect('moderation:my_complaints')
     elif request.method == 'GET':
         form = ComplaintForm()
     else:
@@ -158,3 +158,18 @@ def moderator_appeal_decision_view(request, pk):
     except ComplaintConflict as exc:
         return HttpResponseBadRequest(str(exc))
     return redirect('moderation:queue')
+
+@login_required
+@never_cache
+def my_complaints_view(request):
+    from django.db.models import Q
+    stored = User.objects.filter(
+        pk=request.user.pk, is_active=True, is_blocked=False,
+        email_verification_required=False,
+    ).first()
+    if stored is None:
+        raise PermissionDenied
+    cases = Complaint.objects.filter(
+        Q(reporter_id=stored.pk) | Q(target_user_id=stored.pk),
+    ).distinct().order_by('-created_at', '-pk')[:100]
+    return render(request, 'moderation/my_complaints.html', {'cases': cases})

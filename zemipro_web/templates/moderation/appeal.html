@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Апелляция' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="container" style="max-width:760px;padding:24px">
+  <h1>{% trans 'Апелляция по жалобе' %} #{{ complaint.pk }}</h1>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if complaint.appeal %}
+    <p>{% trans 'Апелляция уже подана.' %} {{ complaint.appeal.get_status_display }}</p>
+  {% else %}
+    <form method="post" style="display:grid;gap:12px">
+      {% csrf_token %}
+      <label for="appeal-reason">{% trans 'Причина апелляции' %}</label>
+      <textarea id="appeal-reason" name="reason" required maxlength="2000" rows="5" dir="auto"></textarea>
+      <button type="submit" class="btn btn--primary">{% trans 'Отправить' %}</button>
+    </form>
+  {% endif %}
+  <p><a href="{% url 'moderation:my_complaints' %}">{% trans 'Мои жалобы' %}</a></p>
+</section>
+{% endblock %}
