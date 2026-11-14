@@ -1126,3 +1126,10 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 
 - **CODE_IMPLEMENTED / CI_PENDING:** separate `MessageTranslation` original-preserving model and PostgreSQL append-only trigger (`marketplace.0022`); protected per-message POST and translated result page with explicit "Show original" and machine-translation label, RU/EN/HE. Fail-closed consent and PII/digit filter, 10/day user quota, bounded provider calls over HTTPS with key in header, no personal metadata sent; Gemini disabled by default. No AI dependency in sending/reading original messages.
 - Live Gemini calls deliberately NOT RUN: no provider credentials or production permitted. Confirmed adapter request shape from Google developer docs; synthetic tests required before stage acceptance.
+
+## 2026-11-14 — Stage 07.7: synthetic E2E and CI acceptance gates
+
+- **CODE_IMPLEMENTED / CI_PENDING:** Stage04→07 customer workflow and invitation→dispute→moderation workflow, negative permission and RU/EN/HE checks, synthetic Chromium mobile/RTL 320/390/768 with private-thread IDOR, and isolated PostgreSQL 17 legacy upgrade/rollback rehearsal.
+- Targeted CI found a test-only locale mismatch (now using HTTP Accept-Language), and Ruff import duplication; fixes committed in the same branch. The complete final SHA checks and independent reviewer are NOT YET VERIFIED.
+- Stage07 security hardening: persisted notification read gate, explicit SMTP opt-in, review text and public snapshot immutability. A Stage05 tampering regression is strengthened to assert database denial.
+- **Do not claim stage acceptance or merge until all final gates pass.** No live customer data, production, SMTP, Gemini, VPS or deployment touched.
