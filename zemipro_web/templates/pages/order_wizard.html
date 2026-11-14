@@ -1,50 +1,26 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
 {% block title %}{{ copy.heading }} — ZemiPro{% endblock %}
 {% block content %}
-<style>
-.zw-shell{width:100%;max-width:820px;margin:0 auto;padding:clamp(12px,3vw,28px)}
-.zw-panel{background:var(--color-surface,#fff);border:1px solid var(--color-border,#dfe5ef);border-radius:16px;padding:clamp(16px,3vw,30px);box-shadow:0 2px 12px #11234a08}
-.zw-steps{display:flex;flex-wrap:wrap;gap:7px;list-style:none;padding:0;margin:16px 0 24px}
-.zw-steps li{font-size:.85rem;border:1px solid var(--color-border,#dfe5ef);border-radius:20px;padding:6px 10px}
-.zw-steps li[aria-current="step"]{background:#174fbb;color:white;border-color:#174fbb}
-.zw-panel input:not([type="checkbox"]),.zw-panel select,.zw-panel textarea{display:block;width:100%;max-width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #aebbd0;border-radius:8px;font:inherit;background:#fff;color:#182744}
-.zw-panel input[type=checkbox]{width:18px;height:18px;vertical-align:middle}
-.zw-field{margin:0 0 18px;min-width:0}
-.zw-field label{display:block;margin:0 0 7px;font-weight:600}
-.zw-field ul.errorlist,.zw-error{color:#b32038;list-style:none;padding:6px 0;margin:0}
-.zw-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:20px}
-.zw-actions .btn{white-space:normal}
-.zw-muted{color:var(--color-text-light,#5d6776);font-size:.93rem}
-.zw-table{width:100%;border-collapse:collapse;table-layout:fixed}
-.zw-table td,.zw-table th{overflow-wrap:anywhere;padding:10px;border-bottom:1px solid var(--color-border,#e4e8f0);text-align:start;vertical-align:top}
-.zw-photo-list{list-style:none;display:flex;gap:12px;flex-wrap:wrap;padding:0;margin:12px 0}
-.zw-photo-list li{max-width:132px}
-.zw-photo-list img{max-width:120px;max-height:112px;object-fit:cover;border:1px solid #bac6db;border-radius:8px}
-.zw-photo-list button{font:inherit;background:none;border:1px solid #d9a2a2;padding:5px;border-radius:6px;cursor:pointer}
-.zw-drafts{margin-top:22px}
-.zw-drafts a{display:inline-block;padding:8px 0}
-@media(max-width:480px){.zw-shell{padding:12px}.zw-panel{padding:15px}.zw-steps{gap:5px}.zw-steps li{font-size:.77rem;padding:5px 7px}.zw-actions>*{width:100%;text-align:center}}
-</style>
-<section class="zw-shell" aria-label="{{ copy.heading }}">
+
+<section class="zw-shell app-wizard" aria-label="{{ copy.heading }}">
     <header>
         <h1>{{ copy.heading }}</h1>
         <p class="zw-muted">{{ copy.intro }}</p>
+        <progress class="zw-progress" value="{{ step }}" max="8" aria-label="{{ copy.step_of }} {{ step }} {{ copy.of }} 8"></progress>
     </header>
     <nav aria-label="{{ copy.heading }}">
         <ol class="zw-steps">
         {% for item in wizard_steps %}
-            <li {% if item.number == step %}aria-current="step"{% endif %}>
-                {{ item.number }}. {{ item.title }}
+            <li {% if item.number == step %}aria-current="step"{% elif item.number < step %}class="zw-steps__done"{% endif %}>
+                <span class="zw-step-number">{{ item.number }} / 8</span>{{ item.title }}
             </li>
         {% endfor %}
         </ol>
     </nav>
     <section class="zw-panel">
         <h2>{{ copy.step_of }} {{ step }} {{ copy.of }} 8 · {{ wizard_title }}</h2>
-        {% if messages %}
-            {% for message in messages %}<p class="zw-error">{{ message }}</p>{% endfor %}
-        {% endif %}
+        {% include 'components/flash_messages.html' %}
         <form method="post" {% if step == 6 %}enctype="multipart/form-data"{% endif %} action="{% if is_new_wizard %}{% url 'marketplace:order_wizard_start' %}{% else %}{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ step }}{% endif %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="{% if is_new_wizard %}start{% elif step == 8 %}publish{% else %}next{% endif %}">
@@ -54,7 +30,15 @@
                 <p class="zw-muted">{{ invite_copy.chosen }} · {{ invite_copy.hint }}</p>
             {% endif %}
             {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
-            {% for error in form.non_field_errors %}<p class="zw-error">{{ error }}</p>{% endfor %}
+            {% if form.errors %}
+            <div class="zw-error-summary" role="alert">
+                {% get_current_language as wizard_language %}
+                {% if wizard_language == 'he' %}<p>יש לתקן את השדות המסומנים ולנסות שוב. הנתונים שהוזנו נשארים בטופס.</p>
+                {% elif wizard_language == 'en' %}<p>Review the highlighted fields and try again. Your entered values remain in this form.</p>
+                {% else %}<p>Проверьте поля с ошибками и повторите попытку. Введённые данные остаются в форме.</p>{% endif %}
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
             {% if step == 8 %}
                 <h3>{{ copy.summary }}</h3>
                 <table class="zw-table">
@@ -75,7 +59,7 @@
                          {% if item.question.depends_on %}data-depends-key="{{ item.question.depends_on.key }}" data-depends-equals="{{ item.question.depends_on.equals }}"{% endif %}>
                         <label for="{{ item.field.id_for_label }}">{{ item.field.label }}{% if item.question.required %} *{% endif %}</label>
                         {{ item.field }}
-                        {% for error in item.field.errors %}<p class="zw-error">{{ error }}</p>{% endfor %}
+                        {% for error in item.field.errors %}<p class="zw-error" role="alert">{{ error }}</p>{% endfor %}
                     </div>
                     {% endfor %}
                 </div>
@@ -84,7 +68,7 @@
                     <div class="zw-field">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
-                        {% for error in field.errors %}<p class="zw-error">{{ error }}</p>{% endfor %}
+                        {% for error in field.errors %}<p class="zw-error" role="alert">{{ error }}</p>{% endfor %}
                     </div>
                 {% endfor %}
             {% endif %}
@@ -98,24 +82,34 @@
                 <div class="zw-field">
                     <label for="zw-visibility">{{ copy.photo_access }}</label>
                     <select id="zw-visibility" name="photo_visibility">
-                        <option value="private">{{ copy.photo_private }}</option>
-                        <option value="assignee">{{ copy.photo_assignee }}</option>
-                        <option value="public">{{ copy.photo_public }}</option>
+                        <option value="private" {% if request.POST.photo_visibility == 'private' or not request.POST.photo_visibility %}selected{% endif %}>{{ copy.photo_private }}</option>
+                        <option value="assignee" {% if request.POST.photo_visibility == 'assignee' %}selected{% endif %}>{{ copy.photo_assignee }}</option>
+                        <option value="public" {% if request.POST.photo_visibility == 'public' %}selected{% endif %}>{{ copy.photo_public }}</option>
                     </select>
                 </div>
                 <div class="zw-field">
                     <label for="zw-public-consent">
                         <input id="zw-public-consent" type="checkbox"
-                               name="public_photo_consent" value="on">
+                               name="public_photo_consent" value="on" {% if request.POST.public_photo_consent == 'on' %}checked{% endif %}>
                         {{ copy.photo_consent }}
                     </label>
                 </div>
                 <p class="zw-muted">{{ copy.photo_notice }}</p>
+                <p class="zw-muted">
+                    {% if current_language == 'he' %}אם קיימת שגיאה בשליחת הטופס, ייתכן שתצטרכו לבחור מחדש את הקבצים מטעמי אבטחת הדפדפן.
+                    {% elif current_language == 'en' %}If this form has an error, your browser may require you to select the photos again for security.
+                    {% else %}При ошибке формы браузер может потребовать выбрать фотографии повторно из соображений безопасности.{% endif %}
+                </p>
             {% endif %}
             {% if step == 7 %}<p class="zw-muted">{{ copy.privacy }}</p>{% endif %}
+            <p class="zw-saved-state" role="note">
+                {% if current_language == 'he' %}ההתקדמות נשמרת לאחר לחיצה על כפתור השמירה וההמשך.
+                {% elif current_language == 'en' %}Your current step is saved when you choose Save and continue.
+                {% else %}Текущий шаг сохраняется после нажатия «Сохранить и продолжить».{% endif %}
+            </p>
             <div class="zw-actions">
                 {% if order and step > 1 %}
-                    <a class="btn btn--secondary" href="{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ previous_step }}">{{ copy.back }}</a>
+                    <a class="btn btn--secondary" data-wizard-back href="{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ previous_step }}">{{ copy.back }}</a>
                 {% endif %}
                 <button type="submit" class="btn btn--primary">
                     {% if step == 8 %}{{ copy.publish }}{% else %}{{ copy.next }}{% endif %}
@@ -123,7 +117,7 @@
             </div>
         </form>
         {% if saved_photos %}
-        <section aria-label="{{ copy.photos_saved }}">
+        <section class="app-form-section" aria-label="{{ copy.photos_saved }}">
             <h3>{{ copy.photos_saved }}</h3>
             <ul class="zw-photo-list">
                 {% for photo in saved_photos %}
@@ -147,7 +141,7 @@
         <h2>{{ copy.drafts }}</h2>
         <ul>
             {% for draft in drafts %}
-            <li><a href="{% url 'marketplace:order_wizard_edit' pk=draft.pk %}">{{ draft.subcategory.localized_name }} — {{ copy.resume }}</a></li>
+            <li><a href="{% url 'marketplace:order_wizard_edit' pk=draft.pk %}">{{ draft.subcategory.localized_name|default:copy.not_set }} — {{ copy.resume }}</a></li>
             {% endfor %}
         </ul>
     </section>
