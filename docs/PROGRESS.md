@@ -1102,3 +1102,9 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 
 - **CODE_IMPLEMENTED / CI_PENDING:** existing offer is required for a POST-only conversation, paged history and nonce-replay POST, JSON 6-second polling recovery, shared per-thread rate limit, recipient read state, private attachment upload/stream, mobile RTL-compatible templates and CSRF/IDOR HTTP tests. No mandatory WebSocket or Gemini.
 - Stage 07.1 targeted CI revealed Django index name problem (fixed in `3b3259c`) and wrong expected PostgreSQL trigger exception type (test adjusted). CI on the final SHA remains to be checked.
+
+
+## 2026-11-14 — Stage 07.3: localised notifications and opt-in delivery
+
+- **CODE_IMPLEMENTED / CI_PENDING:** optional recipient preferences; mandatory security notices; RU/EN/HE recipient-specific content; immutable message event dedup; durable outbound email queue with bounded retry/dead-letter and explicit disabled-by-default worker. Existing Stage04–06 notification service is reused without removing its compatibility contract.
+- All provider tests use synthetic email and injected failures. No external emails/deploy/production touched.
