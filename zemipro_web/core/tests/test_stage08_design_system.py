@@ -33,6 +33,7 @@ class SharedUISourceTests(SimpleTestCase):
         js = (root / 'js/navigation.js').read_text(encoding='utf-8')
         self.assertIn('.has-nav-js .site-nav.nav:not(.is-open)', css)
         self.assertIn("classList.add('has-nav-js')", js)
+        self.assertIn('.has-nav-js .site-menu-toggle', css)
         self.assertIn("event.key === 'Escape'", js)
         self.assertIn("setAttribute('aria-expanded'", js)
         self.assertNotIn('innerHTML', js)
@@ -111,8 +112,6 @@ class SharedUIPageTests(TestCase):
                 self.assertContains(page, 'Тестовая услуга')
                 self.assertContains(page, 'class="category-card"')
                 self.assertContains(page, reverse(
-                    'marketplace:category_detail', args=[category.pk]
-                ) if False else reverse(
                     'marketplace:category_detail', kwargs={'slug': category.slug}
                 ))
 
