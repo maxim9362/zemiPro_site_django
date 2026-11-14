@@ -12,6 +12,7 @@
     {% for alternate in seo_alternates %}<link rel="alternate" hreflang="{{ alternate.language }}" href="{{ alternate.url }}">{% endfor %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+    {% block page_styles %}{% endblock %}
 </head>
 <body>
     <a class="skip-link" href="#main-content">{% if current_language == 'he' %}דלג לתוכן הראשי{% elif current_language == 'en' %}Skip to main content{% else %}Перейти к содержимому{% endif %}</a>
