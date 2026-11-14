@@ -37,6 +37,10 @@ class Complaint(models.Model):
         null=True, blank=True, related_name='complaints',
         verbose_name='На какой отзыв'
     )
+    target_message = models.ForeignKey(
+        'marketplace.Message', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='complaints',
+    )
     reason = models.CharField(
         max_length=20, choices=Reason.choices, verbose_name='Причина'
     )
@@ -76,6 +80,9 @@ class ModerationEvent(models.Model):
         UNBLOCK = 'account_unblocked', 'Пользователь разблокирован'
         PRIVACY_REVIEW = 'privacy_processing', 'Запрос на рассмотрении'
         PRIVACY_REJECT = 'privacy_rejected', 'Запрос отклонён'
+        APPEAL_FILED = 'appeal_filed', 'Апелляция подана'
+        APPEAL_ACCEPTED = 'appeal_accepted', 'Апелляция удовлетворена'
+        APPEAL_REJECTED = 'appeal_rejected', 'Апелляция отклонена'
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
@@ -107,4 +114,41 @@ class ModerationEvent(models.Model):
         indexes = [
             models.Index(fields=['target_user', '-occurred_at'],
                          name='moderation_target_time_idx'),
+        ]
+
+
+class ComplaintAppeal(models.Model):
+    """One participant-initiated, auditable appeal per decided complaint."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Awaiting review'
+        ACCEPTED = 'accepted', 'Granted'
+        REJECTED = 'rejected', 'Denied'
+
+    complaint = models.OneToOneField(
+        Complaint, on_delete=models.PROTECT, related_name='appeal',
+    )
+    filed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='moderation_appeals',
+    )
+    reason = models.TextField()
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.PENDING,
+    )
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='decided_moderation_appeals',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'moderation_complaint_appeal'
+        ordering = ['-created_at', '-pk']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(status__in=['pending', 'accepted', 'rejected']),
+                name='moderation_appeal_status_allowed',
+            ),
         ]

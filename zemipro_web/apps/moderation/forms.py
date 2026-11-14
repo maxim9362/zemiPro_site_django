@@ -29,3 +29,9 @@ class ComplaintForm(forms.ModelForm):
             (value, _(str(label)))
             for value, label in self.fields['reason'].choices
         ]
+
+    def clean_message(self):
+        message = self.cleaned_data['message']
+        if not message.strip() or len(message) > 3000:
+            raise forms.ValidationError(_('Недопустимая длина описания.'))
+        return message

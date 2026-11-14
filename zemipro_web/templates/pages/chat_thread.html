@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ copy.thread }} — ZemiPro{% endblock %}
+{% block content %}
+<section class="container" style="padding-block:20px;max-width:820px;min-width:0">
+  <p><a href="{% url 'marketplace:chat_index' %}">{{ copy.back }}</a></p>
+  <h1>{{ copy.thread }} <bdi dir="ltr">#{{ conversation.response.order_id }}</bdi></h1>
+  <div id="chat-scroll" style="border:1px solid #cbd5e1;border-radius:12px;padding:12px;max-height:65vh;overflow-y:auto">
+    <ol id="chat-log" aria-live="polite" aria-relevant="additions"
+        style="list-style:none;display:grid;gap:10px;padding:0;margin:0"
+        data-poll-url="{% url 'marketplace:chat_poll' conversation_id=conversation.pk %}"
+        data-read-url="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}"
+        data-history="{{ history_page|yesno:'1,0' }}" data-read-label="{{ copy.read }}" data-delivered-label="{{ copy.delivered }}" data-files-label="{{ copy.files }}" data-me="{{ request.user.pk }}" data-last-id="{{ last_id }}">
+      {% for item in rows %}
+        <li data-message-id="{{ item.pk }}" style="padding:10px;border:1px solid #e2e8f0;border-radius:12px;overflow-wrap:anywhere;min-width:0">
+          <small><bdi dir="ltr">{{ item.created_at|date:"d.m.Y H:i" }}</bdi> ·
+          <span data-read-state>{% if item.read_at %}{{ copy.read }}{% else %}{{ copy.delivered }}{% endif %}</span>
+          </small>
+          <p dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ item.body }}</p>
+          {% for image in item.attachments.all %}
+            <a data-attachment-id="{{ image.pk }}" href="{% url 'marketplace:chat_attachment' pk=image.pk %}">
+              <img src="{% url 'marketplace:chat_attachment' pk=image.pk %}"
+                   width="160" height="120" loading="lazy" alt="{{ copy.files }}"
+                   style="max-width:100%;object-fit:contain">
+            </a>
+          {% endfor %}
+          {% if item.sender_id == request.user.pk and can_send %}
+            <form method="post" enctype="multipart/form-data"
+                  action="{% url 'marketplace:chat_image_upload' message_id=item.pk %}">
+              {% csrf_token %}
+              <label>{{ copy.files }} <input type="file" name="image"
+                accept="image/jpeg,image/png,image/webp" style="max-width:100%;min-width:0" required></label>
+              <button class="btn btn--secondary" type="submit">{{ copy.files }}</button>
+            </form>
+          {% endif %}
+          <form method="post" action="{% url 'marketplace:chat_translate' message_id=item.pk %}"
+                style="display:grid;gap:6px;margin-top:8px">
+            {% csrf_token %}
+            <label>{{ copy.translate }}
+              <select name="target_language" required>
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+                <option value="he">עברית</option>
+              </select>
+            </label>
+            <label><input type="checkbox" name="consent" value="yes" required>
+              {{ copy.consent }}</label>
+            <small>{{ copy.privacy }}</small>
+            <button class="btn btn--secondary" type="submit">{{ copy.translate }}</button>
+          </form>
+          <a href="{% url 'moderation:complaint_create' %}?message={{ item.pk }}">{{ copy.message }} ⚑</a>
+        </li>
+      {% empty %}
+        <li id="chat-empty">{{ copy.empty }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+  <nav>{% if older_cursor %}<a href="?before={{ older_cursor }}">{{ copy.older }}</a>{% endif %}
+  {% if history_page %}<a href="?">{{ copy.latest }}</a>{% endif %}</nav>
+  {% if last_id %}<form method="post" action="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}">
+    {% csrf_token %}<input type="hidden" name="through_id" value="{{ last_id }}">
+    <input type="hidden" name="return_to_thread" value="1"><button type="submit">{{ copy.mark_read }}</button>
+  </form>{% endif %}
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if can_send %}
+    <form method="post" style="display:grid;gap:12px;margin-top:16px">
+      {% csrf_token %}
+      <input type="hidden" name="client_nonce" value="{{ nonce }}">
+      <label for="chat-body">{{ copy.message }}</label>
+      <textarea id="chat-body" name="body" rows="3" maxlength="5000" required
+                style="width:100%;box-sizing:border-box" dir="auto"></textarea>
+      <button class="btn btn--primary" type="submit">{{ copy.send }}</button>
+    </form>
+  {% endif %}
+</section>
+<script src="{% static 'js/stage07_chat.js' %}" defer></script>
+{% endblock %}

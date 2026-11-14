@@ -15,6 +15,10 @@ class Notification(models.Model):
         ORDER_CANCELLED = 'order_cancelled', 'Заявка отменена'
         ORDER_COMPLETED = 'order_completed', 'Заявка завершена'
         REVIEW_CREATED = 'review_created', 'Новый отзыв'
+        NEW_MESSAGE = 'new_message', 'Новое сообщение'
+        INVITATION = 'invitation', 'Приглашение'
+        COMPLAINT = 'complaint', 'Жалоба'
+        REVIEW_REPLY = 'review_reply', 'Ответ на отзыв'
         SYSTEM = 'system', 'Системное'
 
     recipient = models.ForeignKey(
@@ -41,6 +45,7 @@ class Notification(models.Model):
         'marketplace.OrderDomainEvent', on_delete=models.PROTECT,
         null=True, blank=True, editable=False, related_name='notifications',
     )
+    dedupe_key = models.CharField(max_length=120, null=True, blank=True, editable=False)
     is_read = models.BooleanField(default=False, verbose_name='Прочитано')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создано')
     read_at = models.DateTimeField(null=True, blank=True, verbose_name='Прочитано в')
@@ -51,6 +56,9 @@ class Notification(models.Model):
         db_table = 'notifications_notification'
         ordering = ['-created_at']
         constraints = [
+            models.UniqueConstraint(
+                fields=['recipient', 'dedupe_key'], name='notif_recipient_key_unique',
+            ),
             models.UniqueConstraint(
                 fields=['order_event', 'recipient'],
                 name='notif_order_event_recipient_unique',
@@ -115,3 +123,61 @@ class Notification(models.Model):
 
     def __str__(self):
         return f'{self.title} → {self.recipient}'
+
+
+class NotificationPreference(models.Model):
+    """Only optional notices may be muted; security notices are mandatory."""
+
+    recipient = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='notification_preference',
+    )
+    in_app_optional = models.BooleanField(default=True)
+    email_optional = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'notifications_preference'
+
+
+class NotificationDelivery(models.Model):
+    """Durable email outbox; sending is never performed in a business transaction."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        RETRY = 'retry', 'Retry'
+        DELIVERED = 'delivered', 'Delivered'
+        DEAD = 'dead', 'Dead letter'
+        SUPPRESSED = 'suppressed', 'Suppressed'
+
+    notification = models.ForeignKey(
+        Notification, on_delete=models.PROTECT, related_name='deliveries',
+    )
+    channel = models.CharField(max_length=12, default='email')
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.PENDING,
+    )
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(default=models.functions.Now)
+    last_error_code = models.CharField(max_length=40, blank=True, default='')
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'notifications_delivery'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['notification', 'channel'], name='notif_delivery_unique',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=['pending', 'retry', 'delivered', 'dead', 'suppressed'],
+                ),
+                name='notif_delivery_status_valid',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['status', 'next_attempt_at'], name='notif_delivery_due_idx',
+            ),
+        ]
