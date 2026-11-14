@@ -200,7 +200,7 @@ def submit_worker_offer(page, lang, order_id):
     return offer.pk
 
 
-def owner_accept_and_chat(page, order_id, offer_id):
+def owner_accept_and_chat(page, worker_page, order_id, offer_id):
     from apps.marketplace.models import Order, Conversation, Message
     visit(page, f"/orders/{order_id}/")
     if page.locator(".response-item").count() != 1:
@@ -229,6 +229,18 @@ def owner_accept_and_chat(page, order_id, offer_id):
     if order.status != Order.Status.ASSIGNED:
         raise AssertionError("Worker was not selected after owner POST")
     screenshot(page, "ru-client-assigned-order")
+    visit(worker_page, f"/chat/{conversation.pk}/")
+    if worker_page.locator(".comm-chat-form").count() != 1:
+        raise AssertionError("Assigned worker has no private chat composer")
+    worker_page.locator('textarea[name="body"]').fill(
+        "Synthetic private reply from selected worker"
+    )
+    post_click(worker_page, ".comm-chat-form")
+    if not Message.objects.filter(
+        conversation=conversation, sender__username="stage08_6_browser_worker",
+        body="Synthetic private reply from selected worker",
+    ).exists():
+        raise AssertionError("Selected worker reply was not persisted")
     return conversation.pk
 
 
@@ -336,8 +348,8 @@ def main():
                     count += 1
                     # Only the Russian pass runs the full chat/moderation/review chain.
                     if lang == "ru":
-                        chat_id = owner_accept_and_chat(client, order_id, offer_id)
-                        count += 3
+                        chat_id = owner_accept_and_chat(client, worker, order_id, offer_id)
+                        count += 4
                         visit(moderator, f"/chat/{chat_id}/", allowed=(403,))
                         if "Synthetic private message from order owner" in moderator.content():
                             raise AssertionError("Moderator got participant-only chat")
