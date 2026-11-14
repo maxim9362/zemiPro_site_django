@@ -1310,6 +1310,12 @@ def rating_create_view(request, pk):
     where the first notification temporarily fails. No review or recipient
     notice may survive that failure by itself.
     """
+    from apps.accounts.models import User
+    if not User.objects.filter(
+        pk=request.user.pk, is_active=True, is_blocked=False,
+        email_verification_required=False,
+    ).exists():
+        raise PermissionDenied('Review unavailable.')
     order = get_object_or_404(
         Order, pk=pk, client=request.user, status=Order.Status.COMPLETED,
     )
@@ -1343,6 +1349,11 @@ def rating_create_view(request, pk):
                 rating.worker_id = order.worker_id
                 rating.client = request.user
                 rating.save()
+                from .models import RatingAuditEvent
+                RatingAuditEvent.objects.create(
+                    rating=rating, actor=request.user,
+                    action=RatingAuditEvent.Action.CREATED, score=rating.rating,
+                )
                 create_notification(
                     recipient=order.worker,
                     **stage06_notice(order.worker, 'review_created', order.pk),
