@@ -74,12 +74,12 @@ def visible_target(*, actor, target_user_id=None, target_order_id=None,
             raise PermissionDenied('Complaint unavailable.')
         result = {'target_rating': rating, 'target_user_id': rating.worker_id}
     else:
-        worker = WorkerProfile.objects.select_related('user').filter(
-            user_id=target_user_id, is_published=True,
-        ).first()
-        if worker is None or worker.user_id == reporter.pk:
+        target = User.objects.filter(pk=target_user_id, is_active=True).first()
+        if target is None or target.pk == reporter.pk:
             raise PermissionDenied('Complaint unavailable.')
-        result = {'target_user': worker.user}
+        # Preserve Stage 03 generic reports; never render the target identity
+        # or private profile fields to the reporter.
+        result = {'target_user': target}
     return result
 
 
