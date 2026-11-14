@@ -130,3 +130,23 @@
 @media(prefers-reduced-motion:reduce) {
     .comm-link-card {transition:none}
 }
+
+/* Stage 08.6 — message/review/complaint reflow and readable focus states. */
+.comm-container,.comm-panel,.comm-message,.comm-notification,
+.comm-chat-window,.comm-case,.comm-review-form {min-inline-size:0;max-inline-size:100%}
+.comm-message__actions :where(form,details,select,input,textarea) {
+  min-inline-size:0;max-inline-size:100%
+}
+.comm-translate summary,.comm-disclosure summary {min-block-size:40px}
+.comm-case__actions button,.comm-form__actions button {min-block-size:44px}
+.comm-report-link {min-block-size:40px;align-items:center}
+.comm-message__attachments a {min-inline-size:0}
+.comm-notification__actions {min-width:0}
+.comm-notification__actions .btn {white-space:normal;max-inline-size:100%}
+.comm-notification__head time {unicode-bidi:isolate}
+.comm-case__meta bdi,.comm-notification__time bdi {unicode-bidi:isolate}
+@media(max-width:480px) {
+  .comm-form__actions,.comm-case__actions {align-items:stretch}
+  .comm-form__actions > *, .comm-case__actions button {flex:1 1 100%}
+  .comm-chat-form textarea {min-width:0}
+}

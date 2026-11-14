@@ -170,3 +170,41 @@
 @media(prefers-reduced-motion:reduce) {
     .app-panel,.app-section-tabs a {transition:none}
 }
+
+/* Stage 08.6 — mobile reflow, error presentation and mixed-script numeric fields. */
+:where(.app-page,.app-workflow,.app-dashboard,.app-panel,.zw-panel,.zw-shell) {
+  min-inline-size:0;
+}
+:where(.app-panel,.order-card,.order-card-sm,.zw-panel) {
+  max-inline-size:100%;
+}
+.app-page .form__row > * {min-inline-size:0}
+.app-page :where(input,select,textarea) {min-inline-size:0;max-inline-size:100%}
+.app-page .form__group .ui-field__errors {overflow-wrap:anywhere}
+.app-workflow :where(.order-card__header,.order-card__footer,.order-card-sm__header) {
+  gap:10px;flex-wrap:wrap;
+}
+.app-workflow :where(.order-card__header,.order-card__footer,.order-card__body) {
+  min-inline-size:0;
+}
+.zw-field__errors {margin-block-start:7px;overflow-wrap:anywhere}
+.zw-field[aria-invalid="true"] {border-inline-start:3px solid var(--ui-danger);padding-inline-start:10px}
+.zw-panel :is(input,select,textarea)[aria-invalid="true"] {
+  border:2px solid var(--ui-danger);
+}
+.zw-panel input[type=file] {overflow-wrap:anywhere}
+.zw-photo-list li {min-inline-size:0}
+:where(.app-page,.zw-panel) input[type=checkbox] {flex-shrink:0}
+@media(max-width:640px) {
+  .app-offer-filter,.app-workflow .order-card__footer,.app-form-actions {
+    flex-wrap:wrap;
+    align-items:stretch;
+  }
+  .app-offer-filter > * {min-inline-size:0;max-inline-size:100%}
+  .app-offer-filter select {width:100%}
+  .zw-table {display:block;max-width:100%;overflow-x:auto}
+  .zw-table td,.zw-table th {word-break:normal;overflow-wrap:anywhere}
+  .app-section-tabs {gap:6px}
+  .app-section-tabs a {white-space:normal}
+  .app-portfolio-list {grid-template-columns:minmax(0,1fr)}
+}

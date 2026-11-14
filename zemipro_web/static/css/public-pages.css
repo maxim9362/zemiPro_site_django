@@ -185,3 +185,25 @@
 @media (prefers-reduced-motion: reduce) {
     .public-city-card,.public-category-grid .category-card {transition: none}
 }
+
+/* Stage 08.6 — RTL-safe reflow and focus/controls on narrow screens. */
+.public-category-grid,.public-result-grid,.public-search-layout,
+.public-profile,.public-panel,.public-hero__layout {min-inline-size:0}
+.public-category-grid > *,.public-result-grid > * {min-inline-size:0;max-inline-size:100%}
+.public-search-form :where(input,select,textarea) {max-inline-size:100%;min-inline-size:0}
+.public-search-form :where(.ui-field,.public-search-form__footer) {min-inline-size:0}
+.public-result-grid .order-card-sm__header {flex-wrap:wrap}
+.public-result-grid .order-card-sm__actions {flex-wrap:wrap}
+.public-profile__review-head bdi,.public-profile__photo figcaption {
+  unicode-bidi:isolate;overflow-wrap:anywhere
+}
+.public-hero__actions .btn {white-space:normal}
+@media(max-width:480px) {
+  .public-search-form__primary,.public-search-form__grid {
+    grid-template-columns:minmax(0,1fr)
+  }
+  .public-page-header {padding-block:26px}
+  .public-filter-form {align-items:stretch}
+  .public-filter-form__group {min-width:0}
+  .public-filter-form .btn {min-height:44px}
+}

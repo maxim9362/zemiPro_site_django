@@ -2,7 +2,7 @@
 :root {
   --ui-primary:#1857ae; --ui-primary-hover:#124589; --ui-ink:#17283f;
   --ui-muted:#4b5f77; --ui-border:#d0dae6; --ui-surface:#fff;
-  --ui-canvas:#f6f9fc; --ui-soft:#edf4fc; --ui-focus:#e6a428;
+  --ui-canvas:#f6f9fc; --ui-soft:#edf4fc; --ui-focus:#875c06; --ui-focus-dark:#f5c55a;
   --ui-danger:#a82336; --ui-success:#166045; --ui-warning:#805500;
   --ui-radius-sm:8px; --ui-radius:12px; --ui-radius-lg:18px;
   --ui-shadow:0 8px 24px rgb(23 40 63 / 6%);
@@ -116,4 +116,55 @@ textarea:focus-visible,[tabindex]:focus-visible {outline:3px solid var(--ui-focu
 @media(prefers-reduced-motion:reduce) {
   .ui-loading::before {animation:none}
   .category-card,.city-card {transition:none;transform:none}
+}
+
+/* Stage 08.6 — highly visible focus on both white and dark surfaces. */
+:where(.public-hero, .site-nav, .comm-message--mine) .btn--primary:focus-visible,
+.site-nav.nav .site-nav__primary:focus-visible,
+.public-hero a:focus-visible,
+.skip-link:focus-visible {
+  outline-color:var(--ui-focus-dark);
+  outline-width:3px;
+  outline-offset:3px;
+}
+:where(main, section, h1, h2, h3, [id]):target {
+  scroll-margin-block-start:clamp(90px,12vh,160px);
+}
+:where(.ui-field, .zw-field, .comm-form__field) :is(input, select, textarea)[aria-invalid="true"] {
+  border-color:var(--ui-danger);
+  border-width:2px;
+}
+.ui-field__errors {margin-block-start:7px;overflow-wrap:anywhere}
+:where(.form__group, .ui-field, .zw-field, .comm-panel, .app-panel) {
+  min-width:0;
+}
+:where(input,select,textarea) {max-inline-size:100%}
+:where(input[type="email"],input[type="tel"],input[type="url"],input[type="date"],input[type="number"]) {
+  direction:ltr;
+  unicode-bidi:isolate;
+  text-align:start;
+}
+:where(.container, .site-header__layout, .site-nav, .app-panel, .public-panel) {
+  overflow-wrap:anywhere;
+}
+.site-header__tools > * {max-width:100%}
+.site-nav.nav :is(a,button) {min-width:0}
+.site-nav.nav .site-nav__primary {text-align:center}
+@media(max-width:768px) {
+  /* Support 200% browser zoom and narrow translated labels. */
+  .site-header__top {flex-wrap:wrap}
+  .site-header__tools {flex-wrap:wrap;justify-content:flex-end}
+  .site-header .site-header__layout {min-width:0}
+  .site-header__tools .language-switcher {min-width:0}
+  .site-menu-toggle {flex-shrink:0}
+}
+@media(max-width:320px) {
+  .site-header__top {align-items:start}
+  .site-header__tools {width:100%;justify-content:space-between}
+  .site-header__city {max-width:100%}
+}
+@media(prefers-contrast:more) {
+  .ui-alert, .ui-empty-state, .order-card, .comm-panel, .app-panel {
+    border-width:2px;
+  }
 }
