@@ -129,7 +129,7 @@ class SharedUIPageTests(TestCase):
             name_en='Services', name_he='שירותים',
         )
         profile = WorkerProfile.objects.create(
-            user=user, city=city, display_name='Stage 08 Expert',
+            user=user, city=city, display_name='Clear Plumbing Expert',
             description='Public synthetic skilled worker text.',
             contact='PRIVATE_STAGE08_CONTACT',
             pricing_details='Negotiable', spoken_languages=['ru'],
@@ -139,7 +139,7 @@ class SharedUIPageTests(TestCase):
         page = self.client.get(reverse('marketplace:worker_directory'))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'ui-worker-card')
-        self.assertContains(page, 'Stage 08 Expert')
+        self.assertContains(page, 'Clear Plumbing Expert')
         self.assertNotContains(page, 'PRIVATE_STAGE08_CONTACT')
         self.assertNotContains(page, 'secret-stage08@example.invalid')
 
