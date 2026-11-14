@@ -12,7 +12,6 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Avg, Count
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from django.utils.translation import override
 
 from apps.marketplace.agreement_services import (
     decide_agreement_change, effective_agreement, propose_agreement_change,
@@ -314,13 +313,14 @@ class Stage07JourneyTests(TestCase):
                 target_language='he', consent=True,
             )
         for language, direction in [('ru', 'ltr'), ('en', 'ltr'), ('he', 'rtl')]:
-            with override(language):
-                result = self.client.get(reverse(
-                    'marketplace:chat_thread', args=[conversation.pk],
-                ))
-                self.assertEqual(result.status_code, 200)
-                self.assertContains(result, f'dir="{direction}"')
-                self.assertContains(result, 'Hello there')
+            result = self.client.get(
+                reverse('marketplace:chat_thread', args=[conversation.pk]),
+                HTTP_ACCEPT_LANGUAGE=language,
+            )
+            self.assertEqual(result.status_code, 200)
+            self.assertContains(result, f'lang="{language}"')
+            self.assertContains(result, f'dir="{direction}"')
+            self.assertContains(result, 'Hello there')
         self.worker.is_blocked = True
         self.worker.save(update_fields=['is_blocked'])
         with self.assertRaises(PermissionDenied):
