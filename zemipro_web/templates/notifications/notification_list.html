@@ -1,76 +1,81 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
-
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Уведомления — ZemiPro' %}{% endblock %}
-
 {% block content %}
-<section class="page-header">
-    <div class="container">
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container">
+        <p class="comm-eyebrow">ZemiPro · {% if current_language == 'he' %}החשבון שלי{% elif current_language == 'en' %}My account{% else %}Личный кабинет{% endif %}</p>
         <h1>{% trans 'Уведомления' %}</h1>
+        <p>{% if current_language == 'he' %}עדכונים לגבי הבקשות והפעולות שלכם. סימון כהודעה שנקראה אינו משנה את מצב הבקשה.{% elif current_language == 'en' %}Updates about your requests and account actions. Marking a notice as read does not change a request's status.{% else %}Обновления по вашим заявкам и действиям. Отметка «Прочитано» не меняет статус заказа.{% endif %}</p>
     </div>
-</section>
-
-<section class="dashboard">
-    <div class="container" style="max-width: 700px;">
-
-        <p><a href="{% url 'notifications:notification_preferences' %}">{% trans 'Настройки уведомлений' %}</a></p>
-        {% if page_obj.object_list %}
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+</header>
+<section class="comm-page">
+    <div class="container comm-container">
+        {% include 'components/flash_messages.html' %}
+        <div class="comm-toolbar">
+            <nav class="app-actions" aria-label="{% trans 'Уведомления' %}">
+                <a class="btn btn--secondary" href="{% url 'notifications:notification_preferences' %}">{% trans 'Настройки уведомлений' %}</a>
+                <a class="btn btn--secondary" href="{% url 'marketplace:chat_index' %}">{% trans 'Переписка' %}</a>
+            </nav>
+            {% if page_obj.object_list %}
             <form method="post" action="{% url 'notifications:notification_mark_all_read' %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn--secondary btn--sm">
-                    {% trans 'Отметить все прочитанными' %}
-                </button>
+                <button type="submit" class="btn btn--secondary btn--sm">{% trans 'Отметить все прочитанными' %}</button>
             </form>
+            {% endif %}
         </div>
-
-        <div class="orders-list">
+        {% if page_obj.object_list %}
+        <div class="comm-stack" aria-label="{% trans 'Уведомления' %}">
             {% for notif in page_obj %}
-            <div class="order-card-sm" style="{% if not notif.is_read %}border-inline-start: 3px solid var(--color-primary);{% endif %}">
-                <div class="order-card-sm__header">
-                    <span class="order-card__category">{{ notif.localized_title }}</span>
-                    <span style="font-size: 0.8125rem; color: var(--color-text-light);">
-                        {{ notif.created_at|date:"d.m.Y H:i" }}
-                    </span>
+            <article class="comm-notification{% if not notif.is_read %} comm-notification--unread{% endif %}">
+                <div class="comm-notification__head">
+                    <strong>{{ notif.localized_title }}</strong>
+                    <time class="comm-notification__time" datetime="{{ notif.created_at|date:'c' }}">
+                        <bdi dir="ltr">{{ notif.created_at|date:"d.m.Y H:i" }}</bdi>
+                    </time>
                 </div>
-                <div class="order-card-sm__body">
-                    <p class="order-card-sm__desc">{{ notif.localized_message }}</p>
-                    {% if not notif.is_read %}
-                    <form method="post" action="{% url 'notifications:notification_mark_read' pk=notif.pk %}" style="margin-top: 8px;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn--secondary btn--sm">
-                            {% trans 'Отметить прочитанным' %}
-                        </button>
-                    </form>
-                    {% endif %}
+                <div class="comm-notification__body">
+                    <p dir="auto">{{ notif.localized_message }}</p>
+                    <div class="comm-notification__actions">
+                        {% if not notif.is_read %}
+                        <form method="post" action="{% url 'notifications:notification_mark_read' pk=notif.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn--secondary btn--sm">{% trans 'Отметить прочитанным' %}</button>
+                        </form>
+                        {% else %}
+                        <span class="ui-status ui-status--completed">{% if current_language == 'he' %}נקרא{% elif current_language == 'en' %}Read{% else %}Прочитано{% endif %}</span>
+                        {% endif %}
+                        {% if notif.related_order %}
+                        <a class="btn btn--primary btn--sm"
+                           href="{% url 'marketplace:order_detail' pk=notif.related_order.pk %}">
+                            {% trans 'Открыть заявку №' %}<bdi dir="ltr">{{ notif.related_order.pk }}</bdi>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
-                {% if notif.related_order %}
-                <div class="order-card-sm__actions">
-                    <a href="{% url 'marketplace:order_detail' pk=notif.related_order.pk %}" class="btn btn--primary btn--sm">
-                        {% trans 'Открыть заявку №' %}{{ notif.related_order.pk }}
-                    </a>
-                </div>
-                {% endif %}
-            </div>
+            </article>
             {% endfor %}
         </div>
-
         {% if page_obj.has_other_pages %}
-        <div class="pagination">
+        <nav class="pagination comm-pagination" aria-label="{% if current_language == 'he' %}עמודי הודעות{% elif current_language == 'en' %}Notification pages{% else %}Страницы уведомлений{% endif %}">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" class="btn btn--secondary btn--sm">← {% trans 'Назад' %}</a>
+            <a href="?page={{ page_obj.previous_page_number }}" class="btn btn--secondary btn--sm">{% trans 'Назад' %}</a>
             {% endif %}
             <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}" class="btn btn--secondary btn--sm">{% trans 'Далее' %} →</a>
+            <a href="?page={{ page_obj.next_page_number }}" class="btn btn--secondary btn--sm">{% trans 'Далее' %}</a>
             {% endif %}
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="comm-empty" role="status">
+            <p>{% trans 'У вас пока нет уведомлений.' %}</p>
+            <a class="btn btn--secondary" href="{% url 'marketplace:client_dashboard' %}">
+                {% if current_language == 'he' %}חזרה לחשבון{% elif current_language == 'en' %}Back to account{% else %}Вернуться в кабинет{% endif %}
+            </a>
         </div>
         {% endif %}
-
-        {% else %}
-        <p class="empty-state">{% trans 'У вас пока нет уведомлений.' %}</p>
-        {% endif %}
-
     </div>
 </section>
 {% endblock %}
