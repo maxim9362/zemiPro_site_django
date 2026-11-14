@@ -182,6 +182,12 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Stage 07 synthetic PostgreSQL upgrade and rollback rehearsal
+        run: |
+          python scripts/stage07_upgrade_rehearsal.py
+          python manage.py migrate --check
+          python manage.py makemigrations --check --dry-run
+
       - name: Stage 07 targeted security, translation and E2E tests
         run: |
           python manage.py test \
