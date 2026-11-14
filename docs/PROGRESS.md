@@ -1120,3 +1120,9 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 
 - **CODE_IMPLEMENTED / CI_PENDING:** existing moderation/report work-dispute queue retained; complaint targets specialist/order/review/private message with owner/participant checks; staff permission-gated queue and decisions reuse append-only ModerationEvent; one auditable appeal per decision, notices and 5-per-hour rate quota, minimal RU/EN/HE-ready templates, CSRF and IDOR negative tests.
 - Reviewed Stage05 snapshot mutation test conflict: score/identity remain immutable; test-directed original review_text corruption stays possible to verify the fail-closed public snapshot; no public editing endpoint.
+
+
+## 2026-11-14 — Stage 07.6: optional, private AI translation
+
+- **CODE_IMPLEMENTED / CI_PENDING:** separate `MessageTranslation` original-preserving model and PostgreSQL append-only trigger (`marketplace.0022`); protected per-message POST and translated result page with explicit "Show original" and machine-translation label, RU/EN/HE. Fail-closed consent and PII/digit filter, 10/day user quota, bounded provider calls over HTTPS with key in header, no personal metadata sent; Gemini disabled by default. No AI dependency in sending/reading original messages.
+- Live Gemini calls deliberately NOT RUN: no provider credentials or production permitted. Confirmed adapter request shape from Google developer docs; synthetic tests required before stage acceptance.

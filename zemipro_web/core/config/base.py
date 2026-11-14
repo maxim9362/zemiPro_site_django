@@ -91,6 +91,18 @@ ZEMIPRO_CATALOG_INDEXING_ENABLED = env_bool('ZEMIPRO_CATALOG_INDEXING_ENABLED', 
 # Owner-approved first public pilot: only Ashdod. Expansion requires a code review.
 # Not environment-overridable, so a production .env cannot silently open all cities.
 ZEMIPRO_PILOT_CITY_SLUG = 'ashdod'
+# Stage 07.6: external AI translation is strictly opt-in and disabled by default.
+# The API key is never stored in code, test fixtures or logs.
+ZEMIPRO_GEMINI_TRANSLATION_ENABLED = env_bool(
+    'ZEMIPRO_GEMINI_TRANSLATION_ENABLED', False,
+)
+ZEMIPRO_GEMINI_TRANSLATION_API_KEY = os.environ.get(
+    'ZEMIPRO_GEMINI_TRANSLATION_API_KEY', '',
+).strip()
+ZEMIPRO_GEMINI_TRANSLATION_MODEL = os.environ.get(
+    'ZEMIPRO_GEMINI_TRANSLATION_MODEL', 'gemini-2.5-flash-lite',
+).strip()
+
 USE_TZ = True
 
 STATIC_URL = '/static/'

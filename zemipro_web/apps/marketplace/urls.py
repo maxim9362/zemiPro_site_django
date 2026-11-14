@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, offer_views, chat_views, review_views
+from . import views, offer_views, chat_views, review_views, translation_views
 
 app_name = 'marketplace'
 
@@ -57,6 +57,8 @@ urlpatterns = [
     path('chat/<int:conversation_id>/', chat_views.chat_thread_view, name='chat_thread'),
     path('chat/<int:conversation_id>/poll/', chat_views.chat_poll_view, name='chat_poll'),
     path('chat/<int:conversation_id>/read/', chat_views.chat_read_view, name='chat_read'),
+    path('chat/messages/<int:message_id>/translate/',
+         translation_views.chat_translate_view, name='chat_translate'),
     path('chat/messages/<int:message_id>/image/', chat_views.chat_image_upload_view, name='chat_image_upload'),
     path('chat/attachments/<int:pk>/', chat_views.chat_attachment_view, name='chat_attachment'),
     path('client/dashboard/', views.client_dashboard_view, name='client_dashboard'),

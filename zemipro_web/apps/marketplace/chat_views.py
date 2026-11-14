@@ -26,6 +26,8 @@ LABELS = {
         'back': 'К диалогам', 'files': 'Прикрепить фото',
         'read': 'Прочитано', 'delivered': 'Доставлено',
         'empty': 'Сообщений пока нет',
+        'translate': 'Перевести', 'consent': 'Разрешаю передачу этого текста в Gemini',
+        'privacy': 'Не переводите сообщения с личными данными.',
     },
     'en': {
         'chats': 'Messages', 'thread': 'Request conversation',
@@ -33,6 +35,8 @@ LABELS = {
         'back': 'Back to conversations', 'files': 'Attach photo',
         'read': 'Read', 'delivered': 'Delivered',
         'empty': 'No messages yet',
+        'translate': 'Translate', 'consent': 'I consent to sending this text to Gemini',
+        'privacy': 'Do not translate messages containing personal information.',
     },
     'he': {
         'chats': 'שיחות', 'thread': 'שיחה על בקשה',
@@ -40,6 +44,8 @@ LABELS = {
         'back': 'בחזרה לשיחות', 'files': 'צירוף תמונה',
         'read': 'נקרא', 'delivered': 'נמסר',
         'empty': 'אין הודעות עדיין',
+        'translate': 'תרגום', 'consent': 'אני מסכים לשליחת הטקסט הזה ל-Gemini',
+        'privacy': 'אין לתרגם הודעות עם פרטים אישיים.',
     },
 }
 

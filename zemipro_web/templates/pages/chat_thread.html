@@ -33,6 +33,21 @@
               <button class="btn btn--secondary" type="submit">{{ copy.files }}</button>
             </form>
           {% endif %}
+          <form method="post" action="{% url 'marketplace:chat_translate' message_id=item.pk %}"
+                style="display:grid;gap:6px;margin-top:8px">
+            {% csrf_token %}
+            <label>{{ copy.translate }}
+              <select name="target_language" required>
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+                <option value="he">עברית</option>
+              </select>
+            </label>
+            <label><input type="checkbox" name="consent" value="yes" required>
+              {{ copy.consent }}</label>
+            <small>{{ copy.privacy }}</small>
+            <button class="btn btn--secondary" type="submit">{{ copy.translate }}</button>
+          </form>
           <a href="{% url 'moderation:complaint_create' %}?message={{ item.pk }}">{{ copy.message }} ⚑</a>
         </li>
       {% empty %}
