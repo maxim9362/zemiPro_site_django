@@ -34,7 +34,10 @@
                         <noscript><button type="submit">{% trans 'Применить' %}</button></noscript>
                     </form>
                     <button id="site-menu-toggle" class="site-menu-toggle" type="button"
-                            aria-controls="site-navigation" aria-expanded="false">
+                            aria-controls="site-navigation" aria-expanded="false"
+                            aria-label="{% if current_language == 'he' %}פתיחת התפריט{% elif current_language == 'en' %}Open menu{% else %}Открыть меню{% endif %}"
+                            data-open-label="{% if current_language == 'he' %}פתיחת התפריט{% elif current_language == 'en' %}Open menu{% else %}Открыть меню{% endif %}"
+                            data-close-label="{% if current_language == 'he' %}סגירת התפריט{% elif current_language == 'en' %}Close menu{% else %}Закрыть меню{% endif %}">
                         <span class="site-menu-toggle__glyph" aria-hidden="true" data-menu-glyph>☰</span>
                         <span>{% if current_language == 'he' %}תפריט{% elif current_language == 'en' %}Menu{% else %}Меню{% endif %}</span>
                     </button>

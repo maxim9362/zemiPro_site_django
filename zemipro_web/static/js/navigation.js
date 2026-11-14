@@ -8,6 +8,7 @@
   function setOpen(open) {
     nav.classList.toggle('is-open', open);
     trigger.setAttribute('aria-expanded', String(open));
+    trigger.setAttribute('aria-label', open ? trigger.dataset.closeLabel : trigger.dataset.openLabel);
     const glyph = trigger.querySelector('[data-menu-glyph]');
     if (glyph) glyph.textContent = open ? '×' : '☰';
   }
