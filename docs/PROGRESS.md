@@ -1137,7 +1137,7 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 
 ## 2026-11-14 — Stage 07: Codex audit remediation
 
-- **REVIEW / LOCALLY_VERIFIED / FINAL_CI_PENDING**; existing Draft PR #16 only.
+- **REVIEW / LOCALLY_VERIFIED / PR_METADATA_BLOCKED**; existing Draft PR #16 only.
 - Audited base `53e5352afa2495d5ad50592b469835691e50c588`; main remained
   `576ef639e1b5944e333ac2829d47e16f51aa82a0` at audit start.
 - Reproduced and fixed ZP-07-001–013: conversation/sender/read integrity,
@@ -1155,3 +1155,10 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
   unauthenticated GitHub job pages required sign-in.
 - PR remains Draft; merge, deployment, Stage08, production data and real provider
   calls are excluded. Historical implementation/failure entries above are retained.
+
+- Кодовый commit `7dd98c8f13601b9a56c5f7dde72b95dcfbc9900c` отправлен в
+  существующую ветку; повторный suite на этом commit: 580/580 PASS.
+  Исправления и 20 новых тестов входят в PR #16. GitHub API отказал обновлению
+  описания PR: `Post "https://api.github.com/graphql": Forbidden`; описание
+  подготовлено вне репозитория. Технический финальный отчёт должен отдельно
+  подтвердить Actions на последнем SHA и этот оставшийся внешний блокер.

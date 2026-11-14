@@ -1,6 +1,6 @@
 # ZemiPro — Stage 07: private communications and trust (2026-11-14)
 
-Status: **IMPLEMENTED / LOCALLY_VERIFIED / FINAL_CI_PENDING / NOT_MERGED / NOT_DEPLOYED**.
+Status: **IMPLEMENTED / LOCALLY_VERIFIED / PR_METADATA_BLOCKED / NOT_MERGED / NOT_DEPLOYED**.
 Scope: Ashdod pilot, RU/EN/HE and Hebrew RTL. Stage 08 visual redesign and
 all production operations are excluded.
 
@@ -178,3 +178,17 @@ RU/EN/HE/RTL browser cases: Stage02 90, Stage06 18, Stage07 30 including no-JS.
 Local full Django suite: **580/580 PASS, 0 failures/skips**; Stage07 targeted
 suite: **56/56 PASS**. Final remote Actions results are recorded against the
 final branch SHA in the audit handoff. Never infer final CI success from an earlier SHA.
+
+### GitHub handoff boundary
+
+Remediation was pushed as `7dd98c8f13601b9a56c5f7dde72b95dcfbc9900c`;
+its exact-commit local suite passed 580/580. The final documentation commit
+contains no runtime changes. All required Actions must still pass on the actual
+final PR head; results and URLs are in the audit handoff, not inferred here.
+
+Updating PR #16's description through the provided GitHub CLI failed with
+`Post "https://api.github.com/graphql": Forbidden`. Git push is available;
+PR metadata write access is not. The prepared description and patch are kept
+outside the repository for handoff. Restore authorized GitHub API access and
+apply the prepared description to complete that requested action. Do not change
+Draft, enable auto-merge or merge while resolving this limitation.
