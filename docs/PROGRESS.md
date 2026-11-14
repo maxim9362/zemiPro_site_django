@@ -1114,3 +1114,9 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 
 - **CODE_IMPLEMENTED / CI_PENDING:** retained existing Rating and computed aggregate; added one-time selected-worker public response with private original/PII-safe snapshot, protected score integrity by PostgreSQL trigger/check, append-only rating audit entries, client notification on response, negative tests. Public order details now render only safe rating snapshot.
 - Stage 08 global redesign deliberately excluded. Production untouched.
+
+
+## 2026-11-14 — Stage 07.5: report queue and appeals
+
+- **CODE_IMPLEMENTED / CI_PENDING:** existing moderation/report work-dispute queue retained; complaint targets specialist/order/review/private message with owner/participant checks; staff permission-gated queue and decisions reuse append-only ModerationEvent; one auditable appeal per decision, notices and 5-per-hour rate quota, minimal RU/EN/HE-ready templates, CSRF and IDOR negative tests.
+- Reviewed Stage05 snapshot mutation test conflict: score/identity remain immutable; test-directed original review_text corruption stays possible to verify the fail-closed public snapshot; no public editing endpoint.
