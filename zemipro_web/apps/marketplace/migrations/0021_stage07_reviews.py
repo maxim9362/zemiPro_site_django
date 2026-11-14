@@ -9,6 +9,10 @@ BEGIN
        OR NEW.order_id IS DISTINCT FROM OLD.order_id
        OR NEW.worker_id IS DISTINCT FROM OLD.worker_id
        OR NEW.client_id IS DISTINCT FROM OLD.client_id
+       OR NEW.review_text IS DISTINCT FROM OLD.review_text
+       OR NEW.public_review_text_snapshot IS DISTINCT FROM OLD.public_review_text_snapshot
+       OR NEW.public_content_safe IS DISTINCT FROM OLD.public_content_safe
+       OR NEW.public_content_policy_version IS DISTINCT FROM OLD.public_content_policy_version
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
     THEN
         RAISE EXCEPTION 'verified review original is immutable';

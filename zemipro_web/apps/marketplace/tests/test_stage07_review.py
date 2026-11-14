@@ -80,6 +80,14 @@ class Stage07ReviewTests(TestCase):
         }).status_code, 302)
         self.assertEqual(RatingReply.objects.count(), 1)
         with self.assertRaises(DatabaseError), transaction.atomic():
+            Rating.objects.filter(pk=self.rating.pk).update(
+                review_text='Unapproved changed review',
+            )
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            Rating.objects.filter(pk=self.rating.pk).update(
+                public_review_text_snapshot='Untrusted public injection',
+            )
+        with self.assertRaises(DatabaseError), transaction.atomic():
             Rating.objects.filter(pk=self.rating.pk).update(rating=1)
         self.rating.refresh_from_db()
         self.assertEqual(self.rating.rating, 5)
