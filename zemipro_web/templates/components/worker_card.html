@@ -10,6 +10,9 @@
     </div>
     <div class="order-card-sm__body">
         <p>{{ worker.city.localized_name }}</p>
+        {% if worker.public_description %}
+        <p class="order-card-sm__desc" dir="auto">{{ worker.public_description|truncatewords:22 }}</p>
+        {% endif %}
         {% for skill in worker.public_search_skills %}{% if skill.is_active %}<span class="tag">{{ skill.localized_name }}</span>{% endif %}{% endfor %}
         {% if worker.starting_price_ils is not None %}
         <p>{% trans 'Заявленная стартовая цена:' %} <bdi dir="ltr">{{ worker.starting_price_ils }} ₪</bdi></p>
