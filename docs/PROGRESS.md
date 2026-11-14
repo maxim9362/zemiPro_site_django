@@ -1000,3 +1000,82 @@
 - **Атомарность и схема:** порядок блокировок детерминирован как `User(pk) → WorkerProfile(pk)`; persisted state перечитывается под `select_for_update`. Добавлена state-only `accounts.0022_user_safe_runtime_manager`, фиксирующая runtime manager в migration state без изменения таблиц или пользовательских данных.
 - **Фактические проверки текущего дерева:** PostgreSQL 17 clean migrations, `migrate --check`, `makemigrations --check --dry-run`, Django check, Ruff, compileall, `pip check`, `git diff --check` — PASS; адресные snapshot/privacy/concurrency 21/21 PASS; полный Django suite **474/474 PASS**; Ashdod-only 13/13 PASS; Compose development/staging config PASS; Chromium RU/EN/HE/RTL **180/180 PASS**, 54 screenshots, widths 320/360/375/390/768/1440. Физические Android/iPhone — NOT_RUN.
 - **Статус:** `IMPLEMENTED / VERIFIED / INDEPENDENT_REVIEW_PERFORMED / PR_12_DRAFT / MERGE_PENDING / DEPLOYMENT_NOT_PERFORMED`. Это не объявляет Stage 05 `DONE`: GitHub Actions финального pushed SHA, решение владельца о merge и все production/release gates остаются отдельными условиями.
+
+
+## 2026-11-13 — этап 06.1, расширение Response
+
+- Ветка: `stage-06-offers-assignment` от `82aea1b`; PR #12 подтверждён MERGED, merge SHA `82aea1b374c15f2715fe4326c7472f1f2a2f993f`. Stage 05 не означает DEPLOYED; отдельные production-гейты открыты.
+- `06.1 IMPLEMENTED / CI_PENDING`: сохранены legacy pending/cancelled и уникальность (order,worker), добавлены фиксированная цена/диапазон/метод, сроки, условия, статусы sent/viewed/negotiating/accepted/rejected/withdrawn/expired. Новая `ResponseRevision` хранит приватную версию и ключ операции; все сервисные изменения — под order-row lock и атомарно; обновление с expected_revision, запрет записи чужого предложения, общий quota.
+- Изменены models/services, новый offer_services, миграция marketplace.0017 и синтетические regression tests; независимая проверка, PostgreSQL 17, полный suite, RU/EN/HE и GitHub Actions ещё не подтверждены. Production и реальные данные не затронуты.
+
+
+### 06.2 — сравнение в кабинете заказчика
+
+- `IMPLEMENTED / CI_PENDING`: форма отправки структурированного предложения и редактирования; приватное owner-only сравнение фиксированной цены, диапазона, условий, срока и реального агрегированного рейтинга без фальшивых оценок; публичное имя только через `WorkerProfile.public_display_name`. RU/EN/HE copy с RTL-friendly формами и bdi, действия POST+CSRF, object-level права в сервисах; новые тесты IDOR/сравнения.
+- Существующие каталоги и шаблоны анкеты специалиста не переписаны. Production не затронут; browser smoke и полный набор ещё не проверены.
+
+
+### 06.3 — атомарный выбор мастера
+
+- `IMPLEMENTED / CI_PENDING`: `accept_response` сериализует выбор по `Order.select_for_update`, проверяет актуального владельца, опубликованность/доступность/соответствие мастера; выбирает один ответ, завершает остальные активные с приватными ревизиями, повтор того же выбора не создаёт событий и уведомлений. Только переход `published → assigned`; начало работы теперь отдельная операция.
+- Обновлены устаревшие stage04 тесты, прямо ожидавшие автоматический старт после выбора (новый контракт REQ-ORD-007). Добавлены адресные тесты повторного выбора, withdrawn/blocked, чужого заказчика; актуальный concurrency test сохраняет два параллельных соединения.
+
+
+### 2026-11-13 — этап 06.4, фиксация соглашений
+
+- `IMPLEMENTED / CI_PENDING`. Созданы `OrderAgreementVersion` и `OrderAgreementDecision` с защитой append-only на уровне PostgreSQL (`marketplace.0018`). Первоначальный выбор исполнителя сохраняет снимок цены, метода расчёта, сроков и условий с указанием мастера-предложившего и заказчика-подтвердившего; повторное назначение не удваивает историю. Изменения создают новую версию и требуют решения противоположной стороны. Текущая подтверждённая версия сохраняется до согласования. В интерфейсе обеих сторон — история и подтверждения RU/EN/HE/RTL. Адресные тесты и CI пока ожидают проверки.
+
+
+### 2026-11-13 — подэтапы 06.5 и 06.6, реализация и регрессии
+
+- **06.5 IMPLEMENTED / CI_PENDING.** Новые `OrderWorkEvent` и миграция `marketplace.0019` (PostgreSQL append-only), `work_services.py`: только назначенный мастер начинает и передаёт результат; только владелец подтверждает завершение; обе стороны могут сообщить о проблеме через безопасный код и перевести заказ в `disputed`. Сохранены штатные отмена и возможность отзыва только после `completed`. Никакого таймера автоматического завершения. POST/CSRF, UID, лимиты, аудит; RU/EN/HE тексты и RTL-мобильные действия. Синтетический сценарий — `test_stage06_work.py`.
+- **06.6 IMPLEMENTED / CI_PENDING.** Защита от массовых откликов через `OrderWriteQuota`, уникальность `Response(order,worker)`, replays по UUID, lock order-first, CAS ревизий, сохранение историй вне переписи, редактирование только своих офферов, приватное сравнение только для persisted enabled owner; negative/rollback/CSRF/IDOR/concurrency `test_stage06_security.py`. Добавлен отдельный изолированный Chrome smoke `scripts/stage06_browser_smoke.py` + CI workflow для сравнения условий, приватности, мобильного RU/EN/HE/RTL (эмуляция; не ручной Android).
+- Подготовлено независимое read-only задание Codex Cloud `docs/STAGE_06_OFFER_ASSIGNMENT.md`. Считать блокирующими CRITICAL/HIGH/MEDIUM до независимого PASS; собственная проверка не является независимым аудитом.
+- Исторические этапы 04–05 не переписаны, их несовместимые fixture/ожидания меняются адресно после анализа CI, сохраняя новые security-гейты. Готовность этапа 06, зелёный финальный CI, Draft PR и merge/deployment **ещё не подтверждены**.
+
+
+## 2026-11-13 — этап 06: независимый CODE_REVIEW_FAIL и remediation PR #13
+
+- **Независимый проверенный SHA:** `b83b341b811f7e13eac4ae0e4da1758779285d0c`. Reviewer выполнил PostgreSQL 17 clean migrations / upgrade rehearsal, 26/26 Stage 06, 500/500 full Django, Ashdod-only 13/13, 18/18 Chrome RTL, Ruff, concurrency и rollback — PASS. Три новые failure-injection проверки выявили `STAGE06_CODE_REVIEW_FAIL`: `ZP-06-001 MEDIUM blocking` (нет уведомления о смене условий соглашения) и `ZP-06-002 MEDIUM blocking` (неатомарные уведомления к созданию отклика/выбору исполнителя/действиям работы). `ZP-06-003 LOW` — документация отставала от PR.
+- **Выполнено в существующей ветке `stage-06-offers-assignment`:** в `views.py` общее `transaction.atomic` объединяет создание предложения и `new_response`, выбор и все `response_accepted/rejected`, а также start/result/problem и `order_updated`. Исключение при создании первого или последующего уведомления откатывает весь комплект состояния и истории; повторный успешный POST не дублирует уведомления. Existing completion подтверждения уже был общетранзакционным и сохранён.
+- **Agreement services:** `propose_agreement_change` уведомляет противоположную сторону о новой версии, `decide_agreement_change` уведомляет предлагающую сторону о принятии/отклонении, обе операции в одной атомарной транзакции с версиями/решениями. Уведомления не включают сырые условия, цены и контакты, локализуются по сохранённому языку получателя (RU/EN/HE); не отправляются неактивным/заблокированным/неподтверждённым получателям согласно действующей privacy-политике. Исторические версии/решения не переписываются.
+- **Тесты:** `test_stage06_notification_atomicity.py` с инъекцией ошибок на предложении, втором уведомлении о назначении, начале, передаче результата, споре, подтверждении результата, создании новой договорённости и решении по ней; проверяется отсутствие частичных записей, rollback, повторные UUID/POST, уникальность уведомлений и RU/EN/HE-копии.
+- **Гейты:** `REMEDIATION_IN_CI / INDEPENDENT_RE_REVIEW_REQUIRED / PR_13_DRAFT / NOT_MERGED / NOT_DEPLOYED`. GitHub Actions на окончательном SHA этого набора исправлений пока ожидают проверки. **Никакого нового независимого `STAGE06_CODE_REVIEW_PASS` нет.** Production/VPS/DNS/Cloudflare и реальные пользовательские данные не затронуты.
+
+
+### 2026-11-13 — техническая проверка remediation на кодовом SHA `fa40cb2c`
+
+- GitHub Actions: [push #43514415266](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43514415266) SUCCESS, [PR Django #43514422280](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43514422280) SUCCESS, [изолированный staging #43514422281](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43514422281) SUCCESS.
+- Полный Django suite **510/510 PASS**, включая 10 новых адресных тестов failure-injection, PostgreSQL 17 чистые миграции (marketplace.0017–0019 без новых схемных изменений), `makemigrations --check --dry-run` (No changes detected), Django check, Ruff, Ashdod-only, Chromium stage02 90/90 + stage06 18/18 RU/EN/HE/RTL — PASS. Test data synthetic.
+- **Статус:** `IMPLEMENTED / REMEDIATION_CI_VERIFIED_ON_CODE_SHA / INDEPENDENT_RE_REVIEW_PENDING / DRAFT_PR_13 / NOT_MERGED / NOT_DEPLOYED`. Это не заменяет повторный независимый review и отдельную проверку GitHub Actions на актуальном HEAD после документальных коммитов. Ни production, ни VPS не изменялись.
+
+
+## 2026-11-14 — Stage 06 повторный независимый FAIL и изменения PR #13
+
+- Независимый Codex на исходном SHA `cabab49f54aa8a65a7f33963fa28f43cd2f276dc` воспроизвёл **`ZP-06-004 MEDIUM`**: отзыв сохранялся при отказе записи уведомления; и **`ZP-06-005 MEDIUM`**: страница заказа и flash при выборе выводили приватный `User.__str__` вместо `WorkerProfile.public_display_name`. Локальный patch Codex прошёл 529/529 Django, но в GitHub не отправлялся; автоматически перенести его в этот checkout было невозможно. Выявленные дефекты подтверждены в актуальном исходном коде PR до исправлений.
+- Реализованы **эквивалентные самостоятельные исправления в прежнем PR #13**, не копия невидимого patch: общий `transaction.atomic` + `Order.select_for_update` защищают запись отзыва и уведомления; дубль POST сериализуется блокировкой заказа; выбор мастера и блок на странице отображают только безопасный публичный snapshot с нейтральным fallback. Добавлены HTTP/failure-injection/concurrency/privacy regression tests `test_stage06_review_privacy_followup.py`.
+- В соответствии с явными требованиями `docs/DEVELOPMENT_PLAN.md` этапа 06.2 реализованы owner-only сортировки новых/старых, цены по возрастанию/убыванию (договорные суммы в конце) и рейтинга, фильтры статуса предложения; недопустимые query keys сбрасываются к безопасным значениям, не-владелец не получает приватную проекцию. RU/EN/HE copy, RTL-friendly формы и regression tests.
+- При споре `report_work_problem` создаёт в существующей таблице `moderation.Complaint` pending item с PII-free кодом причины и ответственным контрагентом **в той же транзакции**, что status+work audit. Повторный UUID не создаёт новый item; исключение при записи жалобы откатывает статус и audit; добавлены тесты `test_stage06_filters_escalation.py`. Механизм рассмотрения через существующий staff moderation Django Admin, Stage 07 chat/complaint UX не запущен.
+- **Гейты:** повторный независимый review нового PR HEAD, CI exact SHA, expiry policy, полнота локализации уведомлений и ручные/mobile release gates остаются открыты. Это `CODE_REMEDIATION_IN_CI / NOT_MERGED / NOT_DEPLOYED`, не `STAGE06_CODE_REVIEW_PASS`. `main`, production, реальные данные не менялись.
+
+
+### 2026-11-14 — GitHub Actions повторной remediation
+
+- **Проверенный SHA кода и документации:** `c36a8652d3b722629693d24c6e782e618c67ea5f`. [Push CI #43577764683](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577764683) SUCCESS, [PR Django CI #43577770047](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577770047) SUCCESS, [isolated staging #43577769980](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577769980) SUCCESS.
+- **Доказательства:** полный Django suite `521/521 PASS`; Ruff, чистые PostgreSQL 17 миграции, `manage.py check`, `makemigrations --check --dry-run`, Chrome Stage02 `90/90` и Stage06 `18/18` — PASS. Включены новые тесты review/notification race/rollback, identity privacy, фильтров и модераторской очереди.
+- **Статус:** `REMEDIATION_CI_VERIFIED / INDEPENDENT_RE_REVIEW_PENDING / PR_13_DRAFT / NOT_MERGED / NOT_DEPLOYED`. После этой записи документальный commit меняет HEAD; для финального merge-гейта обязательно проверить Actions на *последнем* SHA. Независимый новый review и открытые продуктовые/ручные гейты сохраняются.
+
+
+## 2026-11-14 — final local acceptance of Stage 06
+
+Base `240988d`: ZP-06-001–005 adversarial regressions PASS. Independent reviewer
+reproduced ZP-06-006 cross-order assignment deadlock; fixed with no-key worker/profile
+locks and order-only lifecycle lock, deterministic PostgreSQL regression PASS.
+Stage 06 in-app notices now use recipient RU/EN/HE. Final full suite 524/524 PASS;
+clean/upgrade PostgreSQL, Ruff, system/migration checks and Compose PASS.
+Status: LOCAL_VERIFIED / GITHUB_FINAL_GATES_PENDING / NOT_MERGED / NOT_DEPLOYED.
+No expiry policy invented; physical-device acceptance is a public-launch gate.
+Historical failures retained. Current owner merge authorization recorded; no
+branch-protection or CI bypass permitted.
+
+Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90**, Stage06 **18/18 PASS** (RU/EN/HE/RTL, synthetic mobile emulation). Separate-agent review found no remaining blocking code findings after ZP-06-006 remediation; this is not a GitHub approval.

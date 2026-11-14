@@ -30,10 +30,10 @@ class InvitationConflict(ValueError):
     """Safe error without order data, personal contacts or worker identity."""
 
 
-def worker_matches_order(worker_id, order):
-    """Reuse the Stage 05.2 SQL matcher and publication gate, never trust form IDs."""
-    if (order.status != Order.Status.PUBLISHED or order.worker_id is not None
-            or order.city_id is None):
+def worker_eligible_for_order(worker_id, order):
+    """Shared geography/service/availability gate for live unassigned orders."""
+    if (order.status not in (Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION)
+            or order.worker_id is not None or order.city_id is None):
         return False
     mode = order.work_mode if order.work_mode in ('onsite', 'online') else None
     workers = workers_serving_city(
@@ -41,6 +41,14 @@ def worker_matches_order(worker_id, order):
         service=order.subcategory, mode=mode,
     ).exclude(availability=WorkerProfile.Availability.UNAVAILABLE)
     return workers.filter(pk=worker_id).exists()
+
+
+def worker_matches_order(worker_id, order):
+    """Stage 05 invitation stays published-only, unlike stage 06 selection."""
+    return (
+        order.status == Order.Status.PUBLISHED
+        and worker_eligible_for_order(worker_id, order)
+    )
 
 
 def invitable_orders(user, worker, *, limit=40):

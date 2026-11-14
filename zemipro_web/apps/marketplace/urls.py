@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, offer_views
 
 app_name = 'marketplace'
 
@@ -28,10 +28,18 @@ urlpatterns = [
     path('orders/photos/<int:pk>/delete/', views.order_attachment_delete_view,
          name='order_attachment_delete'),
     path('orders/<int:pk>/respond/', views.order_respond_view, name='order_respond'),
+    path('offers/<int:pk>/edit/', offer_views.edit_offer_view, name='offer_edit'),
+    path('orders/<int:pk>/agreement/propose/', offer_views.agreement_propose_view,
+         name='agreement_propose'),
+    path('agreements/<int:pk>/<str:action>/', offer_views.agreement_decide_view,
+         name='agreement_decide'),
+    path('offers/<int:pk>/<str:action>/', offer_views.offer_action_view, name='offer_action'),
     path('orders/<int:order_id>/responses/<int:response_id>/accept/',
          views.order_accept_response_view, name='order_accept_response'),
     path('orders/<int:pk>/cancel/', views.order_cancel_view, name='order_cancel'),
     path('orders/<int:pk>/complete/', views.order_complete_view, name='order_complete'),
+    path('orders/<int:pk>/work/<str:action>/', views.order_work_action_view,
+         name='order_work_action'),
     path('orders/<int:pk>/review/', views.rating_create_view, name='rating_create'),
 
     path('worker/<int:pk>/', views.worker_public_profile_view, name='worker_public_profile'),

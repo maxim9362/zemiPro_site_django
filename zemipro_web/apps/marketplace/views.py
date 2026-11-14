@@ -38,12 +38,19 @@ from .invitation_services import (
 from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
+from .offer_services import submit_offer
+from .offer_presentation import (
+    owner_offer_cards, selected_worker_public_name,
+    filter_and_sort_offer_cards, owner_offer_filter_context,
+)
+from .offer_ui import offer_copy, stage06_notice
+from .agreement_presentation import private_agreement_context
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating, OrderInvitation,
     ServiceQuestionnaire, OrderQuestionnaireAnswer,
 )
 from .services import (
-    get_available_orders_for_worker, create_response, create_order,
+    get_available_orders_for_worker, create_order,
     accept_response, complete_order, cancel_order,
     can_view_private_order_details, workers_serving_city,
 )
@@ -957,8 +964,17 @@ def order_detail_view(request, pk):
     responses = []
 
     if request.user.is_authenticated:
-        has_worker_profile = hasattr(request.user, 'worker_profile')
-        is_owner = order.client == request.user
+        # Persisted account gates must guard even GET projections: a blocked or
+        # unverified owner must not read private offers via a stale session.
+        from apps.accounts.models import User
+        account_enabled = User.objects.filter(
+            pk=request.user.pk, is_active=True, is_blocked=False,
+            email_verification_required=False,
+        ).exists()
+        has_worker_profile = account_enabled and hasattr(
+            request.user, 'worker_profile',
+        )
+        is_owner = account_enabled and order.client_id == request.user.pk
 
         if has_worker_profile:
             worker_response = Response.objects.filter(
@@ -966,9 +982,9 @@ def order_detail_view(request, pk):
             ).first()
 
         if is_owner:
-            responses = Response.objects.filter(
+            responses = list(Response.objects.filter(
                 order=order
-            ).select_related('worker').order_by('-created_at')
+            ).select_related('worker').order_by('-created_at'))
 
             existing_rating = Rating.objects.filter(order=order).first()
 
@@ -981,6 +997,31 @@ def order_detail_view(request, pk):
         if snapshot is not None:
             private_question_answers = present_order_answers(snapshot)
 
+    agreement_context = private_agreement_context(order, request.user)
+    work_party = bool(agreement_context['agreement_current'])
+    work_started = False
+    work_result_submitted = False
+    if work_party:
+        from .models import OrderWorkEvent
+        work_started = OrderWorkEvent.objects.filter(
+            order=order, action=OrderWorkEvent.Action.STARTED,
+        ).exists()
+        work_result_submitted = OrderWorkEvent.objects.filter(
+            order=order, action=OrderWorkEvent.Action.RESULT_SUBMITTED,
+        ).exists()
+
+    # Accept only known sort and filter keys, and only apply them to the
+    # owner-authorized offer projection (never to another user's order).
+    offer_options = owner_offer_filter_context(
+        status_filter=request.GET.get('offer_status', 'all'),
+        sort=request.GET.get('offer_sort', 'newest'),
+    )
+    owner_cards = owner_offer_cards(order, responses) if is_owner else []
+    visible_cards = filter_and_sort_offer_cards(
+        owner_cards, status_filter=offer_options['offer_status_selected'],
+        sort=offer_options['offer_sort_selected'],
+    ) if is_owner else []
+
     return render(request, 'pages/order_detail.html', {
         'order': order,
         'private_question_answers': private_question_answers,
@@ -988,6 +1029,14 @@ def order_detail_view(request, pk):
         'has_worker_profile': has_worker_profile,
         'is_owner': is_owner,
         'responses': responses,
+        'offer_cards': visible_cards,
+        'offer_total_count': len(owner_cards),
+        **offer_options,
+        'offer_copy': offer_copy(),
+        'selected_worker_public_name': selected_worker_public_name(order) if is_owner else '',
+        **agreement_context,
+        'work_started': work_started,
+        'work_result_submitted': work_result_submitted,
         'existing_rating': existing_rating,
         'can_view_private_details': can_read_private,
         'order_photos': list(visible_order_photos(order, request.user)),
@@ -1090,45 +1139,42 @@ def order_accept_response_view(request, order_id, response_id):
     if request.method != 'POST':
         raise Http404
 
-    order = get_object_or_404(Order, pk=order_id, client=request.user, status=Order.Status.PUBLISHED)
+    order = get_object_or_404(Order, pk=order_id, client=request.user)
     response = get_object_or_404(Response, pk=response_id, order=order)
 
-    rejected_workers = list(
-        Response.objects.filter(order=order).exclude(pk=response.pk).values_list('worker_id', flat=True)
-    )
-
     try:
-        response = accept_response(response, actor=request.user)
+        # The choice, agreement snapshot, status history and ALL in-app
+        # notifications must commit together. An error on the second notice
+        # rolls the first notice and the winner selection back as well.
+        with transaction.atomic():
+            response = accept_response(response, actor=request.user)
+            if getattr(response, '_assignment_created', False):
+                create_notification(
+                    recipient=response.worker,
+                    **stage06_notice(response.worker, 'response_accepted', order.pk),
+                    notification_type='response_accepted',
+                    related_order=order,
+                    related_response=response,
+                )
+                from apps.accounts.models import User
+                for worker_id in response._rejected_worker_ids:
+                    worker_user = User.objects.filter(pk=worker_id).first()
+                    if worker_user:
+                        create_notification(
+                            recipient=worker_user,
+                            **stage06_notice(worker_user, 'response_rejected', order.pk),
+                            notification_type='response_rejected',
+                            related_order=order,
+                        )
     except OrderQuotaExceeded as error:
         return _order_quota_response(error)
     except ValueError as error:
         messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
 
-    create_notification(
-        recipient=response.worker,
-        title='Вас выбрали',
-        message=f'Клиент выбрал вас исполнителем по заявке №{order.pk}.',
-        notification_type='response_accepted',
-        related_order=order,
-        related_response=response,
-    )
-
-    from apps.accounts.models import User
-    for worker_id in rejected_workers:
-        try:
-            worker_user = User.objects.get(pk=worker_id)
-            create_notification(
-                recipient=worker_user,
-                title='Выбран другой мастер',
-                message=f'По заявке №{order.pk} клиент выбрал другого мастера.',
-                notification_type='response_rejected',
-                related_order=order,
-            )
-        except User.DoesNotExist:
-            continue
-
-    messages.success(request, _('Мастер %(worker)s выбран!') % {'worker': response.worker})
+    messages.success(request, _('Мастер %(worker)s выбран!') % {
+        'worker': selected_worker_public_name(order),
+    })
     return redirect('marketplace:order_detail', pk=order.pk)
 
 
@@ -1188,8 +1234,7 @@ def order_complete_view(request, pk):
                 if order.worker_id:
                     create_notification(
                         recipient=order.worker,
-                        title='Заявка завершена',
-                        message=f'Клиент отметил заявку №{order.pk} как выполненную.',
+                        **stage06_notice(order.worker, 'order_completed', order.pk),
                         notification_type='order_completed',
                         related_order=order,
                     )
@@ -1200,36 +1245,110 @@ def order_complete_view(request, pk):
 
 
 @login_required
-def rating_create_view(request, pk):
-    order = get_object_or_404(
-        Order, pk=pk, client=request.user, status=Order.Status.COMPLETED
+@require_POST
+@never_cache
+def order_work_action_view(request, pk, action):
+    """A work transition and its notice are a single PostgreSQL transaction."""
+    from .work_services import (
+        report_work_problem, start_work, submit_work_result,
     )
+    if action not in ('start', 'result', 'problem'):
+        raise Http404
+    order = get_object_or_404(
+        Order.objects.filter(
+            Q(client_id=request.user.pk) | Q(worker_id=request.user.pk),
+        ), pk=pk,
+    )
+    try:
+        with transaction.atomic():
+            if action == 'start':
+                order, changed = start_work(
+                    order_id=order.pk, actor=request.user,
+                    operation_key=request.POST.get('operation_key'),
+                )
+            elif action == 'result':
+                order, changed = submit_work_result(
+                    order_id=order.pk, actor=request.user,
+                    operation_key=request.POST.get('operation_key'),
+                )
+            else:
+                order, changed = report_work_problem(
+                    order_id=order.pk, actor=request.user,
+                    problem_code=request.POST.get('problem_code'),
+                    operation_key=request.POST.get('operation_key'),
+                )
+            if changed:
+                recipient_id = (
+                    order.client_id if request.user.pk == order.worker_id
+                    else order.worker_id
+                )
+                if recipient_id:
+                    from apps.accounts.models import User
+                    recipient = User.objects.filter(pk=recipient_id).first()
+                    if recipient:
+                        create_notification(
+                            recipient=recipient,
+                            **stage06_notice(recipient, 'order_updated', order.pk),
+                            notification_type='order_updated',
+                            related_order=order,
+                        )
+    except OrderQuotaExceeded as error:
+        return _order_quota_response(error)
+    except ValueError:
+        messages.error(request, offer_copy()['action_error'])
+        return redirect('marketplace:order_detail', pk=order.pk)
+    if changed:
+        messages.success(request, offer_copy()['status_updated'])
+    return redirect('marketplace:order_detail', pk=order.pk)
 
+
+@login_required
+def rating_create_view(request, pk):
+    """A review and its worker notification commit atomically under Order lock.
+
+    Locking the Order also serializes duplicate client POSTs, including those
+    where the first notification temporarily fails. No review or recipient
+    notice may survive that failure by itself.
+    """
+    order = get_object_or_404(
+        Order, pk=pk, client=request.user, status=Order.Status.COMPLETED,
+    )
     if Rating.objects.filter(order=order).exists():
         messages.info(request, _('Вы уже оставили отзыв на этот заказ.'))
         return redirect('marketplace:order_detail', pk=pk)
-
-    if not order.worker:
+    if not order.worker_id:
         messages.error(request, _('Невозможно оставить отзыв: исполнитель не выбран.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if request.method == 'POST':
         form = RatingCreateForm(request.POST)
         if form.is_valid():
-            rating = form.save(commit=False)
-            rating.order = order
-            rating.worker = order.worker
-            rating.client = request.user
-            rating.save()
-
-            create_notification(
-                recipient=order.worker,
-                title='Новый отзыв',
-                message=f'Клиент оставил отзыв по заявке №{order.pk}.',
-                notification_type='review_created',
-                related_order=order,
-            )
-
+            with transaction.atomic():
+                # Re-read the persisted order after concurrent completion,
+                # cancellation or another review; lock before duplicate check.
+                order = get_object_or_404(
+                    Order.objects.select_for_update(),
+                    pk=pk, client=request.user, status=Order.Status.COMPLETED,
+                )
+                if Rating.objects.filter(order=order).exists():
+                    messages.info(request, _('Вы уже оставили отзыв на этот заказ.'))
+                    return redirect('marketplace:order_detail', pk=pk)
+                if not order.worker_id:
+                    messages.error(
+                        request, _('Невозможно оставить отзыв: исполнитель не выбран.'),
+                    )
+                    return redirect('marketplace:order_detail', pk=pk)
+                rating = form.save(commit=False)
+                rating.order = order
+                rating.worker_id = order.worker_id
+                rating.client = request.user
+                rating.save()
+                create_notification(
+                    recipient=order.worker,
+                    **stage06_notice(order.worker, 'review_created', order.pk),
+                    notification_type='review_created',
+                    related_order=order,
+                )
             messages.success(request, _('Отзыв сохранён!'))
             return redirect('marketplace:order_detail', pk=pk)
     else:
@@ -1302,20 +1421,23 @@ def order_respond_view(request, pk):
         form = ResponseCreateForm(request.POST)
         if form.is_valid():
             try:
-                create_response(
-                    order=order,
-                    worker_user=request.user,
-                    message=form.cleaned_data['message'],
-                )
-
-                if order.client:
-                    create_notification(
-                        recipient=order.client,
-                        title='Новый отклик',
-                        message=f'Мастер откликнулся на вашу заявку №{order.pk}.',
-                        notification_type='new_response',
-                        related_order=order,
+                # The response/revision and customer notice share one commit.
+                # If notification creation fails, the response can be retried
+                # with the same operation_key without a ghost successful reply.
+                with transaction.atomic():
+                    response, created = submit_offer(
+                        order=order, actor=request.user,
+                        message=form.cleaned_data['message'],
+                        data=form.cleaned_data,
+                        operation_key=request.POST.get('operation_key'),
                     )
+                    if created and order.client:
+                        create_notification(
+                            recipient=order.client,
+                            **stage06_notice(order.client, 'new_response', order.pk),
+                            notification_type='new_response',
+                            related_order=order,
+                        )
 
                 messages.success(request, _('Отклик отправлен!'))
                 return redirect('marketplace:order_detail', pk=pk)
@@ -1326,7 +1448,9 @@ def order_respond_view(request, pk):
     else:
         form = ResponseCreateForm()
 
-    return render(request, 'pages/order_respond.html', {
-        'order': order,
-        'form': form,
+    return render(request, 'pages/offer_form.html', {
+        'order': order, 'form': form, 'response': None,
+        'offer_copy': offer_copy(), 'page_title': offer_copy()['submit'],
+        'submit_label': offer_copy()['submit'],
+        'operation_key': request.POST.get('operation_key') or uuid.uuid4(),
     })

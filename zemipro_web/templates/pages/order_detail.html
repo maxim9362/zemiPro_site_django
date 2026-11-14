@@ -82,7 +82,7 @@
 
                 {% if order.worker and is_owner %}
                 <div class="order-card__field">
-                    <strong>{% trans 'Мастер:' %}</strong> {{ order.worker }}
+                    <strong>{% trans 'Мастер:' %}</strong> <bdi dir="auto">{{ selected_worker_public_name }}</bdi>
                 </div>
                 {% endif %}
 
@@ -177,6 +177,14 @@
                 <span class="btn btn--secondary" style="opacity: 0.7; cursor: default;">
                     {% trans 'Вы уже откликались на эту заявку' %}
                 </span>
+                {% if order.status == 'published' or order.status == 'in_discussion' %}
+                    {% if worker_response.status == 'pending' or worker_response.status == 'sent' or worker_response.status == 'viewed' or worker_response.status == 'negotiating' %}
+                    <a class="btn btn--secondary" href="{% url 'marketplace:offer_edit' pk=worker_response.pk %}">{{ offer_copy.edit }}</a>
+                    <form method="post" action="{% url 'marketplace:offer_action' pk=worker_response.pk action='withdraw' %}">
+                        {% csrf_token %}<button class="btn btn--secondary">{{ offer_copy.withdraw }}</button>
+                    </form>
+                    {% endif %}
+                {% endif %}
                 {% endif %}
 
                 {# Ссылка для зарегистрированных пользователей без профиля мастера #}
@@ -199,6 +207,8 @@
         </div>
 
 
+        {% include 'pages/_agreement_card.html' %}
+
         {% if is_owner and order_history %}
         <section class="order-card" style="margin-top:24px;max-width:700px;margin-inline:auto;">
             <div class="order-card__header"><h2>{{ management_copy.history }}</h2></div>
@@ -216,38 +226,84 @@
         </section>
         {% endif %}
 
-        {# Блок откликов для владельца заявки #}
-        {% if is_owner and responses %}
-        <div class="order-card" style="margin-top: 24px; max-width: 700px; margin-left: auto; margin-right: auto;">
+        {% if is_owner and offer_total_count %}
+        <section class="order-card" style="margin-block:24px;max-width:920px;margin-inline:auto;">
             <div class="order-card__header">
-                <span class="order-card__category">{% trans 'Отклики мастеров' %} ({{ responses|length }})</span>
+                <h2>{{ offer_copy.comparison }} ({{ offer_cards|length }})</h2>
             </div>
             <div class="order-card__body">
-                {% for resp in responses %}
-                <div class="response-item" style="border-bottom: 1px solid var(--color-border); padding-bottom: 16px; margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong>{{ resp.worker }}</strong>
-                        <span class="order-card__status order-card__status--{{ resp.status }}">
-                            {% trans resp.get_status_display %}
-                        </span>
+                <form method="get" action="{% url 'marketplace:order_detail' pk=order.pk %}"
+                      style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:16px;">
+                    <div>
+                        <label for="offer-status-filter">{{ offer_copy.filter_status }}</label>
+                        <select name="offer_status" id="offer-status-filter">
+                            {% for option in offer_status_options %}
+                            <option value="{{ option.value }}"{% if option.value == offer_status_selected %} selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    {% if resp.message %}
-                    <p style="color: var(--color-text-light); margin-bottom: 8px;">{{ resp.message }}</p>
-                    {% endif %}
-                    <p style="font-size: 0.8125rem; color: var(--color-text-light);">{% trans 'Отклик:' %} {{ resp.created_at|date:"d.m.Y H:i" }}</p>
-
-                    {% if order.status == 'published' and resp.status == 'pending' %}
-                    <form method="post" action="{% url 'marketplace:order_accept_response' order_id=order.pk response_id=resp.pk %}" style="margin-top: 8px;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn--primary btn--sm" onclick="return confirm('{% trans 'Выбрать этого мастера?' %}')">
-                            {% trans 'Выбрать мастера' %}
-                        </button>
-                    </form>
-                    {% endif %}
+                    <div>
+                        <label for="offer-sort">{{ offer_copy.sort_by }}</label>
+                        <select name="offer_sort" id="offer-sort">
+                            {% for option in offer_sort_options %}
+                            <option value="{{ option.value }}"{% if option.value == offer_sort_selected %} selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn--secondary btn--sm">{{ offer_copy.apply_filters }}</button>
+                </form>
+                {% if not offer_cards %}<p>{{ offer_copy.no_matching_offers }}</p>{% endif %}
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;">
+                    {% for card in offer_cards %}
+                    <article class="response-item" style="border:1px solid var(--color-border);border-radius:12px;padding:16px;min-width:0;">
+                        <h3 dir="auto">{{ card.worker_name }}</h3>
+                        {% if card.profile_id %}
+                        <a href="{% url 'marketplace:worker_public_profile' pk=card.profile_id %}">{{ offer_copy.profile }}</a>
+                        {% endif %}
+                        <p><strong>{{ offer_copy.rating }}:</strong>
+                            {% if card.rating_count %}<bdi dir="ltr">{{ card.rating }} / 5</bdi> ({{ card.rating_count }} {{ offer_copy.reviews }})
+                            {% else %}{{ offer_copy.no_ratings }}{% endif %}
+                        </p>
+                        <p><strong>{{ offer_copy.price }}:</strong> <bdi dir="auto">{{ card.price }}</bdi></p>
+                        {% if card.response.estimated_timeline %}
+                        <p><strong>{{ offer_copy.timeline }}:</strong> <bdi dir="auto">{{ card.response.estimated_timeline }}</bdi></p>
+                        {% endif %}
+                        {% if card.response.terms %}
+                        <p><strong>{{ offer_copy.terms }}:</strong> <span dir="auto">{{ card.response.terms }}</span></p>
+                        {% endif %}
+                        {% if card.response.message %}
+                        <p><strong>{{ offer_copy.message }}:</strong> <span dir="auto">{{ card.response.message }}</span></p>
+                        {% endif %}
+                        <p><strong>{{ offer_copy.status }}:</strong> {{ card.status_label }}</p>
+                        {% if order.status == 'published' or order.status == 'in_discussion' %}
+                        {% if card.response.status == 'pending' or card.response.status == 'sent' or card.response.status == 'viewed' or card.response.status == 'negotiating' %}
+                            <form method="post" action="{% url 'marketplace:order_accept_response' order_id=order.pk response_id=card.response.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn--primary btn--sm">{{ offer_copy.select }}</button>
+                            </form>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+                            {% if card.response.status == 'sent' or card.response.status == 'pending' %}
+                            <form method="post" action="{% url 'marketplace:offer_action' pk=card.response.pk action='viewed' %}">
+                                {% csrf_token %}<input type="hidden" name="operation_key" value="{{ operation_duplicate }}">
+                                <button class="btn btn--secondary btn--sm">{{ offer_copy.viewed }}</button>
+                            </form>
+                            {% endif %}
+                            <form method="post" action="{% url 'marketplace:offer_action' pk=card.response.pk action='negotiate' %}">
+                                {% csrf_token %}<input type="hidden" name="operation_key" value="{{ operation_withdraw }}">
+                                <button class="btn btn--secondary btn--sm">{{ offer_copy.negotiate }}</button>
+                            </form>
+                            <form method="post" action="{% url 'marketplace:offer_action' pk=card.response.pk action='reject' %}">
+                                {% csrf_token %}
+                                <button class="btn btn--secondary btn--sm">{{ offer_copy.reject }}</button>
+                            </form>
+                            </div>
+                        {% endif %}
+                        {% endif %}
+                    </article>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-        </div>
+        </section>
         {% endif %}
 
         {# {% trans 'Отзыв' %} если есть #}

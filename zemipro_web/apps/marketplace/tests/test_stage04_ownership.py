@@ -24,7 +24,7 @@ from apps.marketplace.services import (
     accept_response, cancel_order, complete_order, create_order,
 )
 
-from .factories import make_user
+from .factories import make_user, make_worker_profile
 
 
 @override_settings(ZEMIPRO_PILOT_CITY_SLUG='ashdod')
@@ -193,6 +193,7 @@ class OrderOwnershipAndIdempotencyTests(TestCase):
         order = create_order(
             self.owner, self.category, self.city, '', 'Synthetic request'
         )
+        make_worker_profile(self.worker, city=self.city, category=self.category)
         response = Response.objects.create(order=order, worker=self.worker)
         for actor in (self.other, AnonymousUser(), None):
             with self.subTest(actor=actor), self.assertRaises(PermissionDenied):
@@ -205,9 +206,11 @@ class OrderOwnershipAndIdempotencyTests(TestCase):
         chosen = accept_response(response, actor=self.owner)
         self.assertEqual(chosen.status, Response.Status.ACCEPTED)
         order.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.IN_PROGRESS)
+        self.assertEqual(order.status, Order.Status.ASSIGNED)
         with self.assertRaises(PermissionDenied):
             complete_order(order, actor=self.other)
+        from apps.marketplace.order_lifecycle import transition_order_status
+        transition_order_status(order, Order.Status.IN_PROGRESS, actor=self.owner)
         self.assertEqual(Order.objects.get(pk=order.pk).status, Order.Status.IN_PROGRESS)
         complete_order(order, actor=self.owner)
         self.assertEqual(Order.objects.get(pk=order.pk).status, Order.Status.COMPLETED)

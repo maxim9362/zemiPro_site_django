@@ -163,6 +163,25 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Stage 06 mobile RTL offer comparison and privacy browser smoke
+        env:
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8766 > /tmp/stage06-django-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage06_browser_smoke.py
+
+      - name: Upload Stage 06 comparison screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage06-mobile-rtl-screenshots
+          path: zemipro_web/artifacts/stage06-mobile-rtl/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Run Django suite with service coverage gate
         run: |
           python -m coverage run manage.py test

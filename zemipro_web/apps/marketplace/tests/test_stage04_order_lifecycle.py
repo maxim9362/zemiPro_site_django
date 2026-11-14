@@ -10,7 +10,7 @@ from apps.marketplace.models import Order, OrderStatusEvent, Response, Subcatego
 from apps.marketplace.order_lifecycle import transition_order_status
 from apps.marketplace.services import accept_response, cancel_order, create_order
 
-from .factories import make_category, make_city, make_order, make_user
+from .factories import make_category, make_city, make_order, make_user, make_worker_profile
 
 
 @override_settings(ZEMIPRO_PILOT_CITY_SLUG=None)
@@ -156,21 +156,22 @@ class OrderLifecycleTests(TestCase):
             transition_order_status(order, Order.Status.PUBLISHED, actor=self.owner)
         self.assertFalse(order.status_events.exists())
 
-    def test_acceptance_generates_assigned_and_work_started_atomically(self):
+    def test_acceptance_generates_only_assigned_event(self):
         order = make_order(client=self.owner, category=self.category, city=self.city)
         with self.assertRaises(ValueError):
             transition_order_status(order, Order.Status.ASSIGNED, actor=self.owner)
+        make_worker_profile(self.worker, city=self.city, category=self.category)
         response = Response.objects.create(order=order, worker=self.worker)
         accept_response(response, actor=self.owner)
         order.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.IN_PROGRESS)
+        self.assertEqual(order.status, Order.Status.ASSIGNED)
         self.assertEqual(order.worker_id, self.worker.pk)
         self.assertEqual(list(order.status_events.order_by('pk').values_list(
             'previous_status', 'new_status',
-        )), [('published', 'assigned'), ('assigned', 'in_progress')])
-        with self.assertRaises(ValueError):
-            accept_response(response, actor=self.owner)
-        self.assertEqual(order.status_events.count(), 2)
+        )), [('published', 'assigned')])
+        replay = accept_response(response, actor=self.owner)
+        self.assertFalse(replay._assignment_created)
+        self.assertEqual(order.status_events.count(), 1)
 
     def test_create_and_repeat_cancel_no_duplicate_event(self):
         order = create_order(
