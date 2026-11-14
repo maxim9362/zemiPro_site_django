@@ -226,12 +226,33 @@
         </section>
         {% endif %}
 
-        {% if is_owner and offer_cards %}
+        {% if is_owner and offer_total_count %}
         <section class="order-card" style="margin-block:24px;max-width:920px;margin-inline:auto;">
             <div class="order-card__header">
                 <h2>{{ offer_copy.comparison }} ({{ offer_cards|length }})</h2>
             </div>
             <div class="order-card__body">
+                <form method="get" action="{% url 'marketplace:order_detail' pk=order.pk %}"
+                      style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:16px;">
+                    <div>
+                        <label for="offer-status-filter">{{ offer_copy.filter_status }}</label>
+                        <select name="offer_status" id="offer-status-filter">
+                            {% for option in offer_status_options %}
+                            <option value="{{ option.value }}"{% if option.value == offer_status_selected %} selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="offer-sort">{{ offer_copy.sort_by }}</label>
+                        <select name="offer_sort" id="offer-sort">
+                            {% for option in offer_sort_options %}
+                            <option value="{{ option.value }}"{% if option.value == offer_sort_selected %} selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn--secondary btn--sm">{{ offer_copy.apply_filters }}</button>
+                </form>
+                {% if not offer_cards %}<p>{{ offer_copy.no_matching_offers }}</p>{% endif %}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;">
                     {% for card in offer_cards %}
                     <article class="response-item" style="border:1px solid var(--color-border);border-radius:12px;padding:16px;min-width:0;">

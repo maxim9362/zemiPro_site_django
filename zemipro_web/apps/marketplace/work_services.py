@@ -2,6 +2,8 @@
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 
+from apps.moderation.models import Complaint
+
 from .agreement_services import effective_agreement
 from .models import Order, OrderStatusEvent, OrderWorkEvent
 from .offer_services import _enabled, _key
@@ -122,4 +124,20 @@ def report_work_problem(*, order_id, actor, problem_code, operation_key):
         raise ValueError('Сообщить о проблеме сейчас нельзя.')
     transition_order_status(order, Order.Status.DISPUTED, actor=actor)
     _event(order, actor, OrderWorkEvent.Action.PROBLEM, key, problem_code=problem_code)
+    # Forward the dispute to the existing staff moderation queue. This
+    # PII-free complaint is committed atomically with the dispute and event;
+    # operation-key replays never create duplicate moderation tasks.
+    Complaint.objects.create(
+        reporter=actor, target_order=order,
+        target_user_id=(
+            order.worker_id if actor.pk == order.client_id else order.client_id
+        ),
+        reason=(
+            Complaint.Reason.BAD_SERVICE
+            if problem_code == OrderWorkEvent.ProblemCode.QUALITY
+            else Complaint.Reason.OTHER
+        ),
+        message=f'Automated order dispute. Reason code: {problem_code}.',
+        status=Complaint.Status.PENDING,
+    )
     return order, True

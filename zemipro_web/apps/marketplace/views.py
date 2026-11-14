@@ -39,7 +39,10 @@ from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
 from .offer_services import submit_offer
-from .offer_presentation import owner_offer_cards, selected_worker_public_name
+from .offer_presentation import (
+    owner_offer_cards, selected_worker_public_name,
+    filter_and_sort_offer_cards, owner_offer_filter_context,
+)
 from .offer_ui import offer_copy
 from .agreement_presentation import private_agreement_context
 from .models import (
@@ -1007,6 +1010,18 @@ def order_detail_view(request, pk):
             order=order, action=OrderWorkEvent.Action.RESULT_SUBMITTED,
         ).exists()
 
+    # Accept only known sort and filter keys, and only apply them to the
+    # owner-authorized offer projection (never to another user's order).
+    offer_options = owner_offer_filter_context(
+        status_filter=request.GET.get('offer_status', 'all'),
+        sort=request.GET.get('offer_sort', 'newest'),
+    )
+    owner_cards = owner_offer_cards(order, responses) if is_owner else []
+    visible_cards = filter_and_sort_offer_cards(
+        owner_cards, status_filter=offer_options['offer_status_selected'],
+        sort=offer_options['offer_sort_selected'],
+    ) if is_owner else []
+
     return render(request, 'pages/order_detail.html', {
         'order': order,
         'private_question_answers': private_question_answers,
@@ -1014,7 +1029,9 @@ def order_detail_view(request, pk):
         'has_worker_profile': has_worker_profile,
         'is_owner': is_owner,
         'responses': responses,
-        'offer_cards': owner_offer_cards(order, responses) if is_owner else [],
+        'offer_cards': visible_cards,
+        'offer_total_count': len(owner_cards),
+        **offer_options,
         'offer_copy': offer_copy(),
         'selected_worker_public_name': selected_worker_public_name(order) if is_owner else '',
         **agreement_context,
