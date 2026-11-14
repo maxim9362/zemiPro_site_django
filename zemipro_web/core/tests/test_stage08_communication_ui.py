@@ -186,9 +186,11 @@ class CommunicationPageTests(TestCase):
         blocked = self.client.get(reverse(
             'marketplace:order_detail', args=[completed.pk],
         ))
-        self.assertNotContains(blocked, reverse(
-            'marketplace:rating_reply', args=[rating.pk],
-        ))
+        self.assertEqual(blocked.status_code, 403)
+        self.assertNotIn(
+            reverse('marketplace:rating_reply', args=[rating.pk]),
+            blocked.content.decode(),
+        )
 
     def test_participant_report_moderator_decision_and_appeal(self):
         msg, _ = send_message(
