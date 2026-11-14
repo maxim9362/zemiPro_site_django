@@ -169,6 +169,32 @@ class AccountWorkflowUITests(TestCase):
         self.assertContains(wizard, '<progress')
         self.assertContains(wizard, 'zw-steps__done')
 
+    def test_invalid_wizard_place_step_preserves_typed_area(self):
+        self.client.force_login(self.owner)
+        start = reverse('marketplace:order_wizard_start')
+        token = self.client.get(start).context['token']
+        created = self.client.post(start, {
+            'action': 'start', 'token': token,
+            'category': self.category.pk, 'subcategory': self.service.pk,
+        })
+        self.assertEqual(created.status_code, 302)
+        draft = Order.objects.get(client=self.owner)
+        edit = reverse('marketplace:order_wizard_edit', args=[draft.pk])
+        self.assertEqual(self.client.post(edit + '?step=2', {
+            'action': 'next', 'questionnaire_version': '',
+        }).status_code, 302)
+        invalid = self.client.post(edit + '?step=3', {
+            'action': 'next', 'city': self.other_city.pk,
+            'mode': 'onsite', 'area': 'North synthetic area',
+        })
+        self.assertEqual(invalid.status_code, 200)
+        self.assertContains(invalid, 'North synthetic area')
+        self.assertContains(invalid, 'zw-error-summary')
+        self.assertIn('city', invalid.context['form'].errors)
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, Order.Status.DRAFT)
+        self.assertNotIn('3', draft.wizard_data.get('steps', {}))
+
     def test_offer_form_and_private_order_detail_keep_server_rights(self):
         order = make_order(
             client=self.owner, category=self.category, city=self.city,
