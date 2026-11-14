@@ -17,6 +17,7 @@
             <nav class="app-actions" aria-label="{% trans 'Уведомления' %}">
                 <a class="btn btn--secondary" href="{% url 'notifications:notification_preferences' %}">{% trans 'Настройки уведомлений' %}</a>
                 <a class="btn btn--secondary" href="{% url 'marketplace:chat_index' %}">{% trans 'Переписка' %}</a>
+                <a class="btn btn--secondary" href="{% url 'moderation:my_complaints' %}">{% trans 'Мои жалобы' %}</a>
             </nav>
             {% if page_obj.object_list %}
             <form method="post" action="{% url 'notifications:notification_mark_all_read' %}">
