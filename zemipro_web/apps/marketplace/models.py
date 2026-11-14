@@ -1143,7 +1143,7 @@ class Message(models.Model):
         ]
         indexes = [
             models.Index(
-                fields=['conversation', 'pk'], name='chat_message_page_idx',
+                fields=['conversation', 'id'], name='chat_message_page_idx',
             ),
             models.Index(
                 fields=['conversation', 'sender', '-created_at'],

@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name='message',
             index=models.Index(
-                fields=['conversation', 'pk'], name='chat_message_page_idx',
+                fields=['conversation', 'id'], name='chat_message_page_idx',
             ),
         ),
         migrations.AddIndex(
