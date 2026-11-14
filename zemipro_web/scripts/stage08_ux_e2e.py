@@ -109,6 +109,10 @@ def layout(page, label, lang, role):
 
 def screenshot(page, filename):
     OUT.mkdir(parents=True, exist_ok=True)
+    # Full-page Chromium captures a sticky header at the CURRENT scroll
+    # position. Reset focus/scroll so visual evidence always shows its normal
+    # top-of-page location, rather than a false header overlay mid-form.
+    page.evaluate("document.activeElement?.blur(); window.scrollTo(0, 0)")
     page.screenshot(path=str(OUT / (filename + ".png")), full_page=True,
                     animations="disabled")
 

@@ -4,6 +4,9 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
+from django.utils.translation import override
+
+from apps.marketplace.wizard_services import _budget_label
 
 from apps.locations.models import City
 from apps.marketplace.models import Category, Subcategory
@@ -26,6 +29,21 @@ class VisualContractSourceTests(SimpleTestCase):
             "owner_accept_and_chat", "report_message", "RatingReply",
         ):
             self.assertIn(visible, text)
+
+    def test_negotiable_budget_preview_is_localized_without_price_mutation(self):
+        for language, expected in (
+            ("ru", "Договорная"),
+            ("en", "Negotiable"),
+            ("he", "לפי סיכום"),
+        ):
+            with self.subTest(language=language), override(language):
+                self.assertEqual(
+                    _budget_label({"price_type": "negotiable"}), expected
+                )
+        offer_form = (
+            Path(settings.BASE_DIR) / "templates/pages/offer_form.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('{% trans order.price %}', offer_form)
 
     def test_wizard_step_numbers_are_ltr_isolated_without_changing_rtl_document(self):
         text = (

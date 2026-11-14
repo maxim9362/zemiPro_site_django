@@ -248,7 +248,7 @@ def _budget_label(values):
     if kind == 'range':
         return (f"{Decimal(values['amount_min']):.2f}"
                 f"–{Decimal(values['amount_max']):.2f} ₪")
-    return 'Договорная'
+    return wizard_copy()['negotiable']
 
 
 def wizard_summary(order):
