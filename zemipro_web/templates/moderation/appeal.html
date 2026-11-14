@@ -28,7 +28,7 @@
                     <textarea id="appeal-reason" name="reason" required maxlength="2000" rows="5" dir="auto">{{ request.POST.reason|default:'' }}</textarea>
                 </div>
                 <div class="comm-form__actions">
-                    <button type="submit" class="btn btn--primary">{% trans 'Отправить' %}</button>
+                    <button type="submit" class="btn btn--primary">{% if current_language == 'he' %}שליחה{% elif current_language == 'en' %}Submit{% else %}Отправить{% endif %}</button>
                     <a class="btn btn--secondary" href="{% url 'moderation:my_complaints' %}">{% trans 'Мои жалобы' %}</a>
                 </div>
             </form>

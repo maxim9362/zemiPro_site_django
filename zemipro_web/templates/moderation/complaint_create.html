@@ -7,7 +7,7 @@
     <div class="container comm-container comm-container--narrow">
         <p class="comm-eyebrow">{% if current_language == 'he' %}דיווח ובטיחות{% elif current_language == 'en' %}Reporting and safety{% else %}Жалобы и безопасность{% endif %}</p>
         <h1>{% trans 'Пожаловаться' %}</h1>
-        {% if target_user %}<p>{% trans 'Жалоба на специалиста' %}</p>
+        {% if target_user %}<p>{% if current_language == 'he' %}תלונה על בעל מקצוע{% elif current_language == 'en' %}Complaint about a specialist{% else %}Жалоба на специалиста{% endif %}</p>
         {% elif target_order %}<p>{% trans 'На заявку №' %}<bdi dir="ltr">{{ target_order.pk }}</bdi></p>
         {% elif target_message %}<p>{% trans 'Жалоба на сообщение' %}</p>
         {% elif target_rating %}<p>{% trans 'На отзыв' %}</p>

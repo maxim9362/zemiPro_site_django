@@ -39,7 +39,7 @@
                                   name="note" maxlength="2000" rows="2" dir="auto"></textarea>
                         <div class="comm-case__actions">
                             <button class="btn btn--primary" name="action" value="resolve" type="submit">{% trans 'Рассмотреть' %}</button>
-                            <button class="btn btn--secondary" name="action" value="dismiss" type="submit">{% trans 'Отклонить' %}</button>
+                            <button class="btn btn--secondary" name="action" value="dismiss" type="submit">{% if current_language == 'he' %}דחייה{% elif current_language == 'en' %}Dismiss{% else %}Отклонить{% endif %}</button>
                         </div>
                     </form>
                 </li>
@@ -59,7 +59,7 @@
                         {% csrf_token %}
                         <div class="comm-case__actions">
                             <button class="btn btn--primary" name="action" value="accept" type="submit">{% trans 'Удовлетворить' %}</button>
-                            <button class="btn btn--secondary" name="action" value="reject" type="submit">{% trans 'Отклонить' %}</button>
+                            <button class="btn btn--secondary" name="action" value="reject" type="submit">{% if current_language == 'he' %}דחייה{% elif current_language == 'en' %}Dismiss{% else %}Отклонить{% endif %}</button>
                         </div>
                     </form>
                 </li>
