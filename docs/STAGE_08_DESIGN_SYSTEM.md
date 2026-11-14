@@ -1,6 +1,6 @@
 # ZemiPro — Stage 08.2: общая дизайн-система и компоненты
 
-Статус: IMPLEMENTED / CI_PENDING (изменения кода сохранены, CI и приёмка проверяются на финальном SHA).
+Статус: VERIFIED / CI SUCCESS (588/588). Подтверждён [GitHub CI #43613466892](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43613466892) на SHA `852c9d1ea2d9cc989369a3178df65875f94bc64b`. Этап 08 в целом не завершён.
 
 ## Технологические границы
 

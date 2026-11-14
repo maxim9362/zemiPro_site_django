@@ -1188,3 +1188,11 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 - Профиль: существующие приглашения/избранное/жалоба, портфолио и отзывы только из защищённых view/server-safe полей. Нет изменений backend, URLConf, моделей, миграций, production или Stage07.
 - Добавлены адресные синтетические Django-тесты `apps.marketplace.tests.test_stage08_public_ui`. Полный результат и exact SHA CI требуется подтвердить после push. Codex Cloud ревью только после 08.7.
 - [Stage 08.3 design and security contract](STAGE_08_PUBLIC_UI.md). Ветка и Draft PR #17 те же, PR #16 не объединён. Следующий 08.4 — только после разрешения.
+
+## 2026-11-14 — Stage 08.3: CI verified, public pages
+
+- **CODE_VERIFIED / CI_SUCCESS / OWNER_GATE_NEXT_08_4** на SHA `ec358f6b90abac730dfacaf60c9f1280e2ce1fd6`, [GitHub Actions #43616014325](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43616014325) `completed / success` 32/32.
+- **596/596 Django PASS** (включая 8 новых Stage08.3), Stage07 56/56 PASS; Chromium Stage02 90/90, Stage06 18/18, Stage07 39/39; services.py coverage 89.6%. Изолированные PostgreSQL 17 migrations/consistency PASS.
+- Промежуточный FAIL одного security-assert Stage05 (`<h1>`) воспроизведён и исправлен: в публичном профиле стандартный `<h1>` с внутренним `<bdi dir=auto>`; snapshot приватных данных и пороги старых тестов не менялись.
+- Ранее Stage08.2 успешно проверен: [CI #43613466892](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43613466892), 588/588 PASS на SHA `852c9d1ea2d9cc989369a3178df65875f94bc64b`.
+- Текущий коммит меняет только документацию, автоматический GitHub CI на новом exact SHA требуется проверить отдельно. Единый PR #17 остаётся Draft к Stage07; PR #16 тоже Draft и NOT_MERGED. Без deployment, production, Codex Cloud. 08.4 не начинать без команды владельца.
