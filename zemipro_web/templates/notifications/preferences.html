@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Настройки уведомлений' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="container" style="max-width:720px;padding:24px">
+  <h1>{% trans 'Настройки уведомлений' %}</h1>
+  <p>{% trans 'Обязательные уведомления безопасности не отключаются.' %}</p>
+  <form method="post" style="display:grid;gap:12px">
+    {% csrf_token %}
+    <label><input type="checkbox" name="in_app_optional" {% if not pref or pref.in_app_optional %}checked{% endif %}>
+      {% trans 'Необязательные уведомления внутри сайта' %}</label>
+    <label><input type="checkbox" name="email_optional" {% if pref.email_optional %}checked{% endif %}
+      {% if not email_verified %}disabled{% endif %}>
+      {% trans 'Необязательные уведомления по подтверждённому email' %}</label>
+    {% if not email_verified %}<p>{% trans 'Для email требуется подтверждённый адрес.' %}</p>{% endif %}
+    <button type="submit" class="btn btn--primary">{% trans 'Сохранить' %}</button>
+  </form>
+</section>
+{% endblock %}
