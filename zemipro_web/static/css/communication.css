@@ -1,0 +1,152 @@
+/* Stage 08.5: communication, notifications, feedback and moderation surfaces.
+ * Loaded only by templates/pages/communication_base.html. All domain guards
+ * remain server-side; no user-provided content rendered by CSS/JS. */
+.comm-page {padding-block:clamp(18px,4vw,48px)}
+.comm-container {width:100%;max-width:970px;margin-inline:auto;min-width:0}
+.comm-container--narrow {max-width:780px}
+.comm-page-header {padding-block:clamp(22px,4vw,42px)}
+.comm-page-header h1 {margin-block:7px 12px}
+.comm-eyebrow {font-size:.78rem;font-weight:800;color:var(--ui-primary);letter-spacing:.02em}
+.comm-page-header p {max-width:72ch;color:var(--ui-muted);line-height:1.55}
+.comm-shell {min-width:0}
+.comm-stack {display:grid;gap:16px}
+.comm-panel {
+    background:var(--ui-surface);border:1px solid var(--ui-border);
+    box-shadow:var(--ui-shadow);border-radius:var(--ui-radius-lg);
+    padding:clamp(16px,3vw,28px);min-width:0
+}
+.comm-panel h2 {font-size:1.2rem;margin-block:0 15px;line-height:1.35}
+.comm-panel p {line-height:1.6;overflow-wrap:anywhere}
+.comm-toolbar {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-block:12px 20px}
+.comm-toolbar a {font-weight:700}
+.comm-toolbar .btn {white-space:normal}
+.comm-toolbar form {margin:0}
+.comm-list {list-style:none;padding:0;margin:0;display:grid;gap:13px}
+.comm-list > li {min-width:0}
+.comm-link-card {
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:16px 18px;border:1px solid var(--ui-border);border-radius:12px;
+    background:#fff;color:var(--ui-ink);box-shadow:0 3px 12px rgb(23 40 63 / 4%);
+    text-decoration:none;min-height:64px
+}
+.comm-link-card:hover {border-color:var(--ui-primary);background:var(--ui-soft);text-decoration:none}
+.comm-link-card__hint {display:block;color:var(--ui-muted);font-size:.86rem;margin-block-start:5px}
+.comm-help {padding:12px 16px;background:#eef5fd;border:1px solid #c6daf0;border-radius:10px;color:#2c537b;font-size:.87rem;line-height:1.6}
+.comm-help--warning {background:#fff7e9;color:#77501a;border-color:#e5d1aa}
+.comm-empty {padding:26px;border:1px dashed var(--ui-border);border-radius:12px;background:#fff}
+.comm-chat-window {
+    min-height:185px;max-height:min(65vh,680px);overflow-y:auto;
+    border:1px solid var(--ui-border);border-radius:14px;background:#f5f8fc;
+    padding:clamp(10px,2vw,16px);overscroll-behavior:contain
+}
+.comm-chat-log {list-style:none;padding:0;margin:0;display:grid;gap:13px;min-width:0}
+.comm-message {padding:14px;background:#fff;border:1px solid #d8e3ef;border-radius:14px;box-shadow:0 2px 10px rgb(23 40 63 / 3%);overflow-wrap:anywhere;min-width:0;max-width:93%}
+.comm-message--mine {margin-inline-start:auto;background:#e7f1ff;border-color:#bed4f1}
+.comm-message__meta {display:flex;gap:7px;align-items:center;flex-wrap:wrap;color:#455d79;font-size:.78rem;margin-block-end:9px}
+.comm-message__body {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:plaintext;line-height:1.65}
+.comm-message__attachments {display:flex;flex-wrap:wrap;gap:10px;margin-block-start:10px}
+.comm-message__attachments a {display:inline-flex;border-radius:8px}
+.comm-message__attachments img {display:block;width:160px;max-width:100%;height:118px;object-fit:contain;border:1px solid #cbd8e7;border-radius:8px;background:#fff}
+.comm-message__actions {margin-block-start:12px;display:grid;gap:10px;font-size:.86rem}
+.comm-message__actions details {border:1px solid var(--ui-border);background:#fff;border-radius:8px;padding:8px 11px;min-width:0}
+.comm-message__actions summary {font-weight:700;cursor:pointer;color:var(--ui-primary)}
+.comm-message__actions form {display:grid;gap:9px;margin-block-start:10px;min-width:0}
+.comm-message__actions label {display:flex;flex-direction:column;gap:5px;line-height:1.5}
+.comm-message__actions label.comm-consent {flex-direction:row;align-items:start}
+.comm-message__actions input[type=checkbox] {width:18px;height:18px;flex:none;margin-block-start:4px}
+.comm-message__actions select {font:inherit;min-height:44px;max-width:100%;border:1px solid #8fa2b8;border-radius:8px;padding:7px;background:#fff}
+.comm-message__actions input[type=file] {max-width:100%;min-width:0;font:inherit}
+.comm-message__actions .btn {width:fit-content;max-width:100%}
+.comm-report-link {display:inline-flex;align-self:start;padding:5px 0;color:#8e3143;font-weight:700;font-size:.83rem}
+.comm-chat-pager {display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-block:16px}
+.comm-chat-pager a {font-weight:700}
+.comm-chat-form {display:grid;gap:11px;margin-block-start:20px}
+.comm-chat-form label {font-weight:700}
+.comm-chat-form textarea {width:100%;max-width:100%;box-sizing:border-box;padding:12px;border:1px solid #90a4bd;border-radius:10px;font:inherit;line-height:1.5}
+.comm-chat-form .btn {justify-self:start;min-width:125px}
+.comm-poll-status {font-size:.81rem;color:var(--ui-muted);min-height:1.4em}
+.comm-mark-read form {display:inline-flex}
+.comm-mark-read .btn {max-width:100%}
+.comm-translation {white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:plaintext;background:#f3f7fb;border:1px solid var(--ui-border);border-radius:10px;padding:18px}
+.comm-translation:lang(he) {direction:rtl}
+.comm-disclosure {margin-block:18px;border:1px solid var(--ui-border);border-radius:9px;padding:12px}
+.comm-disclosure summary {font-weight:700;color:var(--ui-primary);cursor:pointer}
+.comm-disclosure p {white-space:pre-wrap;overflow-wrap:anywhere}
+.comm-notification {border:1px solid var(--ui-border);background:#fff;border-radius:12px;overflow:hidden}
+.comm-notification--unread {border-inline-start:4px solid var(--ui-primary);background:#f3f8ff}
+.comm-notification__head {display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;align-items:start;padding:14px 18px;border-block-end:1px solid #e1e8ef}
+.comm-notification__head strong {font-weight:750;overflow-wrap:anywhere}
+.comm-notification__time {font-size:.8rem;color:var(--ui-muted)}
+.comm-notification__body {padding:14px 18px;overflow-wrap:anywhere}
+.comm-notification__body p {margin:0;line-height:1.6}
+.comm-notification__actions {display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-block-start:12px}
+.comm-notification__actions form {margin:0}
+.comm-pagination {display:flex;justify-content:center;gap:10px;align-items:center;flex-wrap:wrap;margin-block:23px}
+.comm-pagination .btn {white-space:normal}
+.comm-switch {display:flex;gap:12px;align-items:start;line-height:1.6;min-width:0}
+.comm-switch input {margin-block-start:4px;width:18px;height:18px;flex:none}
+.comm-switch--disabled {color:var(--ui-muted)}
+.comm-form {display:grid;gap:18px}
+.comm-form__field {display:grid;gap:7px;min-width:0}
+.comm-form__field label {font-weight:700}
+.comm-form__field textarea,.comm-form__field select {
+    width:100%;max-width:100%;box-sizing:border-box;min-height:44px;
+    border:1px solid #91a3b8;border-radius:8px;padding:10px;font:inherit;
+    background:#fff;color:var(--ui-ink)
+}
+.comm-form__field textarea {line-height:1.6}
+.comm-form__actions {display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.comm-form__actions .btn {max-width:100%}
+.comm-case-list {list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.comm-case {padding:18px;background:#fff;border:1px solid var(--ui-border);border-radius:12px;min-width:0}
+.comm-case__meta {font-size:.83rem;font-weight:700;color:var(--ui-muted);margin-block:0 10px}
+.comm-case__body {white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:plaintext;line-height:1.6}
+.comm-case__quote {border-inline-start:3px solid #789ab8;margin:12px 0;padding:8px 12px;background:#f4f8fc}
+.comm-case__actions {display:flex;gap:8px;flex-wrap:wrap;margin-block-start:12px}
+.comm-case__actions button {max-width:100%}
+.comm-case__actions .btn--danger {background:#922d3d;border-color:#922d3d;color:#fff}
+.comm-case__actions .btn--danger:hover {background:#762332}
+.comm-form__note {width:100%;max-width:100%;min-height:90px;box-sizing:border-box;border-radius:8px;padding:10px;border:1px solid #91a3b8;font:inherit}
+.comm-review-summary {background:#eef5fd;border:1px solid #c7ddf4;border-radius:10px;padding:14px 16px;color:#305475}
+.comm-review-summary p {margin:0;line-height:1.6}
+.comm-review-form .form__group {min-width:0}
+.comm-review-form .form__group :is(input,select,textarea) {max-width:100%}
+.comm-review-form .form__group textarea {width:100%;box-sizing:border-box}
+.comm-section-heading {margin-block:0 16px;font-size:1.25rem}
+@media(max-width:640px) {
+    .comm-chat-window {max-height:60vh}
+    .comm-message {max-width:100%}
+    .comm-chat-form .btn {width:100%}
+    .comm-form__actions .btn {flex:1 1 135px;text-align:center}
+    .comm-notification__actions .btn {white-space:normal}
+}
+@media(max-width:390px) {
+    .comm-panel {padding:14px}
+    .comm-message {padding:12px}
+    .comm-chat-window {padding:8px}
+    .comm-message__attachments img {width:120px;height:100px}
+    .comm-pagination .btn {max-width:100%}
+}
+@media(prefers-reduced-motion:reduce) {
+    .comm-link-card {transition:none}
+}
+
+/* Stage 08.6 — message/review/complaint reflow and readable focus states. */
+.comm-container,.comm-panel,.comm-message,.comm-notification,
+.comm-chat-window,.comm-case,.comm-review-form {min-inline-size:0;max-inline-size:100%}
+.comm-message__actions :where(form,details,select,input,textarea) {
+  min-inline-size:0;max-inline-size:100%
+}
+.comm-translate summary,.comm-disclosure summary {min-block-size:40px}
+.comm-case__actions button,.comm-form__actions button {min-block-size:44px}
+.comm-report-link {min-block-size:40px;align-items:center}
+.comm-message__attachments a {min-inline-size:0}
+.comm-notification__actions {min-width:0}
+.comm-notification__actions .btn {white-space:normal;max-inline-size:100%}
+.comm-notification__head time {unicode-bidi:isolate}
+.comm-case__meta bdi,.comm-notification__time bdi {unicode-bidi:isolate}
+@media(max-width:480px) {
+  .comm-form__actions,.comm-case__actions {align-items:stretch}
+  .comm-form__actions > *, .comm-case__actions button {flex:1 1 100%}
+  .comm-chat-form textarea {min-width:0}
+}

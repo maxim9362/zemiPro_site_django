@@ -222,6 +222,47 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      # Stage08.6 screens are new frontend coverage, independent from Stage02/06/07.
+      # Browser/fixtures use only the disposable CI PostgreSQL 17 service.
+      - name: Stage 08.6 mobile RTL keyboard accessibility smoke
+        env:
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8768 > /tmp/stage08-django-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage08_mobile_a11y_smoke.py
+
+      - name: Upload Stage 08.6 responsive screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage08-mobile-a11y-screenshots
+          path: zemipro_web/artifacts/stage08-mobile-a11y/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Stage08.7: real HTML/POST browser journeys on synthetic test DB only.
+      - name: Stage 08.7 UX and permission browser E2E
+        env:
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8769 > /tmp/stage08-e2e.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage08_ux_e2e.py
+
+      - name: Upload Stage 08.7 UX screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage08-ux-e2e-screenshots
+          path: zemipro_web/artifacts/stage08-ux-e2e/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Run Django suite with service coverage gate
         run: |
           python -m coverage run manage.py test

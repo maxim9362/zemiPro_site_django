@@ -1,33 +1,32 @@
-{% extends 'base.html' %}
+{% extends 'pages/public_base.html' %}
 {% load i18n %}
-
+{% get_current_language as current_language %}
 {% block title %}{{ service.localized_name }} — ZemiPro{% endblock %}
 {% block meta_description %}{{ service.localized_description }}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header public-page-header">
     <div class="container">
+        <p class="public-kicker">{% if current_language == 'he' %}שירותים באשדוד{% elif current_language == 'en' %}Services in Ashdod{% else %}Услуги в Ашдоде{% endif %}</p>
         <h1>{{ service.localized_name }}</h1>
         {% if service.localized_description %}<p>{{ service.localized_description }}</p>{% endif %}
     </div>
-</section>
-<section class="category-content">
-    <div class="container">
-        <div class="info-block">
-            <h2>
-                <a href="{% url 'catalog_i18n:category_detail' slug=category.slug %}">
-                    {{ category.localized_name }}
-                </a>
+</header>
+<section class="category-content public-content">
+    <div class="container public-stack">
+        <section class="public-panel">
+            <h2 class="public-panel__title">
+                <a href="{% url 'catalog_i18n:category_detail' slug=category.slug %}">{{ category.localized_name }}</a>
             </h2>
-            {% if category.localized_description %}
-            <p>{{ category.localized_description }}</p>
-            {% endif %}
-        </div>
-        <div class="cta-block">
-            <p>{% trans 'Создайте заявку и получите отклики от проверенных специалистов' %}</p>
-            <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">
-                {% trans 'Создать заявку' %}
-            </a>
+            {% if category.localized_description %}<p>{{ category.localized_description }}</p>{% endif %}
+        </section>
+        <div class="cta-block public-cta">
+            <h2>{% if current_language == 'he' %}צריכים שירות כזה באשדוד?{% elif current_language == 'en' %}Need this service in Ashdod?{% else %}Нужна эта услуга в Ашдоде?{% endif %}</h2>
+            <p>{% if current_language == 'he' %}בדקו אילו בעלי מקצוע מציינים את השירות הזה בפרופיל, או פרסמו בקשה וקבלו הצעות.{% elif current_language == 'en' %}See which published specialists list this service, or post a request and receive offers.{% else %}Посмотрите мастеров, указавших эту услугу в анкете, или создайте заявку и получите предложения.{% endif %}</p>
+            <div class="public-actions">
+                <a class="btn btn--primary" href="{% url 'catalog_i18n:worker_directory' %}?service={{ service.pk }}">{% if current_language == 'he' %}חיפוש לפי שירות{% elif current_language == 'en' %}Search this service{% else %}Найти по услуге{% endif %}</a>
+                <a class="btn btn--secondary" href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
+            </div>
         </div>
     </div>
 </section>

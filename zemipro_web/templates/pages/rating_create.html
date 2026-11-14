@@ -1,53 +1,41 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
-
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Отзыв на заказ' %} #{{ order.pk }} — ZemiPro{% endblock %}
-
 {% block content %}
-<section class="page-header">
-    <div class="container">
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <p class="comm-eyebrow">{% if current_language == 'he' %}עבודה שהושלמה{% elif current_language == 'en' %}Completed request{% else %}Завершённая заявка{% endif %}</p>
         <h1>{% trans 'Оставить отзыв мастеру' %}</h1>
-        <p>{% trans 'Заказ' %} #{{ order.pk }} · {{ order.category.localized_name }} · {{ order.worker }}</p>
+        <p>{% trans 'Заказ' %} <bdi dir="ltr">#{{ order.pk }}</bdi> · {{ order.category.localized_name }}</p>
     </div>
-</section>
-
-<section class="order-form">
-    <div class="container">
-        <form method="post" class="form">
-            {% csrf_token %}
-
-            {% if form.non_field_errors %}
-            <div class="form__errors">
-                {% for error in form.non_field_errors %}
-                <p class="form__error">{{ error }}</p>
-                {% endfor %}
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow comm-stack">
+        <div class="comm-panel">
+            <div class="comm-review-summary" role="note">
+                <p>{% if current_language == 'he' %}שתפו את החוויה שלכם בצורה עניינית. ביקורות משתמשים מוצגות לצד פרופילי בעלי המקצוע; הימנעו מפרטי קשר אישיים.{% elif current_language == 'en' %}Describe your experience accurately. User reviews appear alongside specialist profiles; avoid personal contact details.{% else %}Расскажите о своём опыте. Отзывы пользователей отображаются рядом с анкетами мастеров; не публикуйте личные контакты.{% endif %}</p>
             </div>
-            {% endif %}
-
-            <div class="form__group">
-                <label for="id_rating" class="form__label">{% trans 'Оценка (от 1 до 5) *' %}</label>
-                {{ form.rating }}
-                {% if form.rating.errors %}
-                <span class="form__error">{{ form.rating.errors.0 }}</span>
-                {% endif %}
-            </div>
-
-            <div class="form__group">
-                <label for="id_review_text" class="form__label">{% trans 'Текст отзыва' %}</label>
-                {{ form.review_text }}
-                {% if form.review_text.errors %}
-                <span class="form__error">{{ form.review_text.errors.0 }}</span>
-                {% endif %}
-                <span class="form__hint">{% trans 'Необязательно. Расскажите о качестве работы.' %}</span>
-            </div>
-
-            <button type="submit" class="btn btn--primary btn--lg">
-                {% trans 'Отправить отзыв' %}
-            </button>
-            <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-left: 12px;">
-                {% trans 'Назад' %}
-            </a>
-        </form>
+            <form method="post" class="form comm-form comm-review-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="form__errors ui-alert ui-alert--error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+                <div class="form__group">
+                    <label class="form__label" for="id_rating">{% trans 'Оценка (от 1 до 5) *' %}</label>
+                    {{ form.rating }}
+                    {% for error in form.rating.errors %}<p class="form__error" role="alert">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="form__group">
+                    <label class="form__label" for="id_review_text">{% trans 'Текст отзыва' %}</label>
+                    {{ form.review_text }}
+                    <p class="form__hint">{% trans 'Необязательно. Расскажите о качестве работы.' %}</p>
+                    {% for error in form.review_text.errors %}<p class="form__error" role="alert">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="comm-form__actions">
+                    <button type="submit" class="btn btn--primary">{% trans 'Отправить отзыв' %}</button>
+                    <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary">{% trans 'Назад' %}</a>
+                </div>
+            </form>
+        </div>
     </div>
 </section>
 {% endblock %}

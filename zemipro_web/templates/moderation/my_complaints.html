@@ -1,20 +1,37 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Мои жалобы' %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="container" style="max-width:760px;padding:24px">
-  <h1>{% trans 'Мои жалобы' %}</h1>
-  <ol style="display:grid;gap:12px;padding-inline-start:20px">
-    {% for case in cases %}
-    <li style="border:1px solid #cbd5e1;padding:12px;border-radius:12px">
-      <p>#{{ case.pk }} · {% trans case.get_reason_display %} · {% trans case.get_status_display %}</p>
-      {% if case.status != 'pending' %}
-        <a href="{% url 'moderation:appeal' pk=case.pk %}">{% trans 'Апелляция' %}</a>
-      {% endif %}
-    </li>
-    {% empty %}
-    <li>{% trans 'У вас пока нет жалоб.' %}</li>
-    {% endfor %}
-  </ol>
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <h1>{% trans 'Мои жалобы' %}</h1>
+        <p>{% if current_language == 'he' %}מעקב אחר תלונות הקשורות לחשבונכם. אפשר לבקש ערעור כאשר החלטה כבר התקבלה.{% elif current_language == 'en' %}Track cases linked to your account. An appeal can be requested once a decision has been made.{% else %}Здесь отображаются жалобы, связанные с вашим аккаунтом. После решения можно обратиться с апелляцией.{% endif %}</p>
+    </div>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow">
+        <ol class="comm-case-list">
+            {% for case in cases %}
+            <li class="comm-case">
+                <p class="comm-case__meta">
+                    <bdi dir="ltr">#{{ case.pk }}</bdi> ·
+                    {% trans case.get_reason_display %} ·
+                    {% trans case.get_status_display %}
+                </p>
+                {% if case.status == 'pending' %}
+                <span class="ui-status ui-status--in_progress">{% trans 'На рассмотрении' %}</span>
+                {% else %}
+                <a class="btn btn--secondary btn--sm" href="{% url 'moderation:appeal' pk=case.pk %}">{% trans 'Апелляция' %}</a>
+                {% endif %}
+            </li>
+            {% empty %}
+            <li class="comm-empty" role="status">{% trans 'У вас пока нет жалоб.' %}</li>
+            {% endfor %}
+        </ol>
+        <div class="comm-toolbar">
+            <a class="btn btn--secondary" href="{% url 'marketplace:client_dashboard' %}">{% if current_language == 'he' %}חזרה לחשבון{% elif current_language == 'en' %}Back to account{% else %}Вернуться в кабинет{% endif %}</a>
+        </div>
+    </div>
 </section>
 {% endblock %}

@@ -1,20 +1,40 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Апелляция' %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="container" style="max-width:760px;padding:24px">
-  <h1>{% trans 'Апелляция по жалобе' %} #{{ complaint.pk }}</h1>
-  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
-  {% if complaint.appeal %}
-    <p>{% trans 'Апелляция уже подана.' %} {% if complaint.appeal.status == 'pending' %}{% trans 'На рассмотрении' %}{% elif complaint.appeal.status == 'accepted' %}{% trans 'Апелляция удовлетворена' %}{% else %}{% trans 'Апелляция отклонена' %}{% endif %}</p>
-  {% else %}
-    <form method="post" style="display:grid;gap:12px">
-      {% csrf_token %}
-      <label for="appeal-reason">{% trans 'Причина апелляции' %}</label>
-      <textarea id="appeal-reason" name="reason" required maxlength="2000" rows="5" dir="auto"></textarea>
-      <button type="submit" class="btn btn--primary">{% trans 'Отправить' %}</button>
-    </form>
-  {% endif %}
-  <p><a href="{% url 'moderation:my_complaints' %}">{% trans 'Мои жалобы' %}</a></p>
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <h1>{% trans 'Апелляция по жалобе' %} <bdi dir="ltr">#{{ complaint.pk }}</bdi></h1>
+        <p>{% if current_language == 'he' %}אפשר להגיש ערעור על החלטה שכבר התקבלה. הבדיקה אינה משנה אוטומטית את ההחלטה המקורית.{% elif current_language == 'en' %}You may appeal an existing decision. Filing an appeal does not automatically reverse the original decision.{% else %}Вы можете обжаловать принятое решение. Подача апелляции не отменяет первоначальное решение автоматически.{% endif %}</p>
+    </div>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow comm-stack">
+        {% if error %}<div class="ui-alert ui-alert--error" role="alert"><p>{{ error }}</p></div>{% endif %}
+        <div class="comm-panel">
+            {% if complaint.appeal %}
+            <div class="ui-alert ui-alert--info" role="status">
+                <p>{% trans 'Апелляция уже подана.' %}</p>
+                {% if complaint.appeal.status == 'pending' %}<p>{% trans 'На рассмотрении' %}</p>
+                {% elif complaint.appeal.status == 'accepted' %}<p>{% trans 'Апелляция удовлетворена' %}</p>
+                {% else %}<p>{% trans 'Апелляция отклонена' %}</p>{% endif %}
+            </div>
+            {% else %}
+            <form method="post" class="comm-form">
+                {% csrf_token %}
+                <div class="comm-form__field">
+                    <label for="appeal-reason">{% trans 'Причина апелляции' %}</label>
+                    <textarea id="appeal-reason" name="reason" required maxlength="2000" rows="5" dir="auto">{{ request.POST.reason|default:'' }}</textarea>
+                </div>
+                <div class="comm-form__actions">
+                    <button type="submit" class="btn btn--primary">{% if current_language == 'he' %}שליחה{% elif current_language == 'en' %}Submit{% else %}Отправить{% endif %}</button>
+                    <a class="btn btn--secondary" href="{% url 'moderation:my_complaints' %}">{% trans 'Мои жалобы' %}</a>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+        {% if complaint.appeal %}<a href="{% url 'moderation:my_complaints' %}">{% trans 'Мои жалобы' %}</a>{% endif %}
+    </div>
 </section>
 {% endblock %}

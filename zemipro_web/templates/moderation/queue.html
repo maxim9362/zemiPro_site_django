@@ -1,44 +1,71 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Очередь модерации' %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="container" style="max-width:880px;padding:24px">
-  <h1>{% trans 'Очередь модерации' %}</h1>
-  <h2>{% trans 'Жалобы' %}</h2>
-  <ol>
-  {% for case in complaints %}
-    <li style="border:1px solid #cbd5e1;padding:12px;margin-bottom:12px;overflow-wrap:anywhere">
-      <p>#{{ case.pk }} · {% trans case.get_reason_display %} · {{ case.created_at }}</p>
-      <p dir="auto">{{ case.message }}</p>
-      {% if case.target_message %}
-      <blockquote style="border-inline-start:3px solid #64748b;padding-inline-start:12px">
-        <strong>{% trans 'Сообщение, на которое пожаловались' %}:</strong>
-        <p dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ case.target_message.body }}</p>
-      </blockquote>
-      {% endif %}
-      <form method="post" action="{% url 'moderation:decision' pk=case.pk %}">
-        {% csrf_token %}
-        <label>{% trans 'Примечание модератора' %}
-        <textarea name="note" maxlength="2000" rows="2"></textarea></label>
-        <button name="action" value="resolve" type="submit">{% trans 'Рассмотреть' %}</button>
-        <button name="action" value="dismiss" type="submit">{% trans 'Отклонить' %}</button>
-      </form>
-    </li>
-  {% empty %}<li>{% trans 'Нет ожидающих жалоб.' %}</li>{% endfor %}
-  </ol>
-  <h2>{% trans 'Апелляции' %}</h2>
-  <ol>
-  {% for appeal in appeals %}
-    <li style="border:1px solid #cbd5e1;padding:12px;margin-bottom:12px;overflow-wrap:anywhere">
-      <p>#{{ appeal.pk }} · {% trans 'Жалоба' %} #{{ appeal.complaint_id }}</p>
-      <p dir="auto">{{ appeal.reason }}</p>
-      <form method="post" action="{% url 'moderation:appeal_decision' pk=appeal.pk %}">
-        {% csrf_token %}
-        <button name="action" value="accept" type="submit">{% trans 'Удовлетворить' %}</button>
-        <button name="action" value="reject" type="submit">{% trans 'Отклонить' %}</button>
-      </form>
-    </li>
-  {% empty %}<li>{% trans 'Нет ожидающих апелляций.' %}</li>{% endfor %}
-  </ol>
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container">
+        <p class="comm-eyebrow">{% if current_language == 'he' %}אזור בקרה מוגבל{% elif current_language == 'en' %}Restricted moderation{% else %}Закрытая модерация{% endif %}</p>
+        <h1>{% trans 'Очередь модерации' %}</h1>
+        <p>{% if current_language == 'he' %}כל החלטה נשמרת בהיסטוריית הבקרה. יש לבדוק את פרטי המקרה לפני בחירה בפעולה.{% elif current_language == 'en' %}Moderator decisions are recorded in the audit history. Review the evidence before deciding.{% else %}Решения модератора сохраняются в истории действий. Проверьте материалы до выбора решения.{% endif %}</p>
+    </div>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-stack">
+        <nav class="comm-toolbar" aria-label="{% trans 'Очередь модерации' %}">
+            <a href="#pending-complaints">{% trans 'Жалобы' %}</a>
+            <a href="#pending-appeals">{% trans 'Апелляции' %}</a>
+        </nav>
+        <section class="comm-panel" aria-labelledby="pending-complaints">
+            <h2 id="pending-complaints">{% trans 'Жалобы' %} <bdi dir="ltr">({{ complaints|length }})</bdi></h2>
+            <ol class="comm-case-list">
+                {% for case in complaints %}
+                <li class="comm-case">
+                    <p class="comm-case__meta">
+                        <bdi dir="ltr">#{{ case.pk }}</bdi> · {% trans case.get_reason_display %} ·
+                        <time datetime="{{ case.created_at|date:'c' }}">{{ case.created_at|date:"d.m.Y H:i" }}</time>
+                    </p>
+                    <p class="comm-case__body" dir="auto">{{ case.message }}</p>
+                    {% if case.target_message %}
+                    <blockquote class="comm-case__quote">
+                        <strong>{% trans 'Сообщение, на которое пожаловались' %}:</strong>
+                        <p class="comm-case__body" dir="auto">{{ case.target_message.body }}</p>
+                    </blockquote>
+                    {% endif %}
+                    <form method="post" class="comm-form" action="{% url 'moderation:decision' pk=case.pk %}">
+                        {% csrf_token %}
+                        <label for="moderator-note-{{ case.pk }}">{% trans 'Примечание модератора' %}</label>
+                        <textarea class="comm-form__note" id="moderator-note-{{ case.pk }}"
+                                  name="note" maxlength="2000" rows="2" dir="auto"></textarea>
+                        <div class="comm-case__actions">
+                            <button class="btn btn--primary" name="action" value="resolve" type="submit">{% trans 'Рассмотреть' %}</button>
+                            <button class="btn btn--secondary" name="action" value="dismiss" type="submit">{% if current_language == 'he' %}דחייה{% elif current_language == 'en' %}Dismiss{% else %}Отклонить{% endif %}</button>
+                        </div>
+                    </form>
+                </li>
+                {% empty %}<li class="comm-empty" role="status">{% trans 'Нет ожидающих жалоб.' %}</li>{% endfor %}
+            </ol>
+        </section>
+        <section class="comm-panel" aria-labelledby="pending-appeals">
+            <h2 id="pending-appeals">{% trans 'Апелляции' %} <bdi dir="ltr">({{ appeals|length }})</bdi></h2>
+            <ol class="comm-case-list">
+                {% for appeal in appeals %}
+                <li class="comm-case">
+                    <p class="comm-case__meta">
+                        <bdi dir="ltr">#{{ appeal.pk }}</bdi> · {% trans 'Жалоба' %} <bdi dir="ltr">#{{ appeal.complaint_id }}</bdi>
+                    </p>
+                    <p class="comm-case__body" dir="auto">{{ appeal.reason }}</p>
+                    <form method="post" class="comm-form" action="{% url 'moderation:appeal_decision' pk=appeal.pk %}">
+                        {% csrf_token %}
+                        <div class="comm-case__actions">
+                            <button class="btn btn--primary" name="action" value="accept" type="submit">{% trans 'Удовлетворить' %}</button>
+                            <button class="btn btn--secondary" name="action" value="reject" type="submit">{% if current_language == 'he' %}דחייה{% elif current_language == 'en' %}Dismiss{% else %}Отклонить{% endif %}</button>
+                        </div>
+                    </form>
+                </li>
+                {% empty %}<li class="comm-empty" role="status">{% trans 'Нет ожидающих апелляций.' %}</li>{% endfor %}
+            </ol>
+        </section>
+    </div>
 </section>
 {% endblock %}

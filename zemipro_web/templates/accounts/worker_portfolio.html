@@ -1,20 +1,20 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
 
 {% block title %}{% trans 'Портфолио мастера' %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="page-header">
+<header class="page-header app-page-header">
     <div class="container">
         <h1>{% trans 'Портфолио мастера' %}</h1>
         <p>{% trans 'До 10 фотографий, каждая не более 5 МБ. JPEG, PNG или WebP.' %}</p>
         <p>{% trans 'Фото по умолчанию закрыто. Публикация требует вашего разрешения и опубликованной анкеты.' %}</p>
     </div>
-</section>
-<section class="order-form">
-    <div class="container" style="max-width:760px">
+</header>
+<section class="order-form app-page">
+    <div class="container app-medium app-stack">
         <p><a href="{% url 'accounts:worker_profile' %}">{% trans 'Вернуться к анкете' %}</a></p>
-        {% if messages %}{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}{% endif %}
-        <h2>{% trans 'Добавить фотографию' %}</h2>
+        {% include 'components/flash_messages.html' %}
+        <h2 class="app-panel__heading">{% trans 'Добавить фотографию' %}</h2>
         <form method="post" enctype="multipart/form-data" action="{% url 'accounts:worker_portfolio_add' %}" class="form">
             {% csrf_token %}
             {{ upload_form.non_field_errors }}
@@ -40,9 +40,10 @@
             <button type="submit" class="btn btn--primary">{% trans 'Загрузить фотографию' %}</button>
         </form>
 
-        <h2 style="margin-top:32px">{% trans 'Мои фотографии' %}</h2>
+        <h2 class="app-panel__heading">{% trans 'Мои фотографии' %}</h2>
+        <div class="app-portfolio-list">
         {% for photo in photos %}
-        <div class="order-card" style="margin-bottom:20px;padding:16px">
+        <div class="app-portfolio-item">
             <img src="{% url 'accounts:worker_portfolio_image' pk=photo.pk %}"
                  alt="{% trans 'Пример работы' %}" loading="lazy"
                  style="max-width:100%;max-height:240px;object-fit:contain;">
@@ -68,8 +69,9 @@
             </form>
         </div>
         {% empty %}
-        <p>{% trans 'В портфолио пока нет фотографий.' %}</p>
+        <p class="empty-state">{% trans 'В портфолио пока нет фотографий.' %}</p>
         {% endfor %}
+        </div>
     </div>
 </section>
 {% endblock %}

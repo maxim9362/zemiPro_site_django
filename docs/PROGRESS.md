@@ -1162,3 +1162,81 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
   описания PR: `Post "https://api.github.com/graphql": Forbidden`; описание
   подготовлено вне репозитория. Технический финальный отчёт должен отдельно
   подтвердить Actions на последнем SHA и этот оставшийся внешний блокер.
+
+## 2026-11-14 — Stage 08.1: UI inventory and UX map
+
+- **DOC_IMPLEMENTED / SOURCE_VERIFIED / OWNER_APPROVAL_PENDING.** Working branch `stage-08-frontend` branched from verified Stage07 commit `8ab5839f4c633dd58f13bb84e6417b8ef11abc72`, while PR #16 remains `OPEN / DRAFT / NOT_MERGED` and `main` remained `576ef639e1b5944e333ac2829d47e16f51aa82a0` at branching.
+- Inventoried **47 Django HTML templates**, existing routes/views, roles, forms and scenario states; proposed role-aware navigation and 08.2–08.7 UX/E2E scope in [STAGE_08_UX_AUDIT.md](STAGE_08_UX_AUDIT.md).
+- Browser-visible `zemipro.co.il` is legacy content advertising Telegram and multiple regions; it is **not** proof of the Django frontend. Ashdod-only migration and production switch remain separately gated in Stage 09.
+- Findings: confusing Ashdod/address copy; busy wrapping navbar; inline styles; incomplete distinct status styles; chat polling lacks message actions provided on SSR; form/error/a11y inconsistency; notification deep-link and moderation return UX. Source-only checks: **6/6 PASS, 0 FAIL**. **Django/Playwright/device tests NOT RUN in 08.1**; no changed executable code.
+- Changes: documentation only (`docs/STAGE_08_UX_AUDIT.md`, `docs/ROADMAP.md`, `docs/PROGRESS.md`). No production, deployment, migrations, merge, or changes in Stage07 branch/main. Next step: owner approval and explicit command before 08.2.
+
+## 2026-11-14 — Stage 08.2: shared Django frontend design system
+
+- **IMPLEMENTED / CI_PENDING:** единые CSS tokens и mobile role-aware navigation, без новых зависимостей и API.
+- CSS: static/css/design-system.css (не удаляя существующий style.css); JS: static/js/navigation.js (Escape, focus, no-JS fallback).
+- Компоненты Django: site_navigation, service_card, worker_card, form_field, flash_messages, empty_state, status_badge. Интеграции: home/categories/directory, login/register, dashboards, order_detail.
+- Ограничения privacy: в worker_card только публичная snapshot-проекция; старые CSRF, permissions, switches и RTL остаются на сервере. Пилот — только Ашдод.
+- Адресные тесты в core.tests.test_stage08_design_system, запуск в GitHub CI после push; точный результат подлежит подтверждению. Independent review через Codex — только после 08.7.
+- Описание: docs/STAGE_08_DESIGN_SYSTEM.md; PR #17 остаётся Draft, Stage 07 PR #16 не объединён. Production не трогали, к 08.3 не переходили.
+
+## 2026-11-14 — Stage 08.3: Ashdod-only public pages
+
+- **IMPLEMENTED / CI_PENDING:** реальная переработка главной, каталога/разделов/услуг, городских/категорийных страниц, поиска мастеров и публичного профиля. Новый адаптивный CSS загружается только на публичных страницах через public_base, сохраняется Stage08.2 design system.
+- Главная: поиск или создание заявки, честная география Ашдод, нет требования публиковать точный адрес/телефон и нет обещаний верификации мастеров/платежей.
+- Поиск: существующие Django GET-фильтры, нативное раскрытие дополнительных параметров, server-side сортировка/ошибки/пагинация; безопасные карточки из публичных snapshot без PII. Категории и услуги используют существующие активные записи, не фальсифицируют предложение мастеров.
+- Профиль: существующие приглашения/избранное/жалоба, портфолио и отзывы только из защищённых view/server-safe полей. Нет изменений backend, URLConf, моделей, миграций, production или Stage07.
+- Добавлены адресные синтетические Django-тесты `apps.marketplace.tests.test_stage08_public_ui`. Полный результат и exact SHA CI требуется подтвердить после push. Codex Cloud ревью только после 08.7.
+- [Stage 08.3 design and security contract](STAGE_08_PUBLIC_UI.md). Ветка и Draft PR #17 те же, PR #16 не объединён. Следующий 08.4 — только после разрешения.
+
+## 2026-11-14 — Stage 08.3: CI verified, public pages
+
+- **CODE_VERIFIED / CI_SUCCESS / OWNER_GATE_NEXT_08_4** на SHA `ec358f6b90abac730dfacaf60c9f1280e2ce1fd6`, [GitHub Actions #43616014325](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43616014325) `completed / success` 32/32.
+- **596/596 Django PASS** (включая 8 новых Stage08.3), Stage07 56/56 PASS; Chromium Stage02 90/90, Stage06 18/18, Stage07 39/39; services.py coverage 89.6%. Изолированные PostgreSQL 17 migrations/consistency PASS.
+- Промежуточный FAIL одного security-assert Stage05 (`<h1>`) воспроизведён и исправлен: в публичном профиле стандартный `<h1>` с внутренним `<bdi dir=auto>`; snapshot приватных данных и пороги старых тестов не менялись.
+- Ранее Stage08.2 успешно проверен: [CI #43613466892](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43613466892), 588/588 PASS на SHA `852c9d1ea2d9cc989369a3178df65875f94bc64b`.
+- Текущий коммит меняет только документацию, автоматический GitHub CI на новом exact SHA требуется проверить отдельно. Единый PR #17 остаётся Draft к Stage07; PR #16 тоже Draft и NOT_MERGED. Без deployment, production, Codex Cloud. 08.4 не начинать без команды владельца.
+
+## 2026-11-14 — Stage 08.4: authenticated flows, saved wizard back navigation
+
+- **CODE_VERIFIED / EXACT_CODE_SHA_CI_SUCCESS / STAGE08_IN_PROGRESS / OWNER_GATE_08_5.** Code SHA `450323d50b145dbd3647c77efa87c236649093c4`; [GitHub Actions #43619404743](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43619404743) `completed/success`, 32/32.
+- **Django 607/607 PASS**, включая новые Stage08.4 11/11: формы/ошибки, RU/EN/HE, кабинет/права, создание черновика, invalid step, валидный POST `action=back` сохраняет шаг через существующий сервис. Stage07 56/56; Chromium Stage02 90/90, Stage06 18/18, Stage07 39/39; coverage `marketplace/services.py` 89.6%. Изолированный PostgreSQL 17, migrations, Ruff/Compose/Django checks — PASS.
+- Новые UI файлы: `templates/pages/app_base.html`, `static/css/app-pages.css`, `static/js/wizard-navigation.js`; существующие аккаунт/кабинет/wizard/order/offer/agreement/invitation templates переведены на общую дизайн-систему. Без React/SPA и новых зависимостей.
+- Узкий backend UX adaptation: `apps/marketplace/views.py` допускает только для шагов 2–7 валидированный `action=back`, который вызывает прежний `save_order_wizard_step`, не меняя auth, статусы, правила публикации, квоты, фотографии, приватность, транзакции и права. При ошибке bound form сохраняется. Step8 публикация остаётся отдельным явным подтверждением. Фото-файл сам браузер не восстановит — требование повторного выбора сообщается пользователю.
+- Stage08.1 UX-карта считается принятой последовательным разрешением дальнейших подэтапов владельцем. Stage08.5 ещё не начат. Подробности [STAGE_08_ACCOUNTS_ORDERS_UI.md](STAGE_08_ACCOUNTS_ORDERS_UI.md).
+- Этот documentation-only commit после успешного code SHA требует отдельного exact-final-SHA GitHub CI. PR #17 Draft к Stage07; PR #16 Draft, не объединён. Никаких deployment/production/физических device acceptance или Codex Cloud review до Stage08.7.
+
+## 2026-11-14 — Stage 08.5: communication UI verified
+
+- **CODE_VERIFIED / EXACT_CODE_SHA_CI_SUCCESS / STAGE08_IN_PROGRESS / OWNER_GATE_08_6**. Кодовый SHA `f89c03e681dd92e0a21740a6e22fe2cd4d0c08ed`, [Django CI #43624240516](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43624240516) `completed / success`, 32/32.
+- **613/613 Django PASS**, включая 6/6 новых `core.tests.test_stage08_communication_ui`; Stage07 targeted 56/56; Chromium Stage02 90/90, Stage06 18/18, Stage07 39/39; coverage marketplace/services.py 89.6%. Isolated PostgreSQL 17 and production settings checks PASS.
+- Новые файлы `static/css/communication.css`, `templates/pages/communication_base.html`, `templates/components/chat_message_actions.html`, адресные тесты. Обновлены SSR chat/poll JS, translation page, notifications/preferences, complaint/appeal/moderation, review creation/reply block.
+- JS новые сообщения не отображают HTML: `textContent`, numeric message ID, CSRF-прототипы действий, private attached images только с same-origin URL. Статусы сети, no-JS fallback, read receipts и запрет принудительного скролла при чтении сохранены.
+- Узкий read-only backend UX-fix: `apps/marketplace/views.py` выдаёт `existing_rating` выбранному участнику-исполнителю только при `completed` и persisted account eligibility; сам сервис reply не менялся. Только публичная safe projection, не raw contact/PII. Отрицательные тесты outsider/blocked PASS.
+- Промежуточные FAIL устранены: i18n tag в chat templates, отсутствие review projection, неверное ожидание HTTP200 в тесте блокировки (старый middleware возвращает 403). Прежние серверные permission/security и тесты не ослаблены.
+- Подробности: [STAGE_08_COMMUNICATION_UI.md](STAGE_08_COMMUNICATION_UI.md). Документационный commit этой записи нуждается в повторном exact-SHA CI. 08.6 ещё не начат, Codex Cloud независимый аудит — только после 08.7. PR #17 Draft к PR #16 Draft, без merge/deploy/production.
+
+## 2026-11-14 — Stage 08.6: mobile RTL and accessibility code verified
+
+- **CODE_VERIFIED / EXACT_CODE_SHA_CI_SUCCESS / STAGE08_IN_PROGRESS / OWNER_GATE_08_7.** Кодовый SHA `212d45aa290c1cc7deb1b488999ea4e8ef67b9f2` и [GitHub CI #43628366099](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43628366099): **completed / SUCCESS 34/34**.
+- **624/624 Django PASS** (включая 11 новых Stage08.6 `core.tests.test_stage08_accessibility`); Stage07 targeted 56/56; Chrome Stage08.6 **213/213** экранов/масштабов/ролей/RTL/клавиатуры/no-JS, прежние Stage02 90/90, Stage06 18/18, Stage07 39/39. Coverage marketplace/services.py 89.6%; тестовые PostgreSQL 17, Ruff, Compose, migrations, production-settings PASS.
+- CSS/TPL: фокусные токены и цветовой контраст, reflow для 320/390/768/1440 и 200% текста, логические RTL свойства, aria-describedby/invalid для common fields и 8-step wizard, локализованные aria-label мобильного меню, Escape/focus restore, no-JS forms. Нет новых backend разрешений, миграций и сетевых зависимостей.
+- Проверка только синтетическая Chrome: не утверждать готовность реальных Android/iOS, VoiceOver/TalkBack, ручную визуальную приёмку или WCAG-сертификацию. Эти условия и независимый Codex Cloud audit выполняются в конце 08.7/перед релизом по отдельному гейту.
+- [Детальное описание и гейты](STAGE_08_MOBILE_ACCESSIBILITY.md). Текущий коммит обновляет только документацию; точный final SHA GitHub CI ещё проверяется отдельно. PR #17 Draft к Stage07 PR #16 Draft / NOT_MERGED, нет production/deployment. Stage08.7 не начат.
+
+
+## 2026-11-14 — Stage08 final Codex audit
+
+Исходный SHA ca965b3: 629/629 Django PASS. Подтверждены canonical budget и
+no-JS header fixes. Исправлены два новых MEDIUM: невозможность загрузить услуги
+без JS (native required блокировал POST) и потеря chat draft при quota rejection.
+Добавлены две Django-регрессии, расширен browser no-JS сценарий.
+Browser 90/18/39 + 213/47 PASS; полный final suite, независимое повторное review
+и exact-SHA Actions фиксируются в handoff. Документационный LOW исправлен.
+Подробности: [STAGE_08_FINAL_ACCEPTANCE.md](STAGE_08_FINAL_ACCEPTANCE.md).
+PR #17 остаётся Draft к Stage07; merge/deploy/production не выполнялись.
+
+Итог локальной приёмки: **631/631 Django, 13/13 targeted PASS**, failures/skips0;
+coverage89.6%. Отдельный reviewer после fixes: **INDEPENDENT_REVIEW_PASS**.
+Runtime после review не менялся. Последний SHA должен пройти remote CI,
+проверяемый в handoff; merge и deployment по-прежнему запрещены.

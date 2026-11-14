@@ -1,37 +1,35 @@
-{% extends 'base.html' %}
+{% extends 'pages/public_base.html' %}
 {% load i18n %}
-
+{% get_current_language as current_language %}
 {% block title %}{{ section.localized_name }} — ZemiPro{% endblock %}
 {% block meta_description %}{{ section.localized_description }}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header public-page-header">
     <div class="container">
+        <p class="public-kicker">{% if current_language == 'he' %}שירותים באשדוד{% elif current_language == 'en' %}Services in Ashdod{% else %}Услуги в Ашдоде{% endif %}</p>
         <h1>{{ section.localized_name }}</h1>
-        {% if section.localized_description %}
-        <p>{{ section.localized_description }}</p>
-        {% endif %}
+        {% if section.localized_description %}<p>{{ section.localized_description }}</p>{% endif %}
     </div>
-</section>
-<section class="categories-list">
-    <div class="container">
+</header>
+<section class="categories-list public-content">
+    <div class="container public-stack">
         {% if categories %}
-        <div class="categories-grid">
-            {% for category in categories %}
-            <a href="{% url 'catalog_i18n:category_detail' slug=category.slug %}" class="category-card">
-                <span class="category-card__emoji">{{ category.emoji }}</span>
-                <h2 class="category-card__title">{{ category.localized_name }}</h2>
-                <p class="category-card__desc">{{ category.localized_description }}</p>
-            </a>
-            {% endfor %}
-        </div>
+        <section class="public-panel" aria-label="{% trans 'Категории услуг' %}">
+            <h2 class="public-panel__title">{% trans 'Категории услуг' %}</h2>
+            <div class="categories-grid public-category-grid">
+                {% for category in categories %}
+                {% include 'components/service_card.html' with category=category %}
+                {% endfor %}
+            </div>
+        </section>
         {% else %}
-        <p class="empty-state">{% trans 'Категории пока не добавлены.' %}</p>
+        {% trans 'Категории пока не добавлены.' as empty_title %}
+        {% include 'components/empty_state.html' with empty_title=empty_title %}
         {% endif %}
-        <div class="cta-block">
-            <a href="{% url 'catalog_i18n:categories_list' %}" class="btn btn--secondary">
-                {% trans 'Категории услуг' %}
-            </a>
+        <div class="public-actions">
+            <a class="btn btn--secondary" href="{% url 'catalog_i18n:categories_list' %}">{% trans 'Категории услуг' %}</a>
+            <a class="btn btn--primary" href="{% url 'catalog_i18n:worker_directory' %}">{% if current_language == 'he' %}חיפוש בעלי מקצוע{% elif current_language == 'en' %}Search specialists{% else %}Поиск специалистов{% endif %}</a>
         </div>
     </div>
 </section>

@@ -1,19 +1,42 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Настройки уведомлений' %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="container" style="max-width:720px;padding:24px">
-  <h1>{% trans 'Настройки уведомлений' %}</h1>
-  <p>{% trans 'Обязательные уведомления безопасности не отключаются.' %}</p>
-  <form method="post" style="display:grid;gap:12px">
-    {% csrf_token %}
-    <label><input type="checkbox" name="in_app_optional" {% if not pref or pref.in_app_optional %}checked{% endif %}>
-      {% trans 'Необязательные уведомления внутри сайта' %}</label>
-    <label><input type="checkbox" name="email_optional" {% if pref.email_optional %}checked{% endif %}
-      {% if not email_verified %}disabled{% endif %}>
-      {% trans 'Необязательные уведомления по подтверждённому email' %}</label>
-    {% if not email_verified %}<p>{% trans 'Для email требуется подтверждённый адрес.' %}</p>{% endif %}
-    <button type="submit" class="btn btn--primary">{% trans 'Сохранить' %}</button>
-  </form>
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <h1>{% trans 'Настройки уведомлений' %}</h1>
+        <p>{% trans 'Обязательные уведомления безопасности не отключаются.' %}</p>
+    </div>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow comm-stack">
+        {% include 'components/flash_messages.html' %}
+        <div class="comm-panel">
+            <form method="post" class="comm-form">
+                {% csrf_token %}
+                <fieldset>
+                    <legend class="comm-section-heading">{% if current_language == 'he' %}הודעות לבחירה{% elif current_language == 'en' %}Optional notifications{% else %}Дополнительные уведомления{% endif %}</legend>
+                    <label class="comm-switch">
+                        <input type="checkbox" name="in_app_optional" {% if not pref or pref.in_app_optional %}checked{% endif %}>
+                        <span>{% trans 'Необязательные уведомления внутри сайта' %}</span>
+                    </label>
+                    <label class="comm-switch{% if not email_verified %} comm-switch--disabled{% endif %}">
+                        <input type="checkbox" name="email_optional" {% if pref.email_optional %}checked{% endif %}
+                               {% if not email_verified %}disabled{% endif %}>
+                        <span>{% trans 'Необязательные уведомления по подтверждённому email' %}</span>
+                    </label>
+                    {% if not email_verified %}
+                    <p class="comm-help comm-help--warning">{% trans 'Для email требуется подтверждённый адрес.' %}</p>
+                    {% endif %}
+                </fieldset>
+                <div class="comm-form__actions">
+                    <button type="submit" class="btn btn--primary">{% if current_language == 'he' %}שמירה{% elif current_language == 'en' %}Save{% else %}Сохранить{% endif %}</button>
+                    <a class="btn btn--secondary" href="{% url 'notifications:notification_list' %}">{% trans 'Уведомления' %}</a>
+                </div>
+            </form>
+        </div>
+        <p class="app-muted">{% if current_language == 'he' %}שינוי הבחירות כאן אינו משבית התראות חובה בנושא אבטחת החשבון.{% elif current_language == 'en' %}These choices do not disable mandatory account security notices.{% else %}Эти настройки не отключают обязательные уведомления безопасности аккаунта.{% endif %}</p>
+    </div>
 </section>
 {% endblock %}
