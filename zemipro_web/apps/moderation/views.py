@@ -90,7 +90,7 @@ def moderator_queue_view(request):
     _staff(request.user)
     return render(request, 'moderation/queue.html', {
         'complaints': Complaint.objects.select_related(
-            'target_order',
+            'target_order', 'target_message',
         ).filter(status=Complaint.Status.PENDING).order_by('created_at', 'pk')[:100],
         'appeals': ComplaintAppeal.objects.select_related('complaint').filter(
             status=ComplaintAppeal.Status.PENDING,

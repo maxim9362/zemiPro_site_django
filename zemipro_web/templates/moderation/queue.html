@@ -10,6 +10,12 @@
     <li style="border:1px solid #cbd5e1;padding:12px;margin-bottom:12px;overflow-wrap:anywhere">
       <p>#{{ case.pk }} · {{ case.get_reason_display }} · {{ case.created_at }}</p>
       <p dir="auto">{{ case.message }}</p>
+      {% if case.target_message %}
+      <blockquote style="border-inline-start:3px solid #64748b;padding-inline-start:12px">
+        <strong>{% trans 'Сообщение, на которое пожаловались' %}:</strong>
+        <p dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ case.target_message.body }}</p>
+      </blockquote>
+      {% endif %}
       <form method="post" action="{% url 'moderation:decision' pk=case.pk %}">
         {% csrf_token %}
         <label>{% trans 'Примечание модератора' %}
