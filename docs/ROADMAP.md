@@ -65,7 +65,7 @@
 | `05` | Поиск специалистов и приглашения | 6 | 04 | `NOT_STARTED / UNVERIFIED` | — |
 | `06` | Отклики, предложения и выбор исполнителя | 6 | 05 | `MERGED / CI_VERIFIED / DEPLOYMENT_PENDING` | [#13 — merged](https://github.com/maxim9362/zemiPro_site_django/pull/13) |
 | `07` | Чат, уведомления, репутация и модерация | 7 | 06 | `REVIEW / LOCALLY_VERIFIED / PR_METADATA_BLOCKED` | [#16 (Draft)](https://github.com/maxim9362/zemiPro_site_django/pull/16) |
-| `08` | Фронтенд и пользовательский интерфейс | 7 | 07 | `NOT_STARTED / UNVERIFIED` | — |
+| `08` | Фронтенд и пользовательский интерфейс | 7 | 07 | `REVIEW / INDEPENDENT_REVIEW_PASS` | #17 Draft |
 | `09` | Новые Django SEO-страницы и решения по legacy URL | 7 | 08 + инвентарь 00 | `NOT_STARTED / UNVERIFIED` | — |
 | `10` | Аналитика и автоматизированный маркетинг | 7 | 09 | `NOT_STARTED / UNVERIFIED` | — |
 | `11` | Версионированный API для приложений | 6 | 10 (контракты можно раньше) | `NOT_STARTED / UNVERIFIED` | — |
@@ -317,7 +317,7 @@ flowchart TD
 - **Результат:** единый, адаптивный веб-интерфейс для заказчика и специалиста на существующем Django.
 - **Гейт закрытия:** пользовательские сценарии и экраны RU/EN/HE, RTL, mobile и доступность проходят UX/E2E; разрешения сервера не ослаблены.
 - **Особое условие:** без новой параллельной фронтенд-платформы без ADR, без изменения доменной логики и без deployment.
-- **Статус:** `IN_PROGRESS / 08.6 CODE_VERIFIED / 08.7 NOT_STARTED` · **Ветка:** `stage-08-frontend` (от Stage 07 SHA `8ab5839f`, пока PR #16 Draft) · **Итоговый PR:** #17 Draft, к Stage 07
+- **Статус:** `REVIEW / 08.1–08.7 IMPLEMENTED / INDEPENDENT_REVIEW_PASS` · **Ветка:** `stage-08-frontend` (от Stage 07 SHA `8ab5839f`, пока PR #16 Draft) · **Итоговый PR:** #17 Draft, к Stage 07
 
 - [x] **08.1 — Аудит интерфейса и UX-карта.** `DOC_ACCEPTED / SOURCE_VERIFIED` — исходники, роли, экраны и состояния описаны в [STAGE_08_UX_AUDIT.md](STAGE_08_UX_AUDIT.md); дизайн и browser acceptance ещё не выполнены.
 - [x] **08.2 — Дизайн-система и общие компоненты.** `VERIFIED / CI SUCCESS (588/588)` — общие токены/компоненты/тесты в [STAGE_08_DESIGN_SYSTEM.md](STAGE_08_DESIGN_SYSTEM.md); дальнейшие экраны в 08.3–08.5.
@@ -325,9 +325,9 @@ flowchart TD
 - [x] **08.4 — Кабинеты и формы заказа.** `CODE_VERIFIED / CI SUCCESS (607/607)` — личные экраны, формы, предложения и сохранение при возврате: [STAGE_08_ACCOUNTS_ORDERS_UI.md](STAGE_08_ACCOUNTS_ORDERS_UI.md). Визуальные E2E и Codex — 08.7.
 - [x] **08.5 — Чат, уведомления, отзывы и жалобы в UI.** `CODE_VERIFIED / CI SUCCESS (613/613)` — защищённые коммуникации, уведомления, отзывы и модерация; условия и проверки [STAGE_08_COMMUNICATION_UI.md](STAGE_08_COMMUNICATION_UI.md). Полная визуальная приёмка — 08.7.
 - [x] **08.6 — Mobile-first, RU/EN/HE, RTL и доступность.** `CODE_VERIFIED / CI SUCCESS (624/624; Chrome 213/213)` — навигация, формы, увеличенный текст, RTL и responsive: [STAGE_08_MOBILE_ACCESSIBILITY.md](STAGE_08_MOBILE_ACCESSIBILITY.md). Полные UX/визуальные E2E и ручной скринридер — 08.7 и pre-release.
-- [ ] **08.7 — UX/E2E и визуальная приёмка.** Готово когда: основные сценарии и регрессии проверены; физические телефоны — отдельный pre-release гейт.
+- [x] **08.7 — UX/E2E и визуальная приёмка.** `LOCALLY_VERIFIED`: 47 browser milestones; [финальная приёмка](STAGE_08_FINAL_ACCEPTANCE.md). Готово когда: основные сценарии и регрессии проверены; физические телефоны — отдельный pre-release гейт.
 
-**Решение по этапу 08 (14.11.2026):** владелец последовательно разрешил 08.1–08.6 командами «Дальше». Ветка `stage-08-frontend` и единый Draft PR #17 зависят от Draft PR #16 этапа 07. Код 08.6 прошёл CI. **08.7 начинать только по новой команде; независимый Codex Cloud аудит — после 08.7, PR #16/#17 не сливать и production не менять.**
+**Решение по этапу 08 (14.11.2026):** владелец последовательно разрешил 08.1–08.6 командами «Дальше». Ветка `stage-08-frontend` и единый Draft PR #17 зависят от Draft PR #16 этапа 07. Код 08.6 прошёл CI. **По новой команде владельца выполнен финальный Codex аудит 08.1–08.7, исправлены ZP-08-003/004; итоговые CI/review — в финальной приёмке. PR #16/#17 не сливать и production не менять.**
 
 ### Этап 09. Новые Django SEO-страницы и безопасный переход со старых URL
 

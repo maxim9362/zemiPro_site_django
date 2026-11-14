@@ -54,7 +54,10 @@
                 {% if current_language == 'he' %}ללא JavaScript: בחרו קטגוריה ושלחו את הטופס כדי להציג את השירותים המתאימים; לאחר מכן בחרו שירות ושלחו שוב.
                 {% elif current_language == 'en' %}Without JavaScript, select a category and submit to display its services. Then select a service and submit again.
                 {% else %}Без JavaScript сначала выберите категорию и отправьте форму — появится список услуг. Затем выберите услугу и отправьте форму ещё раз.{% endif %}
-            </p></noscript>
+            </p>
+            <button type="submit" name="action" value="{% if is_new_wizard %}start{% else %}next{% endif %}" formnovalidate data-load-services class="btn btn--secondary">
+                {% if current_language == 'he' %}הצגת שירותים{% elif current_language == 'en' %}Load services{% else %}Показать услуги{% endif %}
+            </button></noscript>
             {% endif %}
             {% if step == 2 and not has_questions %}
                 <p>{{ copy.no_questions }}</p>

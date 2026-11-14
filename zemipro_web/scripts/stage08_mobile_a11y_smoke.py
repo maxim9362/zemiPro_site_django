@@ -287,6 +287,20 @@ def check_without_js(browser, lang, session_name, session_key):
         box = submit.bounding_box()
         if box is None or box["y"] < 0 or box["y"] + box["height"] > 568:
             raise AssertionError(f"{lang}: short no-JS viewport cannot reach wizard submit")
+        category = page.locator('#id_category option[value]:not([value=""])').first.get_attribute('value')
+        page.select_option('#id_category', category)
+        with page.expect_navigation(wait_until='domcontentloaded'):
+            page.locator('[data-load-services]').click()
+        services = page.locator('#id_subcategory option[value]:not([value=""])')
+        if not services.count():
+            raise AssertionError(f"{lang}: no-JS category POST did not load services")
+        page.select_option('#id_subcategory', services.first.get_attribute('value'))
+        with page.expect_navigation(wait_until='domcontentloaded'):
+            page.locator('.zw-panel form button.btn--primary').click()
+        from urllib.parse import urlparse
+        import re
+        if not re.fullmatch(r'/orders/[0-9]+/wizard/', urlparse(page.url).path):
+            raise AssertionError(f"{lang}: no-JS service selection did not create draft")
         OUT.mkdir(parents=True, exist_ok=True)
         page.screenshot(
             path=str(OUT / f"NOJS-320x568-{lang}-client-wizard.png"),

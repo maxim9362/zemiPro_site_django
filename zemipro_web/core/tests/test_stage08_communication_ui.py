@@ -223,3 +223,18 @@ class CommunicationPageTests(TestCase):
         appeal = self.client.get(reverse('moderation:appeal', args=[case.pk]))
         self.assertEqual(appeal.status_code, 200)
         self.assertContains(appeal, 'name="reason"')
+
+    def test_chat_rate_limit_keeps_unsent_text_escaped(self):
+        from apps.marketplace.models import Message
+        from django.utils.html import escape
+        for unused in range(15):
+            send_message(conversation_id=self.conversation.pk, actor=self.owner,
+                         body='Synthetic quota message', client_nonce=uuid4())
+        self.client.force_login(self.owner)
+        body = '</textarea><script>alert("synthetic")</script>'
+        response = self.client.post(reverse('marketplace:chat_thread', args=[self.conversation.pk]),
+                                    {'body': body, 'client_nonce': str(uuid4())})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, escape(body))
+        self.assertNotContains(response, body)
+        self.assertEqual(Message.objects.filter(conversation=self.conversation).count(), 15)

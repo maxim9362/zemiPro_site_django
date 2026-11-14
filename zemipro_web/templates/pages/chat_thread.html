@@ -87,7 +87,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="client_nonce" value="{{ nonce }}">
                 <label for="chat-body">{{ copy.message }}</label>
-                <textarea id="chat-body" name="body" rows="3" maxlength="5000" required dir="auto"></textarea>
+                <textarea id="chat-body" name="body" rows="3" maxlength="5000" required dir="auto">{{ request.POST.body }}</textarea>
                 <button class="btn btn--primary" type="submit">{{ copy.send }}</button>
             </form>
             {% else %}

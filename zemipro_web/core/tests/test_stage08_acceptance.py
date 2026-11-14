@@ -113,3 +113,20 @@ class VisualContractPagesTests(TestCase):
                     )
                 self.assertContains(res, 'role="note"')
                 self.assertContains(res, '<progress')
+
+    def test_no_js_service_reload_still_enforces_server_validation(self):
+        from apps.marketplace.models import Order
+        self.client.force_login(self.owner)
+        url = reverse('marketplace:order_wizard_start')
+        initial = self.client.get(url)
+        self.assertContains(initial, 'formnovalidate data-load-services')
+        response = self.client.post(url, {'category': self.cat.pk, 'action': 'start', 'token': initial.context['token']})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['form'].errors)
+        self.assertFalse(Order.objects.filter(client=self.owner).exists())
+        self.assertIn(self.service, response.context['form'].fields['subcategory'].queryset)
+        response = self.client.post(url, {'category': self.cat.pk,
+                                         'subcategory': self.service.pk, 'action': 'start',
+                                         'token': initial.context['token']})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.get(client=self.owner).status, 'draft')

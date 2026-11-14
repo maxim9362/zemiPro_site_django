@@ -1223,3 +1223,20 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 - CSS/TPL: фокусные токены и цветовой контраст, reflow для 320/390/768/1440 и 200% текста, логические RTL свойства, aria-describedby/invalid для common fields и 8-step wizard, локализованные aria-label мобильного меню, Escape/focus restore, no-JS forms. Нет новых backend разрешений, миграций и сетевых зависимостей.
 - Проверка только синтетическая Chrome: не утверждать готовность реальных Android/iOS, VoiceOver/TalkBack, ручную визуальную приёмку или WCAG-сертификацию. Эти условия и независимый Codex Cloud audit выполняются в конце 08.7/перед релизом по отдельному гейту.
 - [Детальное описание и гейты](STAGE_08_MOBILE_ACCESSIBILITY.md). Текущий коммит обновляет только документацию; точный final SHA GitHub CI ещё проверяется отдельно. PR #17 Draft к Stage07 PR #16 Draft / NOT_MERGED, нет production/deployment. Stage08.7 не начат.
+
+
+## 2026-11-14 — Stage08 final Codex audit
+
+Исходный SHA ca965b3: 629/629 Django PASS. Подтверждены canonical budget и
+no-JS header fixes. Исправлены два новых MEDIUM: невозможность загрузить услуги
+без JS (native required блокировал POST) и потеря chat draft при quota rejection.
+Добавлены две Django-регрессии, расширен browser no-JS сценарий.
+Browser 90/18/39 + 213/47 PASS; полный final suite, независимое повторное review
+и exact-SHA Actions фиксируются в handoff. Документационный LOW исправлен.
+Подробности: [STAGE_08_FINAL_ACCEPTANCE.md](STAGE_08_FINAL_ACCEPTANCE.md).
+PR #17 остаётся Draft к Stage07; merge/deploy/production не выполнялись.
+
+Итог локальной приёмки: **631/631 Django, 13/13 targeted PASS**, failures/skips0;
+coverage89.6%. Отдельный reviewer после fixes: **INDEPENDENT_REVIEW_PASS**.
+Runtime после review не менялся. Последний SHA должен пройти remote CI,
+проверяемый в handoff; merge и deployment по-прежнему запрещены.
