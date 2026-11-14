@@ -133,6 +133,38 @@ and notifications. It covers all six user-facing action types plus both
 agreement change transitions. The independent baseline FAIL remains in force
 until a new independent review on the final exact HEAD.
 
+## Second independent audit and remediation (2026-11-14)
+
+A new independent Codex run on `cabab49f` found two blocking MEDIUMs:
+
+- `ZP-06-004`: review POST committed Rating before a separate internal
+  notification; an injected notification failure left a persisted review
+  without the worker's notice. The PR now locks the Order row in the review
+  transaction, serializes duplicate POSTs and writes both records together.
+- `ZP-06-005`: selected-worker flash and owner page leaked a private User
+  name via `User.__str__`. Both now use the canonical persisted safe
+  `WorkerProfile.public_display_name` or a neutral fallback; the worker
+  account's private username is never a display fallback.
+
+Codex tested a separate local patch (529/529), but it was not published or
+accessible for literal import from the ChatGPT GitHub session. Equivalent
+changes and fresh synthetic rollback/race/privacy tests were implemented in
+the **same stage-06 Draft PR**, with independent exact-HEAD CI required.
+
+The Stage 06 development plan additionally requires comparison filters/sorts
+and moderator routing when a problem is reported. Owner-only server-validated
+status filters and newest/oldest/price/rating sorts, RU/EN/HE controls, and
+atomic creation of a pending PII-free `moderation.Complaint` now implement
+those bounded requirements. No Stage 07 chat or external notifications were
+introduced.
+
+**Explicit remaining acceptance questions:** the expiration policy/trigger
+for offers is not defined; `expired` is a supported persisted state, but
+there is no invented timeout; and full dynamic i18n of every notification
+type (including legacy stages) requires a separate evidence-based review.
+Physical Android/iPhone checks and an independent review of the new final
+SHA remain mandatory before any merge.
+
 ## Independent Codex Cloud review assignment (read-only)
 
 Review the **final SHA** of the single stage-06 Draft PR against the
