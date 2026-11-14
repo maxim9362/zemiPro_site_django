@@ -1,5 +1,5 @@
 {% extends 'pages/app_base.html' %}
-{% load i18n static %}
+{% load i18n static a11y_widgets %}
 {% get_current_language as current_language %}
 {% block title %}{{ copy.heading }} — ZemiPro{% endblock %}
 {% block content %}
@@ -19,8 +19,8 @@
         {% endfor %}
         </ol>
     </nav>
-    <section class="zw-panel">
-        <h2>{{ copy.step_of }} {{ step }} {{ copy.of }} 8 · {{ wizard_title }}</h2>
+    <section class="zw-panel" aria-labelledby="wizard-current-step">
+        <h2 id="wizard-current-step">{{ copy.step_of }} {{ step }} {{ copy.of }} 8 · {{ wizard_title }}</h2>
         {% include 'components/flash_messages.html' %}
         <form method="post" {% if step == 6 %}enctype="multipart/form-data"{% endif %} action="{% if is_new_wizard %}{% url 'marketplace:order_wizard_start' %}{% else %}{% url 'marketplace:order_wizard_edit' pk=order.pk %}?step={{ step }}{% endif %}">
             {% csrf_token %}
@@ -31,7 +31,7 @@
             {% endif %}
             {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
             {% if form.errors %}
-            <div class="zw-error-summary" role="alert">
+            <div class="zw-error-summary" role="alert" tabindex="-1" id="wizard-errors">
                 {% get_current_language as wizard_language %}
                 {% if wizard_language == 'he' %}<p>יש לתקן את השדות המסומנים ולנסות שוב. הנתונים שהוזנו נשארים בטופס.</p>
                 {% elif wizard_language == 'en' %}<p>Review the highlighted fields and try again. Your entered values remain in this form.</p>
@@ -62,21 +62,36 @@
             {% if step == 2 %}
                 <div id="wizard-questions">
                     {% for item in questionnaire_questions %}
+                    {% with help_id=item.field.auto_id|add:'-help' errors_id=item.field.auto_id|add:'-errors' %}
                     <div class="zw-field" data-question-key="{{ item.key }}"
+                         {% if item.field.errors %}aria-invalid="true"{% endif %}
                          {% if item.question.depends_on %}data-depends-key="{{ item.question.depends_on.key }}" data-depends-equals="{{ item.question.depends_on.equals }}"{% endif %}>
                         <label for="{{ item.field.id_for_label }}">{{ item.field.label }}{% if item.question.required %} *{% endif %}</label>
-                        {{ item.field }}
-                        {% for error in item.field.errors %}<p class="zw-error" role="alert">{{ error }}</p>{% endfor %}
+                        {% ui_widget item.field help_id errors_id %}
+                        {% if item.field.help_text %}<p id="{{ help_id }}" class="zw-muted">{{ item.field.help_text }}</p>{% endif %}
+                        {% if item.field.errors %}
+                        <div id="{{ errors_id }}" class="zw-field__errors" role="alert">
+                            {% for error in item.field.errors %}<p class="zw-error">{{ error }}</p>{% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+                    {% endwith %}
                     {% endfor %}
                 </div>
             {% else %}
                 {% for field in form.visible_fields %}
-                    <div class="zw-field">
+                    {% with help_id=field.auto_id|add:'-help' errors_id=field.auto_id|add:'-errors' %}
+                    <div class="zw-field"{% if field.errors %} aria-invalid="true"{% endif %}>
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% for error in field.errors %}<p class="zw-error" role="alert">{{ error }}</p>{% endfor %}
+                        {% ui_widget field help_id errors_id %}
+                        {% if field.help_text %}<p id="{{ help_id }}" class="zw-muted">{{ field.help_text }}</p>{% endif %}
+                        {% if field.errors %}
+                        <div id="{{ errors_id }}" class="zw-field__errors" role="alert">
+                            {% for error in field.errors %}<p class="zw-error">{{ error }}</p>{% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+                    {% endwith %}
                 {% endfor %}
             {% endif %}
             {% if step == 6 %}
