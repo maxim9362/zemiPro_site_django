@@ -165,6 +165,20 @@ type (including legacy stages) requires a separate evidence-based review.
 Physical Android/iPhone checks and an independent review of the new final
 SHA remain mandatory before any merge.
 
+## GitHub CI evidence after second review changes
+
+SHA `c36a8652d3b722629693d24c6e782e618c67ea5f`:
+[push #43577764683](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577764683),
+[PR Django #43577770047](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577770047),
+[staging #43577769980](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577769980)
+all **SUCCESS**. PostgreSQL 17, full Django **521/521 PASS**, Ruff, model
+migration checks, 90 old + 18 Stage06 Chrome mobile/RTL cases PASS.
+
+This is implementation CI evidence, **not** an independent code review of the
+new tree or owner permission to merge. Re-review must inspect all second
+audit fixes and additions (review atomicity, snapshot privacy, owner sorts,
+moderation queue), and verify final PR SHA after this documentation update.
+
 ## Independent Codex Cloud review assignment (read-only)
 
 Review the **final SHA** of the single stage-06 Draft PR against the
