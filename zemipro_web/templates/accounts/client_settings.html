@@ -1,39 +1,35 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
 {% block title %}{% trans 'Личные данные и приватность' %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="page-header"><div class="container">
+<header class="page-header app-page-header"><div class="container app-medium">
     <h1>{% trans 'Личные данные и приватность' %}</h1>
     <p>{% trans 'Данные доступны только владельцу аккаунта.' %}</p>
-</div></section>
-<section class="order-form"><div class="container">
-    {% if messages %}{% for message in messages %}
-    <p class="form__hint" role="status">{{ message }}</p>
-    {% endfor %}{% endif %}
+</div></header>
+<section class="order-form app-page"><div class="container app-medium app-stack">
+    {% include 'components/flash_messages.html' %}
+    <div class="app-panel">
     <form method="post" class="form">
         {% csrf_token %}
         {% if form.non_field_errors %}<div class="form__errors">{{ form.non_field_errors }}</div>{% endif %}
-        {% for field in form %}
-        <div class="form__group">
-            <label class="form__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<span class="form__error">{{ field.errors.0 }}</span>{% endif %}
-        </div>
-        {% endfor %}
+        <div class="form__row">{% for field in form %}
+            {% include 'components/form_field.html' with field=field %}
+        {% endfor %}</div>
         <p class="form__hint">{% get_current_language as privacy_lang %}
           {% if privacy_lang == 'he' %}שינוי כתובת האימייל מחייב אימות מחדש. מספר טלפון הוא אופציונלי ואינו מאומת באמצעות SMS. הודעות על הזמנות זמינות בחשבון.
           {% elif privacy_lang == 'en' %}Changing your email requires verification again. A phone number is optional and is not verified by SMS. Order notifications remain available in your account.
           {% else %}После смены email потребуется повторное подтверждение. Телефон необязателен и не подтверждается по SMS. Уведомления о заказах доступны в личном кабинете.{% endif %}</p>
         <button type="submit" class="btn btn--primary">{% trans 'Сохранить настройки' %}</button>
     </form>
-    <section class="dashboard__section">
+    </div>
+    <section class="app-panel dashboard__section">
         <h2>{{ directory_copy.history_heading }}</h2>
         <form method="post" action="{% url 'accounts:clear_worker_history' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn--secondary">{{ directory_copy.history_clear }}</button>
         </form>
     </section>
-    <section class="dashboard__section">
+    <section class="app-panel dashboard__section">
         <h2>{% trans 'Запросы по персональным данным' %}</h2>
         <p>{% trans 'Запросы рассматриваются вручную. Отправка запроса не удаляет аккаунт или историю заказов автоматически.' %}</p>
         <form method="post" action="{% url 'accounts:client_privacy_request' %}">
