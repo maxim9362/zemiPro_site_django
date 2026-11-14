@@ -1,60 +1,35 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
-
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Пожаловаться — ZemiPro' %}{% endblock %}
-
 {% block content %}
-<section class="page-header">
-    <div class="container">
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <p class="comm-eyebrow">{% if current_language == 'he' %}דיווח ובטיחות{% elif current_language == 'en' %}Reporting and safety{% else %}Жалобы и безопасность{% endif %}</p>
         <h1>{% trans 'Пожаловаться' %}</h1>
-        {% if target_user %}
-        <p>{% trans 'Жалоба на специалиста' %}</p>
-        {% elif target_order %}
-        <p>{% trans 'На заявку №' %}{{ target_order.pk }}</p>
-        {% elif target_message %}
-        <p>{% trans 'Жалоба на сообщение' %}</p>
-        {% elif target_rating %}
-        <p>{% trans 'На отзыв' %}</p>
+        {% if target_user %}<p>{% trans 'Жалоба на специалиста' %}</p>
+        {% elif target_order %}<p>{% trans 'На заявку №' %}<bdi dir="ltr">{{ target_order.pk }}</bdi></p>
+        {% elif target_message %}<p>{% trans 'Жалоба на сообщение' %}</p>
+        {% elif target_rating %}<p>{% trans 'На отзыв' %}</p>
         {% endif %}
     </div>
-</section>
-
-<section class="order-form">
-    <div class="container">
-        <form method="post" class="form">
-            {% csrf_token %}
-
-            {% if form.non_field_errors %}
-            <div class="form__errors">
-                {% for error in form.non_field_errors %}
-                <p class="form__error">{{ error }}</p>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <div class="form__group">
-                <label for="id_reason" class="form__label">{% trans 'Причина жалобы *' %}</label>
-                {{ form.reason }}
-                {% if form.reason.errors %}
-                <span class="form__error">{{ form.reason.errors.0 }}</span>
-                {% endif %}
-            </div>
-
-            <div class="form__group">
-                <label for="id_message" class="form__label">{% trans 'Описание *' %}</label>
-                {{ form.message }}
-                {% if form.message.errors %}
-                <span class="form__error">{{ form.message.errors.0 }}</span>
-                {% endif %}
-            </div>
-
-            <button type="submit" class="btn btn--primary btn--lg">
-                {% trans 'Отправить жалобу' %}
-            </button>
-            <a href="javascript:history.back()" class="btn btn--secondary" style="margin-inline-start: 12px;">
-                {% trans 'Назад' %}
-            </a>
-        </form>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow comm-stack">
+        {% include 'components/flash_messages.html' %}
+        <div class="comm-panel">
+            <p class="comm-help">{% if current_language == 'he' %}תארו את הבעיה בצורה עניינית. המידע נבדק לפי כללי השירות, ללא הבטחה לתוצאה מסוימת.{% elif current_language == 'en' %}Describe the concern factually. Reports are reviewed under site policy; an outcome is not guaranteed.{% else %}Опишите проблему по существу. Жалоба рассматривается по правилам сервиса, конкретный результат не гарантируется.{% endif %}</p>
+            <form method="post" class="comm-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="form__errors ui-alert ui-alert--error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+                {% include 'components/form_field.html' with field=form.reason %}
+                {% include 'components/form_field.html' with field=form.message %}
+                <div class="comm-form__actions">
+                    <button type="submit" class="btn btn--primary">{% trans 'Отправить жалобу' %}</button>
+                    <a class="btn btn--secondary" href="{% url 'moderation:my_complaints' %}">{% trans 'Мои жалобы' %}</a>
+                </div>
+            </form>
+        </div>
     </div>
 </section>
 {% endblock %}
