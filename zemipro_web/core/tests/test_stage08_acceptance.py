@@ -1,12 +1,14 @@
 """Stage 08.7 acceptance: RTL visual contract and safe isolated UI E2E."""
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils.translation import override
 
-from apps.marketplace.wizard_services import _budget_label
+from apps.marketplace.wizard_services import _budget_label, wizard_summary
+from apps.marketplace.wizard_ui import wizard_copy
 
 from apps.locations.models import City
 from apps.marketplace.models import Category, Subcategory
@@ -31,6 +33,11 @@ class VisualContractSourceTests(SimpleTestCase):
             self.assertIn(visible, text)
 
     def test_negotiable_budget_preview_is_localized_without_price_mutation(self):
+        order = SimpleNamespace(
+            wizard_data={"steps": {"5": {"price_type": "negotiable"}}},
+            subcategory=None,
+            city=SimpleNamespace(localized_name="Ashdod"),
+        )
         for language, expected in (
             ("ru", "Договорная"),
             ("en", "Negotiable"),
@@ -38,12 +45,29 @@ class VisualContractSourceTests(SimpleTestCase):
         ):
             with self.subTest(language=language), override(language):
                 self.assertEqual(
-                    _budget_label({"price_type": "negotiable"}), expected
+                    _budget_label({"price_type": "negotiable"}), "Договорная"
                 )
+                self.assertEqual(
+                    dict(wizard_summary(order))[wizard_copy()["price_type"]],
+                    expected,
+                )
+        self.assertEqual(
+            _budget_label({"price_type": "fixed", "amount_min": "125"}), "125.00 ₪"
+        )
         offer_form = (
             Path(settings.BASE_DIR) / "templates/pages/offer_form.html"
         ).read_text(encoding="utf-8")
         self.assertIn('{% trans order.price %}', offer_form)
+
+    def test_no_js_short_mobile_header_must_scroll_past_controls(self):
+        css = (
+            Path(settings.BASE_DIR) / "static/css/design-system.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("html:not(.has-nav-js) .site-header {position:static}", css)
+        self.assertIn(
+            "html:not(.has-nav-js) .site-nav.nav {max-height:none;overflow:visible}",
+            css,
+        )
 
     def test_wizard_step_numbers_are_ltr_isolated_without_changing_rtl_document(self):
         text = (

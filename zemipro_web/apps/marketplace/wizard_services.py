@@ -248,7 +248,9 @@ def _budget_label(values):
     if kind == 'range':
         return (f"{Decimal(values['amount_min']):.2f}"
                 f"–{Decimal(values['amount_max']):.2f} ₪")
-    return wizard_copy()['negotiable']
+    # Persist a canonical, language-independent source key; presentation is
+    # localized in wizard_summary and Django templates at render time.
+    return 'Договорная'
 
 
 def wizard_summary(order):
@@ -256,6 +258,13 @@ def wizard_summary(order):
     steps = order.wizard_data.get('steps', {})
     t = wizard_copy()
     place = steps.get('3', {})
+    budget = steps.get('5')
+    if not budget:
+        budget_text = t['not_set']
+    elif budget['price_type'] == 'negotiable':
+        budget_text = t['negotiable']
+    else:
+        budget_text = _budget_label(budget)
     return [
         (t['service'], order.subcategory.localized_name if order.subcategory else t['not_set']),
         (t['city'], order.city.localized_name),
@@ -263,7 +272,7 @@ def wizard_summary(order):
         (t['area'], place.get('area') or t['not_set']),
         (t['date'], steps.get('4', {}).get('preferred_date') or t['no_date']),
         (t['urgency'], t.get(steps.get('4', {}).get('urgency'), t['not_set'])),
-        (t['price_type'], _budget_label(steps['5']) if '5' in steps else t['not_set']),
+        (t['price_type'], budget_text),
         (t['description'], steps.get('6', {}).get('description') or t['not_set']),
     ]
 

@@ -260,7 +260,7 @@ def check_text_resize(page, lang, role, label, path):
 def check_without_js(browser, lang, session_name, session_key):
     from django.conf import settings
     context = browser.new_context(
-        locale=lang, viewport={"width": 320, "height": 844},
+        locale=lang, viewport={"width": 320, "height": 568},
         java_script_enabled=False,
     )
     context.add_cookies([{
@@ -276,6 +276,22 @@ def check_without_js(browser, lang, session_name, session_key):
         wizard = page.goto(BASE + "/orders/new/", wait_until="domcontentloaded")
         if wizard.status != 200 or not page.locator('.zw-panel form').count():
             raise AssertionError(f"{lang}: no-JS order wizard unavailable")
+        position = page.locator(".site-header").evaluate(
+            "(el) => getComputedStyle(el).position"
+        )
+        if position != "static":
+            raise AssertionError(f"{lang}: expanded no-JS header traps short phones")
+        submit = page.locator('.zw-panel form button[type="submit"]').first
+        submit.scroll_into_view_if_needed()
+        submit.click(trial=True, timeout=5000)
+        box = submit.bounding_box()
+        if box is None or box["y"] < 0 or box["y"] + box["height"] > 568:
+            raise AssertionError(f"{lang}: short no-JS viewport cannot reach wizard submit")
+        OUT.mkdir(parents=True, exist_ok=True)
+        page.screenshot(
+            path=str(OUT / f"NOJS-320x568-{lang}-client-wizard.png"),
+            full_page=True,
+        )
     finally:
         context.close()
 

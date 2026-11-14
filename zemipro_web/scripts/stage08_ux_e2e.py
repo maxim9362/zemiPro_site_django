@@ -175,15 +175,22 @@ def create_published_request(page, lang, category_id, service_id, city_id):
     if page.locator('input[name="confirm"]').count() != 1:
         raise AssertionError("Final preview consent missing")
     layout(page, "wizard-review", lang, "client")
+    expected_budget = {"ru": "Договорная", "en": "Negotiable", "he": "לפי סיכום"}[lang]
+    if expected_budget not in page.locator(".zw-table").inner_text():
+        raise AssertionError(f"{lang}: wizard budget preview is not localized")
     screenshot(page, f"{lang}-client-wizard-confirm")
     page.locator('input[name="confirm"]').check()
     post_click(page, ".zw-panel > form", 'button[name="action"][value="publish"]')
     db_call(order.refresh_from_db)
     if order.status != Order.Status.PUBLISHED or order.city_id != city_id:
         raise AssertionError("Publishing did not persist the Ashdod-only order")
+    if order.price != "Договорная":
+        raise AssertionError(f"{lang}: order persisted a localized budget label")
     if f"/orders/{order_id}/" not in page.url:
         raise AssertionError("Published order did not link to details")
     layout(page, "published-order", lang, "client")
+    if expected_budget not in page.locator("main").inner_text():
+        raise AssertionError(f"{lang}: saved canonical budget is not localized on details")
     screenshot(page, f"{lang}-client-published-order")
     return order_id
 

@@ -102,6 +102,10 @@ textarea:focus-visible,[tabindex]:focus-visible {outline:3px solid var(--ui-focu
   .has-nav-js .site-menu-toggle {display:inline-flex}
   .site-nav.nav {display:flex;flex-direction:column;align-items:stretch;gap:4px;padding-block:10px;margin-block-start:8px;border-block-start:1px solid var(--ui-border);max-height:calc(100vh - 92px);overflow-y:auto;scrollbar-gutter:stable}
   .has-nav-js .site-nav.nav:not(.is-open) {display:none}
+  /* No-JS menu stays expanded; let the entire header leave the viewport on
+     short phones instead of permanently hiding the wizard underneath it. */
+  html:not(.has-nav-js) .site-header {position:static}
+  html:not(.has-nav-js) .site-nav.nav {max-height:none;overflow:visible}
   .site-nav.nav a,.site-nav.nav .nav__logout button,.site-nav.nav .nav__switch-role button {width:100%;justify-content:flex-start;text-align:start;min-height:44px;padding-inline:12px}
   .site-nav.nav .nav__logout,.site-nav.nav .nav__switch-role {display:block;width:100%}
   .site-header__city {font-size:.76rem}
