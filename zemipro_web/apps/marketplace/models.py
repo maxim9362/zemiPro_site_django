@@ -1261,3 +1261,45 @@ class RatingAuditEvent(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError('Review audit entries are immutable.')
+
+class MessageTranslation(models.Model):
+    """Optional private machine translation; never replaces the original Message."""
+
+    class Language(models.TextChoices):
+        RU = 'ru', 'Русский'
+        EN = 'en', 'English'
+        HE = 'he', 'עברית'
+
+    message = models.ForeignKey(
+        Message, on_delete=models.PROTECT, related_name='machine_translations',
+    )
+    requested_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT,
+        related_name='requested_chat_translations',
+    )
+    target_language = models.CharField(max_length=2, choices=Language.choices)
+    translated_body = models.TextField()
+    engine = models.CharField(max_length=32, default='gemini')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_message_translation'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['message', 'target_language'],
+                name='chat_translation_target_unique',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(target_language__in=['ru', 'en', 'he']),
+                name='chat_translation_language_valid',
+            ),
+        ]
+        ordering = ['created_at', 'pk']
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Machine translations are append-only.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Machine translations are append-only.')
