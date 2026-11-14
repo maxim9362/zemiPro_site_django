@@ -994,6 +994,14 @@ def order_detail_view(request, pk):
                 order=order
             ).select_related('worker').order_by('-created_at'))
 
+        # The selected worker can read and answer the *public projection*
+        # of the completed-order review. This mirrors review_services'
+        # existing owner/status eligibility; it never grants order-private
+        # response/history or raw contact data to the worker or strangers.
+        if is_owner or (
+            account_enabled and order.status == Order.Status.COMPLETED
+            and order.worker_id == request.user.pk
+        ):
             existing_rating = Rating.objects.filter(order=order).first()
 
     can_read_private = can_view_private_order_details(request.user, order)

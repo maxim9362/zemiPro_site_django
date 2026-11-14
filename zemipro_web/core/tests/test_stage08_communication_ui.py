@@ -173,6 +173,22 @@ class CommunicationPageTests(TestCase):
         self.assertContains(detail, 'Отправить ответ')
         self.client.force_login(self.other)
         self.assertEqual(self.client.get(url).status_code, 404)
+        outsider = self.client.get(reverse(
+            'marketplace:order_detail', args=[completed.pk],
+        ))
+        self.assertNotContains(outsider, reverse(
+            'marketplace:rating_reply', args=[rating.pk],
+        ))
+        # A blocked selected worker must not acquire a new UI capability.
+        self.worker.is_blocked = True
+        self.worker.save(update_fields=['is_blocked'])
+        self.client.force_login(self.worker)
+        blocked = self.client.get(reverse(
+            'marketplace:order_detail', args=[completed.pk],
+        ))
+        self.assertNotContains(blocked, reverse(
+            'marketplace:rating_reply', args=[rating.pk],
+        ))
 
     def test_participant_report_moderator_decision_and_appeal(self):
         msg, _ = send_message(
