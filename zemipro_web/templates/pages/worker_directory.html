@@ -1,68 +1,87 @@
-{% extends 'base.html' %}
-{% load i18n public_text %}
-
+{% extends 'pages/public_base.html' %}
+{% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Поиск специалистов' %} — ZemiPro{% endblock %}
 {% block meta_description %}{% trans 'Поиск опубликованных специалистов и их реальных услуг.' %}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header public-page-header">
     <div class="container">
+        <p class="public-kicker">{% if current_language == 'he' %}חיפוש באשדוד{% elif current_language == 'en' %}Search in Ashdod{% else %}Поиск в Ашдоде{% endif %}</p>
         <h1>{% trans 'Поиск специалистов' %}</h1>
         <p>{% trans 'Только опубликованные анкеты; цены и доступность указаны самими специалистами.' %}</p>
     </div>
-</section>
-<section class="category-content">
-    <div class="container">
-        <form method="get" class="form worker-directory__form" role="search">
+</header>
+<section class="category-content public-content">
+    <div class="container public-search-layout">
+        <form method="get" class="form worker-directory__form public-search-form" role="search">
             {% if form.errors %}
-            <div class="form__errors" role="alert">
+            <div class="form__errors ui-alert ui-alert--error" role="alert">
                 <p>{% trans 'Проверьте параметры поиска. Результаты не показаны, пока ошибки не исправлены.' %}</p>
                 {{ form.non_field_errors }}
             </div>
             {% endif %}
-            <div class="worker-directory__filters">
-                {% for field in form %}
-                <div class="form__group">
-                    <label for="{{ field.id_for_label }}" class="form__label">{{ field.label }}</label>
-                    {{ field }}
-                    {% for error in field.errors %}<span class="form__error">{{ error }}</span>{% endfor %}
-                </div>
-                {% endfor %}
+            <div class="public-search-form__primary">
+                {% include 'components/form_field.html' with field=form.q %}
+                {% include 'components/form_field.html' with field=form.category %}
+                {% include 'components/form_field.html' with field=form.service %}
             </div>
-            <p class="form__hint">{% trans 'Фильтр цены применяется только к добровольно указанной числовой стартовой цене в шекелях.' %}</p>
-            <p class="form__hint">{% trans 'Онлайн означает формат услуги; расстояние в километрах без проверенных координат не рассчитывается.' %}</p>
-            <p class="form__hint">{% trans 'Ранжирование показывает соответствие запросу, а не подтверждённое качество или опыт. Рейтинг основан только на отзывах пользователей.' %}</p>
-            <button type="submit" class="btn btn--primary">{% trans 'Найти специалистов' %}</button>
-            <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}" class="btn btn--secondary">{% trans 'Сбросить фильтры' %}</a>
+            <details class="public-search-form__extra" {% if form.errors or request.GET.city or request.GET.neighborhood or request.GET.language or request.GET.mode or request.GET.price_from or request.GET.price_to or request.GET.min_rating or request.GET.availability %}open{% endif %}>
+                <summary>{% if current_language == 'he' %}סינון נוסף{% elif current_language == 'en' %}More filters{% else %}Дополнительные фильтры{% endif %}</summary>
+                <div class="public-search-form__grid">
+                    {% for field in form %}
+                    {% if field.name != 'q' and field.name != 'category' and field.name != 'service' and field.name != 'sort' %}
+                        {% include 'components/form_field.html' with field=field %}
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <p class="public-search-form__hint">
+                    {% trans 'Фильтр цены применяется только к добровольно указанной числовой стартовой цене в шекелях.' %}
+                </p>
+            </details>
+            <div class="public-search-form__footer">
+                {% include 'components/form_field.html' with field=form.sort %}
+                <div class="public-search-form__actions">
+                    <button type="submit" class="btn btn--primary">{% trans 'Найти специалистов' %}</button>
+                    <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}" class="btn btn--secondary">{% trans 'Сбросить фильтры' %}</a>
+                </div>
+            </div>
+            <p class="public-search-form__hint">{% trans 'Онлайн означает формат услуги; расстояние в километрах без проверенных координат не рассчитывается.' %}</p>
         </form>
 
-        <p style="margin-top:20px;">{% blocktrans count counter=page_obj.paginator.count %}Найден {{ counter }} специалист{% plural %}Найдено специалистов: {{ counter }}{% endblocktrans %}</p>
-        {% if page_obj.object_list %}
-        <div class="orders-list">
-            {% for worker in page_obj %}
-            {% include 'components/worker_card.html' with worker=worker %}
-            {% endfor %}
-        </div>
-        {% if page_obj.has_other_pages %}
-        <nav class="pagination" aria-label="{% trans 'Страницы результатов' %}">
-            {% if page_obj.has_previous %}
-            <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">{% trans 'Назад' %}</a>
+        <section class="public-results" aria-labelledby="search-results-title">
+            <div class="public-section__heading">
+                <h2 id="search-results-title">{% if current_language == 'he' %}תוצאות חיפוש{% elif current_language == 'en' %}Search results{% else %}Результаты поиска{% endif %}</h2>
+            </div>
+            <p class="public-result-heading" role="status">{% blocktrans count counter=page_obj.paginator.count %}Найден {{ counter }} специалист{% plural %}Найдено специалистов: {{ counter }}{% endblocktrans %}</p>
+            {% if page_obj.object_list %}
+            <div class="public-result-grid">
+                {% for worker in page_obj %}
+                    {% include 'components/worker_card.html' with worker=worker %}
+                {% endfor %}
+            </div>
+            {% if page_obj.has_other_pages %}
+            <nav class="pagination" aria-label="{% trans 'Страницы результатов' %}">
+                {% if page_obj.has_previous %}
+                <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">{% trans 'Назад' %}</a>
+                {% endif %}
+                <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">{% trans 'Далее' %}</a>
+                {% endif %}
+            </nav>
             {% endif %}
-            <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
-            {% if page_obj.has_next %}
-            <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">{% trans 'Далее' %}</a>
+            {% else %}
+                {% trans 'Подходящих опубликованных специалистов пока нет.' as empty_title %}
+                {% if form.errors %}
+                {% include 'components/empty_state.html' with empty_title=empty_title empty_description=directory_copy.invalid_help %}
+                {% else %}
+                {% include 'components/empty_state.html' with empty_title=empty_title empty_description=directory_copy.empty_help %}
+                {% endif %}
             {% endif %}
-        </nav>
-        {% endif %}
-        {% else %}
-        {% trans 'Подходящих опубликованных специалистов пока нет.' as empty_title %}
-        {% if form.errors %}
-        {% include 'components/empty_state.html' with empty_title=empty_title empty_description=directory_copy.invalid_help %}
-        {% else %}
-        {% include 'components/empty_state.html' with empty_title=empty_title empty_description=directory_copy.empty_help %}
-        {% endif %}
-        {% endif %}
-        <div class="cta-block">
+        </section>
+
+        <div class="cta-block public-cta">
             <h2>{% trans 'Не нашли подходящего специалиста?' %}</h2>
             <p>{% trans 'Можно создать заявку и дождаться откликов, не публикуя телефон и точный адрес.' %}</p>
             <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
