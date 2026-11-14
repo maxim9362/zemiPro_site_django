@@ -14,7 +14,7 @@
         <ol class="zw-steps">
         {% for item in wizard_steps %}
             <li {% if item.number == step %}aria-current="step"{% elif item.number < step %}class="zw-steps__done"{% endif %}>
-                <span class="zw-step-number">{{ item.number }} / 8</span>{{ item.title }}
+                <span class="zw-step-number"><bdi dir="ltr">{{ item.number }} / 8</bdi></span>{{ item.title }}
             </li>
         {% endfor %}
         </ol>

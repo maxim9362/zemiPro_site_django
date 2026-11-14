@@ -5,6 +5,7 @@ This is not manual physical-phone or screen-reader certification.
 """
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from uuid import uuid4
 
@@ -18,6 +19,17 @@ from stage08_mobile_a11y_smoke import fixtures as stage08_fixture
 BASE = "http://127.0.0.1:8769"
 OUT = Path("artifacts/stage08-ux-e2e")
 LANGS = ("ru", "en", "he")
+_DB_THREAD = ThreadPoolExecutor(max_workers=1, thread_name_prefix="stage08-orm")
+
+
+def db_call(fn):
+    """Keep Django ORM outside Playwright's active asyncio event-loop thread.
+
+    The single test-only DB worker runs operations sequentially. No async-unsafe
+    environment override or server-side permission exception is introduced.
+    """
+    return _DB_THREAD.submit(fn).result()
+
 
 
 def bootstrap():
@@ -123,7 +135,7 @@ def create_published_request(page, lang, category_id, service_id, city_id):
     if "/wizard/" not in page.url:
         raise AssertionError("Wizard draft not created after choosing the service")
     order_id = int(page.url.split("/orders/")[1].split("/")[0])
-    order = Order.objects.get(pk=order_id)
+    order = db_call(lambda: Order.objects.get(pk=order_id))
     if order.status != Order.Status.DRAFT:
         raise AssertionError("Wizard should persist a private draft first")
     if page.locator(".zw-panel h2").count() != 1:
@@ -162,7 +174,7 @@ def create_published_request(page, lang, category_id, service_id, city_id):
     screenshot(page, f"{lang}-client-wizard-confirm")
     page.locator('input[name="confirm"]').check()
     post_click(page, ".zw-panel > form", 'button[name="action"][value="publish"]')
-    order.refresh_from_db()
+    db_call(order.refresh_from_db)
     if order.status != Order.Status.PUBLISHED or order.city_id != city_id:
         raise AssertionError("Publishing did not persist the Ashdod-only order")
     if f"/orders/{order_id}/" not in page.url:
@@ -194,7 +206,7 @@ def submit_worker_offer(page, lang, order_id):
     page.wait_for_load_state("domcontentloaded")
     if f"/orders/{order_id}/" not in page.url:
         raise AssertionError(f"Offer POST did not return to order: {page.url}")
-    offer = Response.objects.get(order_id=order_id)
+    offer = db_call(lambda: Response.objects.select_related('worker').get(order_id=order_id))
     if offer.worker.username != "stage08_6_browser_worker":
         raise AssertionError("Offer attributed to wrong worker")
     return offer.pk
@@ -211,7 +223,7 @@ def owner_accept_and_chat(page, worker_page, order_id, offer_id):
     )
     if "/chat/" not in page.url:
         raise AssertionError("Chat did not open from private offer")
-    conversation = Conversation.objects.get(response_id=offer_id)
+    conversation = db_call(lambda: Conversation.objects.get(response_id=offer_id))
     visit(page, f"/chat/{conversation.pk}/")
     layout(page, "chat-thread", "ru", "client")
     page.locator('textarea[name="body"]').fill(
@@ -219,13 +231,13 @@ def owner_accept_and_chat(page, worker_page, order_id, offer_id):
     )
     screenshot(page, "ru-client-chat")
     post_click(page, ".comm-chat-form")
-    if not Message.objects.filter(
+    if not db_call(lambda: Message.objects.filter(
         conversation=conversation, body="Synthetic private message from order owner"
-    ).exists():
+    ).exists()):
         raise AssertionError("Chat message was not persisted")
     visit(page, f"/orders/{order_id}/")
     post_click(page, f'form[action="/orders/{order_id}/responses/{offer_id}/accept/"]')
-    order = Order.objects.get(pk=order_id)
+    order = db_call(lambda: Order.objects.get(pk=order_id))
     if order.status != Order.Status.ASSIGNED:
         raise AssertionError("Worker was not selected after owner POST")
     screenshot(page, "ru-client-assigned-order")
@@ -236,10 +248,10 @@ def owner_accept_and_chat(page, worker_page, order_id, offer_id):
         "Synthetic private reply from selected worker"
     )
     post_click(worker_page, ".comm-chat-form")
-    if not Message.objects.filter(
+    if not db_call(lambda: Message.objects.filter(
         conversation=conversation, sender__username="stage08_6_browser_worker",
         body="Synthetic private reply from selected worker",
-    ).exists():
+    ).exists()):
         raise AssertionError("Selected worker reply was not persisted")
     return conversation.pk
 
@@ -247,7 +259,7 @@ def owner_accept_and_chat(page, worker_page, order_id, offer_id):
 def report_message(client, moderator, chat_id):
     from apps.marketplace.models import Message
     from apps.moderation.models import Complaint
-    message = Message.objects.filter(conversation_id=chat_id).order_by("-pk").first()
+    message = db_call(lambda: Message.objects.filter(conversation_id=chat_id).order_by("-pk").first())
     visit(client, f"/chat/{chat_id}/")
     report = client.locator(f'a.comm-report-link[href*="message={message.pk}"]')
     if report.count() != 1:
@@ -262,9 +274,9 @@ def report_message(client, moderator, chat_id):
     )
     screenshot(client, "ru-client-complaint")
     post_click(client, "form.comm-form")
-    case = Complaint.objects.filter(
+    case = db_call(lambda: Complaint.objects.filter(
         target_message_id=message.pk
-    ).order_by("-pk").first()
+    ).order_by("-pk").first())
     if case is None:
         raise AssertionError("Participant complaint was not stored")
     visit(moderator, "/moderation/queue/")
@@ -278,7 +290,7 @@ def report_message(client, moderator, chat_id):
         raise AssertionError("Moderator decision action missing")
     decision.locator('button[name="action"][value="resolve"]').click()
     moderator.wait_for_load_state("domcontentloaded")
-    case.refresh_from_db()
+    db_call(case.refresh_from_db)
     if case.status != Complaint.Status.RESOLVED:
         raise AssertionError("Moderator decision did not persist")
     visit(client, f"/moderation/complaint/{case.pk}/appeal/")
@@ -286,19 +298,20 @@ def report_message(client, moderator, chat_id):
         "Synthetic appeal on the moderator outcome"
     )
     post_click(client, "form.comm-form")
-    case.refresh_from_db()
-    if not hasattr(case, "appeal"):
+    db_call(case.refresh_from_db)
+    appeal = db_call(lambda: getattr(case, "appeal", None))
+    if appeal is None:
         raise AssertionError("Owner appeal was not persisted")
     visit(moderator, "/moderation/queue/")
     appeal_form = moderator.locator(
-        f'form[action="/moderation/appeals/{case.appeal.pk}/decision/"]'
+        f'form[action="/moderation/appeals/{appeal.pk}/decision/"]'
     )
     if appeal_form.count() != 1:
         raise AssertionError("Moderator appeal action missing")
     appeal_form.locator('button[name="action"][value="reject"]').click()
     moderator.wait_for_load_state("domcontentloaded")
-    case.refresh_from_db()
-    if case.appeal.status != "rejected":
+    db_call(case.refresh_from_db)
+    if db_call(lambda: case.appeal.status) != "rejected":
         raise AssertionError("Moderator appeal outcome not persisted")
 
 
@@ -364,7 +377,7 @@ def main():
                         )
                         post_click(client, "form.form")
                         from apps.marketplace.models import Rating, RatingReply
-                        rating = Rating.objects.get(order_id=completed_id)
+                        rating = db_call(lambda: Rating.objects.get(order_id=completed_id))
                         visit(worker, f"/orders/{completed_id}/")
                         reply = worker.locator(f'form[action="/reviews/{rating.pk}/reply/"]')
                         if reply.count() != 1:
@@ -374,7 +387,7 @@ def main():
                         )
                         reply.locator('button[type="submit"]').click()
                         worker.wait_for_load_state("domcontentloaded")
-                        if not RatingReply.objects.filter(rating=rating).exists():
+                        if not db_call(lambda: RatingReply.objects.filter(rating=rating).exists()):
                             raise AssertionError("Review reply did not persist")
                         count += 2
                 finally:
