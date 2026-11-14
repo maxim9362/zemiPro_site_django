@@ -182,6 +182,36 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Stage 07 targeted security, translation and E2E tests
+        run: |
+          python manage.py test \
+            apps.marketplace.tests.test_stage07_chat_permissions \
+            apps.marketplace.tests.test_stage07_chat_http \
+            apps.marketplace.tests.test_stage07_notifications \
+            apps.marketplace.tests.test_stage07_review \
+            apps.marketplace.tests.test_stage07_moderation \
+            apps.marketplace.tests.test_stage07_translation \
+            apps.marketplace.tests.test_stage07_e2e
+
+      - name: Stage 07 Chromium mobile chat, privacy and RTL smoke
+        env:
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8767 > /tmp/stage07-django-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage07_browser_smoke.py
+
+      - name: Upload Stage 07 mobile chat screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage07-chat-mobile-rtl-screenshots
+          path: zemipro_web/artifacts/stage07-chat-mobile/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Run Django suite with service coverage gate
         run: |
           python -m coverage run manage.py test

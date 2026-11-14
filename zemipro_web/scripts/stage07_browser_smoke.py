@@ -129,7 +129,6 @@ def check(page, *, lang, role, width, conversation_id):
 
 def main():
     conversation_id, sessions = fixtures()
-    django.conf.settings
     from django.conf import settings
     counter = 0
     with sync_playwright() as playwright:
