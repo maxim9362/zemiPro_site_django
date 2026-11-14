@@ -258,10 +258,10 @@ def report_message(client, moderator, chat_id):
     visit(moderator, "/moderation/queue/")
     if str(case.pk) not in moderator.locator("#pending-complaints").inner_text():
         # The heading has a count, but the case is in the same section.
-        if not moderator.locator(f'form[action="/moderation/complaint/{case.pk}/decision/"]').count():
+        if not moderator.locator(f'form[action="/moderation/queue/{case.pk}/decision/"]').count():
             raise AssertionError("Authorized moderator cannot find pending case")
     screenshot(moderator, "ru-moderator-queue")
-    decision = moderator.locator(f'form[action="/moderation/complaint/{case.pk}/decision/"]')
+    decision = moderator.locator(f'form[action="/moderation/queue/{case.pk}/decision/"]')
     if decision.count() != 1:
         raise AssertionError("Moderator decision action missing")
     decision.locator('button[name="action"][value="resolve"]').click()
@@ -346,7 +346,7 @@ def main():
                         count += 4
                         visit(client, f"/orders/{completed_id}/review/")
                         screenshot(client, "ru-client-review-form")
-                        client.locator('select[name="rating"]').select_option("5")
+                        client.locator('input[name="rating"]').fill("5")
                         client.locator('textarea[name="review_text"]').fill(
                             "Synthetic completion feedback without personal contact"
                         )
