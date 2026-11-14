@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from uuid import uuid4
 
 from django.test import TestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.marketplace.chat_services import open_conversation, send_message
@@ -108,3 +109,35 @@ class Stage07NotificationTests(TestCase):
         self.assertEqual(sender.call_count, 5)
         self.assertTrue(Notification.objects.filter(pk=notice.pk).exists())
         self.assertTrue(Response.objects.filter(pk=self.response.pk).exists())
+
+    def test_blocked_and_unverified_user_cannot_access_notification_http(self):
+        create_domain_notification(
+            recipient_id=self.owner.pk, event_key='security.123',
+            event='complaint', mandatory=True,
+        )
+        notice = self.owner.notifications.get()
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(reverse(
+            'notifications:notification_list',
+        )).status_code, 200)
+        self.owner.is_blocked = True
+        self.owner.save(update_fields=['is_blocked'])
+        for path in (
+            reverse('notifications:notification_list'),
+            reverse('notifications:notification_preferences'),
+        ):
+            self.assertEqual(self.client.get(path).status_code, 403)
+        self.assertEqual(self.client.post(reverse(
+            'notifications:notification_mark_read', args=[notice.pk],
+        )).status_code, 403)
+        self.assertEqual(self.client.post(reverse(
+            'notifications:notification_mark_all_read',
+        )).status_code, 403)
+        self.owner.is_blocked = False
+        self.owner.email_verification_required = True
+        self.owner.save(update_fields=[
+            'is_blocked', 'email_verification_required',
+        ])
+        self.assertEqual(self.client.get(reverse(
+            'notifications:notification_list',
+        )).status_code, 403)

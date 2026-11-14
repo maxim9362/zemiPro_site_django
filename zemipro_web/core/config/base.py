@@ -187,6 +187,12 @@ if ZEMIPRO_CONTACT_DELIVERY_MODE == 'smtp':
     EMAIL_TIMEOUT = 10
     DEFAULT_FROM_EMAIL = sender
 
+# Optional Stage 07 worker can only be enabled with approved SMTP delivery.
+ZEMIPRO_STAGE07_EMAIL_ENABLED = (
+    env_bool('ZEMIPRO_STAGE07_EMAIL_ENABLED', False)
+    and ZEMIPRO_CONTACT_DELIVERY_MODE == 'smtp'
+)
+
 
 # Structured logs deliberately exclude request paths, query strings, headers,
 # exception messages, tracebacks and user input. Use stable events only.
