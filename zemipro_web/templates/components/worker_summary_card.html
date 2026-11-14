@@ -1,0 +1,25 @@
+{% load i18n %}
+<article class="order-card-sm public-result-card">
+    <div class="order-card-sm__header">
+        <strong class="order-card__category" dir="auto">{{ worker.public_display_name }}</strong>
+        {% if worker.review_count %}
+        <span class="ui-worker-card__rating"><bdi dir="ltr">★ {{ worker.avg_rating|floatformat:1 }}</bdi> ({{ worker.review_count }})</span>
+        {% else %}
+        <span class="ui-worker-card__rating">{% trans 'Пока нет отзывов' %}</span>
+        {% endif %}
+    </div>
+    <div class="order-card-sm__body">
+        {% if show_city %}<p class="order-card-sm__city">{{ worker.city.localized_name }}</p>{% endif %}
+        {% if worker.public_description %}<p class="order-card-sm__desc" dir="auto">{{ worker.public_description|truncatewords:24 }}</p>{% endif %}
+        {% if show_skills %}
+        <div aria-label="{% trans 'Категории:' %}">
+            {% for skill in worker.skills.all %}
+            {% if skill.is_active %}<span class="tag">{{ skill.localized_name }}</span>{% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="order-card-sm__actions">
+        <a class="btn btn--primary btn--sm" href="{% url 'marketplace:worker_public_profile' pk=worker.pk %}">{% trans 'Открыть профиль' %}</a>
+    </div>
+</article>
