@@ -363,6 +363,22 @@ def main():
                         raise AssertionError("Owner cannot see worker offer comparison")
                     screenshot(client, f"{lang}-client-offer-comparison")
                     count += 1
+                    # Verify that a real submitted offer reaches the owner
+                    # through the UI without granting notifications to others.
+                    from apps.notifications.models import Notification
+                    visit(client, "/notifications/")
+                    unread = client.locator('form[action^="/notifications/"][action$="/read/"]')
+                    if unread.count() < 1:
+                        raise AssertionError("Owner did not receive new-offer notification")
+                    screenshot(client, f"{lang}-client-notifications")
+                    unread.first.locator('button[type="submit"]').click()
+                    client.wait_for_load_state("domcontentloaded")
+                    if not db_call(lambda: Notification.objects.filter(
+                        recipient__username="stage08_6_browser_client",
+                        is_read=True,
+                    ).exists()):
+                        raise AssertionError("Mark-as-read did not persist")
+                    count += 1
                     # Only the Russian pass runs the full chat/moderation/review chain.
                     if lang == "ru":
                         chat_id = owner_accept_and_chat(client, worker, order_id, offer_id)
