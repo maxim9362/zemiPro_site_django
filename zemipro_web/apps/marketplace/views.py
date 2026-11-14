@@ -39,7 +39,7 @@ from .questionnaires import localized_label
 from .questionnaire_services import present_order_answers
 from .forms import OrderCreateForm, ResponseCreateForm
 from .offer_services import submit_offer
-from .offer_presentation import owner_offer_cards
+from .offer_presentation import owner_offer_cards, selected_worker_public_name
 from .offer_ui import offer_copy
 from .agreement_presentation import private_agreement_context
 from .models import (
@@ -1016,6 +1016,7 @@ def order_detail_view(request, pk):
         'responses': responses,
         'offer_cards': owner_offer_cards(order, responses) if is_owner else [],
         'offer_copy': offer_copy(),
+        'selected_worker_public_name': selected_worker_public_name(order) if is_owner else '',
         **agreement_context,
         'work_started': work_started,
         'work_result_submitted': work_result_submitted,
@@ -1156,7 +1157,9 @@ def order_accept_response_view(request, order_id, response_id):
         messages.error(request, _(str(error)))
         return redirect('marketplace:order_detail', pk=order.pk)
 
-    messages.success(request, _('Мастер %(worker)s выбран!') % {'worker': response.worker})
+    messages.success(request, _('Мастер %(worker)s выбран!') % {
+        'worker': selected_worker_public_name(order),
+    })
     return redirect('marketplace:order_detail', pk=order.pk)
 
 
@@ -1288,35 +1291,52 @@ def order_work_action_view(request, pk, action):
 
 @login_required
 def rating_create_view(request, pk):
-    order = get_object_or_404(
-        Order, pk=pk, client=request.user, status=Order.Status.COMPLETED
-    )
+    """A review and its worker notification commit atomically under Order lock.
 
+    Locking the Order also serializes duplicate client POSTs, including those
+    where the first notification temporarily fails. No review or recipient
+    notice may survive that failure by itself.
+    """
+    order = get_object_or_404(
+        Order, pk=pk, client=request.user, status=Order.Status.COMPLETED,
+    )
     if Rating.objects.filter(order=order).exists():
         messages.info(request, _('Вы уже оставили отзыв на этот заказ.'))
         return redirect('marketplace:order_detail', pk=pk)
-
-    if not order.worker:
+    if not order.worker_id:
         messages.error(request, _('Невозможно оставить отзыв: исполнитель не выбран.'))
         return redirect('marketplace:order_detail', pk=pk)
 
     if request.method == 'POST':
         form = RatingCreateForm(request.POST)
         if form.is_valid():
-            rating = form.save(commit=False)
-            rating.order = order
-            rating.worker = order.worker
-            rating.client = request.user
-            rating.save()
-
-            create_notification(
-                recipient=order.worker,
-                title='Новый отзыв',
-                message=f'Клиент оставил отзыв по заявке №{order.pk}.',
-                notification_type='review_created',
-                related_order=order,
-            )
-
+            with transaction.atomic():
+                # Re-read the persisted order after concurrent completion,
+                # cancellation or another review; lock before duplicate check.
+                order = get_object_or_404(
+                    Order.objects.select_for_update(),
+                    pk=pk, client=request.user, status=Order.Status.COMPLETED,
+                )
+                if Rating.objects.filter(order=order).exists():
+                    messages.info(request, _('Вы уже оставили отзыв на этот заказ.'))
+                    return redirect('marketplace:order_detail', pk=pk)
+                if not order.worker_id:
+                    messages.error(
+                        request, _('Невозможно оставить отзыв: исполнитель не выбран.'),
+                    )
+                    return redirect('marketplace:order_detail', pk=pk)
+                rating = form.save(commit=False)
+                rating.order = order
+                rating.worker_id = order.worker_id
+                rating.client = request.user
+                rating.save()
+                create_notification(
+                    recipient=order.worker,
+                    title='Новый отзыв',
+                    message=f'Клиент оставил отзыв по заявке №{order.pk}.',
+                    notification_type='review_created',
+                    related_order=order,
+                )
             messages.success(request, _('Отзыв сохранён!'))
             return redirect('marketplace:order_detail', pk=pk)
     else:

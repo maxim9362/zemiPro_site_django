@@ -82,7 +82,7 @@
 
                 {% if order.worker and is_owner %}
                 <div class="order-card__field">
-                    <strong>{% trans 'Мастер:' %}</strong> {{ order.worker }}
+                    <strong>{% trans 'Мастер:' %}</strong> <bdi dir="auto">{{ selected_worker_public_name }}</bdi>
                 </div>
                 {% endif %}
 
