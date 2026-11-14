@@ -455,7 +455,9 @@ def accept_response(response, *, actor):
         if (order.worker_id is not None
                 or order.status not in (Order.Status.PUBLISHED, Order.Status.IN_DISCUSSION)):
             raise ValueError('Исполнитель для этой заявки уже выбран.')
-        selected = Response.objects.select_for_update().select_related('worker').get(
+        # Preserve worker-block/update serialization while allowing deferred FK
+        # KEY SHARE checks from other orders' revisions and notifications.
+        selected = Response.objects.select_for_update(no_key=True).select_related('worker').get(
             pk=response.pk, order=order,
         )
         if selected.status not in ACTIVE_STATUSES:
@@ -465,7 +467,7 @@ def accept_response(response, *, actor):
             raise ValueError('Исполнитель недоступен.')
         # Serialize profile publication changes with selection; the join
         # above already locks the current worker user along with Response.
-        profile = WorkerProfile.objects.select_for_update().filter(
+        profile = WorkerProfile.objects.select_for_update(no_key=True).filter(
             user_id=selected.worker_id, is_published=True,
         ).first()
         if profile is None or not worker_eligible_for_order(profile.pk, order):

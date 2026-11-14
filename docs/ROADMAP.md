@@ -258,7 +258,7 @@ flowchart TD
 - **Результат этапа:** Мастер присылает цену/условия, клиент сравнивает предложения и выбирает одного исполнителя.
 - **Гейт закрытия:** Состояния заказов консистентны, конкурентное назначение одного исполнителя доказано тестами.
 - **Особое условие:** Повторные запросы не должны создавать двойные предложения или назначения.
-- **Статус:** `IN_PROGRESS / ZP-06-001–005 REMEDIATION_CI_VERIFIED / INDEPENDENT_RE_REVIEW_PENDING` · **Ветка:** `stage-06-offers-assignment` · **Единственный [Draft PR #13](https://github.com/maxim9362/zemiPro_site_django/pull/13)**. Нет независимого CODE_REVIEW_PASS, merge или deployment.
+- **Статус:** `IN_PROGRESS / STAGE06_LOCAL_VERIFIED / GITHUB_FINAL_GATES_PENDING` · **Ветка:** `stage-06-offers-assignment` · **Единственный [Draft PR #13](https://github.com/maxim9362/zemiPro_site_django/pull/13)**. Нет независимого CODE_REVIEW_PASS, merge или deployment.
 
 - [x] **06.1 — Модель предложения и история изменений.** `INDEPENDENT_SUBSTEP_PASS` на проверенном SHA `b83b341b`; Готово когда: невозможно создать дубли активных откликов или подменить чужую цену.
 - [ ] **06.2 — Кабинет клиента и сравнение предложений.** Готово когда: клиент видит несколько реальных предложений, но не получает закрытые данные других заказов.
@@ -543,3 +543,10 @@ flowchart TD
 ## 12. Ближайшее подтверждённое действие
 
 **Актуально на 2026-11-12:** первый пилот — **только Ашдод**; остальные 24 города сохраняются в техническом справочнике, но недоступны клиентам для новых заявок и поиска. Ashdod-only фильтрация реализована в views/forms/services на Django, без миграций и удаления данных. [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111) подтвердил **12/12 адресных Ashdod tests, 163/163 Django, Chrome 45/45**; [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632) SUCCESS. Требуется отдельное независимое **Codex review нового кода**, иврит и контент (Ашдод, 11 категорий, 4 анкеты), реальные Android/iPhone, UX одобрение, release security/infra gates; CBS обязателен до национального rollout. PR [#8](https://github.com/maxim9362/zemiPro_site_django/pull/8) остаётся Draft / NOT_MERGED, Stage 02 не DONE, production/VPS/DNS/Cloudflare не затронуты. Дополнительная чистка UX-формы: убран пример адреса в Тель-Авиве (`f21444d7`), добавлен 12-й адресный тест. Текущий подтверждённый кодовый SHA — `f21444d72ab804bffca1dccc067d124ac97a5014`.
+
+
+2026-11-14 final local Stage 06 acceptance: previous 001–005 verified; new
+ZP-06-006 deadlock independently reproduced and fixed. 524/524 local Django PASS.
+Local technical acceptance does not close the remote gate: exact-head GitHub CI,
+required approvals and merge remain pending. See STAGE_06_OFFER_ASSIGNMENT.md
+for evidence and expiry/Stage07/public-launch boundaries.

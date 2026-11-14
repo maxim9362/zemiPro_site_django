@@ -149,5 +149,40 @@ _COPY = {
 }
 
 
+
+_NOTICE_COPY = {
+    'ru': {
+        'new_response': ('Новый отклик', 'Мастер откликнулся на вашу заявку №{order}.'),
+        'response_accepted': ('Вас выбрали', 'Клиент выбрал вас исполнителем по заявке №{order}.'),
+        'response_rejected': ('Выбран другой мастер', 'По заявке №{order} клиент выбрал другого мастера.'),
+        'order_updated': ('Обновление выполнения заказа', 'Изменён этап выполнения заявки №{order}.'),
+        'order_completed': ('Заявка завершена', 'Клиент отметил заявку №{order} как выполненную.'),
+        'review_created': ('Новый отзыв', 'Клиент оставил отзыв по заявке №{order}.'),
+    },
+    'en': {
+        'new_response': ('New offer', 'A specialist submitted an offer for your request #{order}.'),
+        'response_accepted': ('You were selected', 'The client selected you for request #{order}.'),
+        'response_rejected': ('Another specialist selected', 'The client selected another specialist for request #{order}.'),
+        'order_updated': ('Work progress updated', 'The work stage changed for request #{order}.'),
+        'order_completed': ('Request completed', 'The client confirmed completion of request #{order}.'),
+        'review_created': ('New review', 'The client left a review for request #{order}.'),
+    },
+    'he': {
+        'new_response': ('הצעה חדשה', 'בעל מקצוע שלח הצעה לבקשה שלך מס׳ {order}.'),
+        'response_accepted': ('נבחרת לביצוע העבודה', 'הלקוח בחר בך לביצוע בקשה מס׳ {order}.'),
+        'response_rejected': ('נבחר בעל מקצוע אחר', 'הלקוח בחר בבעל מקצוע אחר לבקשה מס׳ {order}.'),
+        'order_updated': ('עדכון התקדמות העבודה', 'שלב העבודה בבקשה מס׳ {order} השתנה.'),
+        'order_completed': ('הבקשה הושלמה', 'הלקוח אישר את השלמת בקשה מס׳ {order}.'),
+        'review_created': ('חוות דעת חדשה', 'הלקוח השאיר חוות דעת על בקשה מס׳ {order}.'),
+    },
+}
+
+
+def stage06_notice(recipient, kind, order_id):
+    """Use recipient language; include only an order identifier, never private terms."""
+    language = (recipient.preferred_language or 'ru').split('-')[0]
+    title, message = _NOTICE_COPY.get(language, _NOTICE_COPY['ru'])[kind]
+    return {'title': title, 'message': message.format(order=order_id)}
+
 def offer_copy():
     return _COPY.get((get_language() or 'ru').split('-')[0], _COPY['ru'])

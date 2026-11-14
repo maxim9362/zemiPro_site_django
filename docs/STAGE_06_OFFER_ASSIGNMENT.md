@@ -162,8 +162,8 @@ introduced.
 for offers is not defined; `expired` is a supported persisted state, but
 there is no invented timeout; and full dynamic i18n of every notification
 type (including legacy stages) requires a separate evidence-based review.
-Physical Android/iPhone checks and an independent review of the new final
-SHA remain mandatory before any merge.
+Physical Android/iPhone checks remain public-launch gates. Independent review
+and required CI on the final SHA remain technical merge gates.
 
 ## GitHub CI evidence after second review changes
 
@@ -207,3 +207,48 @@ latest \`main\`. Ignore earlier self-review status. Do not push, merge or deploy
 Acceptance requires all necessary CI workflows SUCCESS on **the exact final
 HEAD**, independently reviewed findings remediated in the same PR, plus the
 owner's separate authorization before merge. Deployment is explicitly excluded.
+
+
+## Final local acceptance, 2026-11-14
+
+Reviewed base: `240988d553fc2c5d1d433aad91b4f170e93b75c6`.
+ZP-06-001–005 remediation was independently exercised again: rollback after actual
+notification writes, exact retry, immutable records, private-identity rendering,
+concurrent assignment/reviews and an end-to-end agreement/work/review scenario.
+
+New **ZP-06-006 (blocking MEDIUM)**: two orders in the same city selecting opposite
+workers could deadlock. Joined worker `FOR UPDATE` locks conflicted with deferred
+foreign-key checks while another transaction held the shared city/quota lock.
+The fix uses `FOR NO KEY UPDATE` for assignment's response/user/profile locks,
+retaining exclusion of worker block/profile updates, and locks only the Order in
+lifecycle transitions. A barrier-based PostgreSQL regression failed on the base
+and passed after the fix in a separate reviewer's isolated database.
+
+Existing Stage 06 submission/selection/rejection/work/completion/review notices
+now use the recipient's RU/EN/HE language with order-ID-only content. Atomic scopes
+and failure-injection seams are preserved. Agreement notifications already had
+recipient-language handling. This does not add external delivery or queues.
+
+Final local Django suite: **524/524 PASS**. Clean PostgreSQL 17 migrations, legacy
+upgrade rehearsal, system/model checks, Ruff, compileall, pip check and Compose
+configuration validation passed. Evidence is local; no GitHub approval or merge
+is implied. Required Actions must still succeed on the exact pushed final SHA.
+
+### Requirements boundaries
+
+- Offer `expired` is persisted and excluded from selection. No expiry period or
+  triggering schedule is specified; no automatic timer is invented. Defining the
+  policy is an explicit product decision, not a reason to auto-complete work.
+- Stage 06 disputes create a PII-free pending Complaint in the existing staff
+  queue in the same transaction. Replay and queue/notice failures preserve
+  consistency. Expanded moderation resolution/appeals and chat remain Stage 07.
+- Existing Stage 06 internal notices are localized and atomic. External delivery,
+  channel settings/retry and broader legacy notification work belong to 07.3.
+- Synthetic Chromium RU/EN/HE/RTL and HTTP/service E2E are technical checks;
+  physical Android/iPhone, real-user pilot and production monitoring remain
+  public-launch gates. No deployment or production data access is authorized.
+- The owner explicitly authorized merge in this task after technical gates;
+  this supersedes historical read-only/extra-owner-confirmation instructions.
+  GitHub branch protections and required independent approvals still apply.
+
+Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90**, Stage06 **18/18 PASS** (RU/EN/HE/RTL, synthetic mobile emulation). Separate-agent review found no remaining blocking code findings after ZP-06-006 remediation; this is not a GitHub approval.

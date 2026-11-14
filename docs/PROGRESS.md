@@ -1064,3 +1064,18 @@
 - **Проверенный SHA кода и документации:** `c36a8652d3b722629693d24c6e782e618c67ea5f`. [Push CI #43577764683](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577764683) SUCCESS, [PR Django CI #43577770047](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577770047) SUCCESS, [isolated staging #43577769980](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43577769980) SUCCESS.
 - **Доказательства:** полный Django suite `521/521 PASS`; Ruff, чистые PostgreSQL 17 миграции, `manage.py check`, `makemigrations --check --dry-run`, Chrome Stage02 `90/90` и Stage06 `18/18` — PASS. Включены новые тесты review/notification race/rollback, identity privacy, фильтров и модераторской очереди.
 - **Статус:** `REMEDIATION_CI_VERIFIED / INDEPENDENT_RE_REVIEW_PENDING / PR_13_DRAFT / NOT_MERGED / NOT_DEPLOYED`. После этой записи документальный commit меняет HEAD; для финального merge-гейта обязательно проверить Actions на *последнем* SHA. Независимый новый review и открытые продуктовые/ручные гейты сохраняются.
+
+
+## 2026-11-14 — final local acceptance of Stage 06
+
+Base `240988d`: ZP-06-001–005 adversarial regressions PASS. Independent reviewer
+reproduced ZP-06-006 cross-order assignment deadlock; fixed with no-key worker/profile
+locks and order-only lifecycle lock, deterministic PostgreSQL regression PASS.
+Stage 06 in-app notices now use recipient RU/EN/HE. Final full suite 524/524 PASS;
+clean/upgrade PostgreSQL, Ruff, system/migration checks and Compose PASS.
+Status: LOCAL_VERIFIED / GITHUB_FINAL_GATES_PENDING / NOT_MERGED / NOT_DEPLOYED.
+No expiry policy invented; physical-device acceptance is a public-launch gate.
+Historical failures retained. Current owner merge authorization recorded; no
+branch-protection or CI bypass permitted.
+
+Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90**, Stage06 **18/18 PASS** (RU/EN/HE/RTL, synthetic mobile emulation). Separate-agent review found no remaining blocking code findings after ZP-06-006 remediation; this is not a GitHub approval.

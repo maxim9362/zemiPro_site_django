@@ -43,7 +43,7 @@ from .offer_presentation import (
     owner_offer_cards, selected_worker_public_name,
     filter_and_sort_offer_cards, owner_offer_filter_context,
 )
-from .offer_ui import offer_copy
+from .offer_ui import offer_copy, stage06_notice
 from .agreement_presentation import private_agreement_context
 from .models import (
     Category, ServiceSection, Subcategory, Order, Response, Rating, OrderInvitation,
@@ -1151,8 +1151,7 @@ def order_accept_response_view(request, order_id, response_id):
             if getattr(response, '_assignment_created', False):
                 create_notification(
                     recipient=response.worker,
-                    title='Вас выбрали',
-                    message=f'Клиент выбрал вас исполнителем по заявке №{order.pk}.',
+                    **stage06_notice(response.worker, 'response_accepted', order.pk),
                     notification_type='response_accepted',
                     related_order=order,
                     related_response=response,
@@ -1163,8 +1162,7 @@ def order_accept_response_view(request, order_id, response_id):
                     if worker_user:
                         create_notification(
                             recipient=worker_user,
-                            title='Выбран другой мастер',
-                            message=f'По заявке №{order.pk} клиент выбрал другого мастера.',
+                            **stage06_notice(worker_user, 'response_rejected', order.pk),
                             notification_type='response_rejected',
                             related_order=order,
                         )
@@ -1236,8 +1234,7 @@ def order_complete_view(request, pk):
                 if order.worker_id:
                     create_notification(
                         recipient=order.worker,
-                        title='Заявка завершена',
-                        message=f'Клиент отметил заявку №{order.pk} как выполненную.',
+                        **stage06_notice(order.worker, 'order_completed', order.pk),
                         notification_type='order_completed',
                         related_order=order,
                     )
@@ -1291,8 +1288,7 @@ def order_work_action_view(request, pk, action):
                     if recipient:
                         create_notification(
                             recipient=recipient,
-                            title='Обновление выполнения заказа',
-                            message=f'Изменён этап выполнения заявки №{order.pk}.',
+                            **stage06_notice(recipient, 'order_updated', order.pk),
                             notification_type='order_updated',
                             related_order=order,
                         )
@@ -1349,8 +1345,7 @@ def rating_create_view(request, pk):
                 rating.save()
                 create_notification(
                     recipient=order.worker,
-                    title='Новый отзыв',
-                    message=f'Клиент оставил отзыв по заявке №{order.pk}.',
+                    **stage06_notice(order.worker, 'review_created', order.pk),
                     notification_type='review_created',
                     related_order=order,
                 )
@@ -1439,8 +1434,7 @@ def order_respond_view(request, pk):
                     if created and order.client:
                         create_notification(
                             recipient=order.client,
-                            title='Новый отклик',
-                            message=f'Мастер откликнулся на вашу заявку №{order.pk}.',
+                            **stage06_notice(order.client, 'new_response', order.pk),
                             notification_type='new_response',
                             related_order=order,
                         )

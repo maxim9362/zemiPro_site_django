@@ -57,7 +57,8 @@ def transition_order_status(order, target_status, *, actor, operation_key=None,
             raise ValueError('Неверный идентификатор операции.') from error
 
     with transaction.atomic():
-        locked = Order.objects.select_for_update().select_related('city').get(pk=order_id)
+        # Different orders must not serialize on the shared city row.
+        locked = Order.objects.select_for_update(of=('self',)).select_related('city').get(pk=order_id)
         active_owner = User.objects.filter(
             pk=actor.pk, is_active=True, is_blocked=False,
             email_verification_required=False,
