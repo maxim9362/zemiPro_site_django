@@ -174,6 +174,11 @@
                     {% trans 'Откликнуться' %}
                 </a>
                 {% elif not is_owner and worker_response %}
+                {% if worker_response.status == 'pending' or worker_response.status == 'sent' or worker_response.status == 'viewed' or worker_response.status == 'negotiating' or worker_response.status == 'accepted' %}
+                <form method="post" action="{% url 'marketplace:chat_open' response_id=worker_response.pk %}">
+                    {% csrf_token %}<button type="submit" class="btn btn--secondary">{% trans 'Переписка' %}</button>
+                </form>
+                {% endif %}
                 <span class="btn btn--secondary" style="opacity: 0.7; cursor: default;">
                     {% trans 'Вы уже откликались на эту заявку' %}
                 </span>
@@ -275,6 +280,11 @@
                         <p><strong>{{ offer_copy.message }}:</strong> <span dir="auto">{{ card.response.message }}</span></p>
                         {% endif %}
                         <p><strong>{{ offer_copy.status }}:</strong> {{ card.status_label }}</p>
+                        {% if card.response.status == 'pending' or card.response.status == 'sent' or card.response.status == 'viewed' or card.response.status == 'negotiating' or card.response.status == 'accepted' %}
+                        <form method="post" action="{% url 'marketplace:chat_open' response_id=card.response.pk %}">
+                          {% csrf_token %}<button type="submit" class="btn btn--secondary btn--sm">{% trans 'Переписка' %}</button>
+                        </form>
+                        {% endif %}
                         {% if order.status == 'published' or order.status == 'in_discussion' %}
                         {% if card.response.status == 'pending' or card.response.status == 'sent' or card.response.status == 'viewed' or card.response.status == 'negotiating' %}
                             <form method="post" action="{% url 'marketplace:order_accept_response' order_id=order.pk response_id=card.response.pk %}">

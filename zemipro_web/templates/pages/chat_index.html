@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}{{ copy.chats }} — ZemiPro{% endblock %}
+{% block content %}
+<section class="container" style="padding-block:24px;max-width:820px">
+  <h1>{{ copy.chats }}</h1>
+  <ol style="list-style:none;padding:0;display:grid;gap:12px">
+    {% for item in conversations %}
+      <li style="border:1px solid #cbd5e1;border-radius:12px;padding:16px">
+        <a href="{% url 'marketplace:chat_thread' conversation_id=item.pk %}">
+          {{ copy.thread }} <bdi dir="ltr">#{{ item.response.order_id }}</bdi>
+        </a>
+      </li>
+    {% empty %}
+      <li>{{ copy.empty }}</li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

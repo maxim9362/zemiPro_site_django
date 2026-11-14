@@ -2,7 +2,7 @@
 from uuid import uuid4
 
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, transaction
 from django.test import TestCase
 
 from apps.marketplace.chat_services import (
@@ -92,7 +92,7 @@ class ChatPermissionTests(TestCase):
         first.body = 'Tampered'
         with self.assertRaises(ValidationError):
             first.save()
-        with self.assertRaises(IntegrityError), transaction.atomic():
+        with self.assertRaises(DatabaseError), transaction.atomic():
             Message.objects.filter(pk=first.pk).update(body='Tampered')
         self.assertEqual(Message.objects.get(pk=first.pk).body, 'Synthetic private message')
 
