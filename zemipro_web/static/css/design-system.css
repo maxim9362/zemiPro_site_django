@@ -119,7 +119,8 @@ textarea:focus-visible,[tabindex]:focus-visible {outline:3px solid var(--ui-focu
 }
 
 /* Stage 08.6 — highly visible focus on both white and dark surfaces. */
-:where(.public-hero, .site-nav, .comm-message--mine) .btn--primary:focus-visible,
+.btn--primary:focus-visible,
+.btn--danger:focus-visible,
 .site-nav.nav .site-nav__primary:focus-visible,
 .public-hero a:focus-visible,
 .skip-link:focus-visible {

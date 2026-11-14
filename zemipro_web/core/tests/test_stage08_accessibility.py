@@ -48,6 +48,8 @@ class Stage08AccessibilitySources(SimpleTestCase):
         self.assertGreaterEqual(
             _contrast(values["--ui-muted"], "#ffffff"), 4.5
         )
+        self.assertIn(".btn--primary:focus-visible", css)
+        self.assertIn(".btn--danger:focus-visible", css)
         self.assertIn(":focus-visible", css)
         self.assertIn("prefers-contrast:more", css)
 
