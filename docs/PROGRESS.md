@@ -1170,3 +1170,12 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 - Browser-visible `zemipro.co.il` is legacy content advertising Telegram and multiple regions; it is **not** proof of the Django frontend. Ashdod-only migration and production switch remain separately gated in Stage 09.
 - Findings: confusing Ashdod/address copy; busy wrapping navbar; inline styles; incomplete distinct status styles; chat polling lacks message actions provided on SSR; form/error/a11y inconsistency; notification deep-link and moderation return UX. Source-only checks: **6/6 PASS, 0 FAIL**. **Django/Playwright/device tests NOT RUN in 08.1**; no changed executable code.
 - Changes: documentation only (`docs/STAGE_08_UX_AUDIT.md`, `docs/ROADMAP.md`, `docs/PROGRESS.md`). No production, deployment, migrations, merge, or changes in Stage07 branch/main. Next step: owner approval and explicit command before 08.2.
+
+## 2026-11-14 — Stage 08.2: shared Django frontend design system
+
+- **IMPLEMENTED / CI_PENDING:** единые CSS tokens и mobile role-aware navigation, без новых зависимостей и API.
+- CSS: static/css/design-system.css (не удаляя существующий style.css); JS: static/js/navigation.js (Escape, focus, no-JS fallback).
+- Компоненты Django: site_navigation, service_card, worker_card, form_field, flash_messages, empty_state, status_badge. Интеграции: home/categories/directory, login/register, dashboards, order_detail.
+- Ограничения privacy: в worker_card только публичная snapshot-проекция; старые CSRF, permissions, switches и RTL остаются на сервере. Пилот — только Ашдод.
+- Адресные тесты в core.tests.test_stage08_design_system, запуск в GitHub CI после push; точный результат подлежит подтверждению. Independent review через Codex — только после 08.7.
+- Описание: docs/STAGE_08_DESIGN_SYSTEM.md; PR #17 остаётся Draft, Stage 07 PR #16 не объединён. Production не трогали, к 08.3 не переходили.
