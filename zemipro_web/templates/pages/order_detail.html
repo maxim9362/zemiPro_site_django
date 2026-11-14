@@ -308,31 +308,37 @@
         </section>
         {% endif %}
 
-        {# {% trans 'Отзыв' %} если есть #}
         {% if existing_rating %}
-        <div class="order-card app-order-history">
+        <section class="order-card app-order-history" aria-labelledby="order-verified-review">
             <div class="order-card__header">
-                <span class="order-card__category">{% trans 'Отзыв' %}</span>
+                <h2 id="order-verified-review" class="order-card__category">{% trans 'Отзыв' %}</h2>
             </div>
             <div class="order-card__body">
-                <p><strong>{% trans 'Оценка:' %}</strong> {{ existing_rating.rating }}/5</p>
+                <p><strong>{% trans 'Оценка:' %}</strong> <bdi dir="ltr">{{ existing_rating.rating }}/5</bdi></p>
                 {% if existing_rating.review_text %}
-                <p>{{ existing_rating.public_review_text }}</p>
+                <p dir="auto">{{ existing_rating.public_review_text }}</p>
                 {% endif %}
                 {% if existing_rating.worker_reply %}
-                  <div class="form__hint"><strong>{% trans 'Ответ специалиста' %}:</strong>
+                <div class="app-notice">
+                    <strong>{% trans 'Ответ специалиста' %}:</strong>
                     <p dir="auto">{{ existing_rating.worker_reply.public_text }}</p>
-                  </div>
+                </div>
                 {% elif order.worker_id == request.user.pk and order.status == 'completed' %}
-                  <form method="post" action="{% url 'marketplace:rating_reply' rating_id=existing_rating.pk %}">
+                <form method="post" class="form app-stack"
+                      action="{% url 'marketplace:rating_reply' rating_id=existing_rating.pk %}">
                     {% csrf_token %}
-                    <label for="review-reply">{% trans 'Ответить на отзыв' %}</label>
-                    <textarea id="review-reply" name="body" rows="3" maxlength="1000" required dir="auto"></textarea>
-                    <button type="submit" class="btn btn--secondary">{% trans 'Отправить ответ' %}</button>
-                  </form>
+                    <div class="form__group">
+                        <label class="form__label" for="review-reply">{% trans 'Ответить на отзыв' %}</label>
+                        <textarea class="form__textarea" id="review-reply" name="body"
+                                  rows="3" maxlength="1000" required dir="auto"></textarea>
+                    </div>
+                    <div class="app-form-actions">
+                        <button type="submit" class="btn btn--secondary">{% trans 'Отправить ответ' %}</button>
+                    </div>
+                </form>
                 {% endif %}
             </div>
-        </div>
+        </section>
         {% endif %}
     </div>
 </section>
