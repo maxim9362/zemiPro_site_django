@@ -222,6 +222,8 @@ class PublicUIStage08Tests(TestCase):
         guest = self.client.get(url)
         self.assertEqual(guest.status_code, 200)
         self.assertContains(guest, 'Clear Home Plumber')
+        self.assertContains(guest, '<h1>')
+        self.assertContains(guest, '<bdi dir="auto">')
         self.assertContains(guest, 'public-profile__overview')
         self.assertContains(guest, 'Примеры работ')
         self.assertContains(guest, 'Отзывы')
