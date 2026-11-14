@@ -117,7 +117,7 @@ class Stage07NotificationTests(TestCase):
         )
         notice = self.owner.notifications.get()
         self.client.force_login(self.owner)
-        self.assertIn(self.client.get(reverse(
+        self.assertEqual(self.client.get(reverse(
             'notifications:notification_list',
         )).status_code, 200)
         self.owner.is_blocked = True
