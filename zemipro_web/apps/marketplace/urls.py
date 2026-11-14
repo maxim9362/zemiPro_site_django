@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, offer_views, chat_views
+from . import views, offer_views, chat_views, review_views
 
 app_name = 'marketplace'
 
@@ -42,6 +42,7 @@ urlpatterns = [
          name='order_work_action'),
     path('orders/<int:pk>/review/', views.rating_create_view, name='rating_create'),
 
+    path('reviews/<int:rating_id>/reply/', review_views.rating_reply_view, name='rating_reply'),
     path('worker/<int:pk>/', views.worker_public_profile_view, name='worker_public_profile'),
     path('worker/<int:pk>/favorite/', views.toggle_favorite_worker_view,
          name='toggle_favorite_worker'),

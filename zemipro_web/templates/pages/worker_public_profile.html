@@ -140,6 +140,10 @@
                         {% if review.review_text %}
                         <p class="order-card-sm__desc">{{ review.public_review_text }}</p>
                         {% endif %}
+                        {% if review.worker_reply %}
+                        <p class="form__hint"><strong>{% trans 'Ответ специалиста' %}:</strong>
+                        <span dir="auto">{{ review.worker_reply.public_text }}</span></p>
+                        {% endif %}
 
                     </div>
                 </div>
