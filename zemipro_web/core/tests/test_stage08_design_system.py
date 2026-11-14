@@ -89,6 +89,7 @@ class SharedUIPageTests(TestCase):
         self.assertContains(client, 'href="/client/dashboard/"')
         self.assertNotContains(client, 'href="/worker/dashboard/"')
         self.assertContains(client, 'action="/accounts/switch-role/"')
+        self.assertNotContains(client, 'href="/moderation/queue/"')
         self.assertContains(client, 'name="role" value="worker"')
         user.active_role = 'worker'
         user.save(update_fields=['active_role'])

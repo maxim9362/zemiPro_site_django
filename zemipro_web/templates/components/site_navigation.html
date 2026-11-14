@@ -24,7 +24,7 @@
             {% if unread_notifications_count %}<span class="notif-badge">{{ unread_notifications_count }}</span>{% endif %}
         </a>
         <a href="{% url 'accounts:contact_verification' %}">{% trans 'Подтверждение контактов' %}</a>
-        {% if perms.moderation.review_complaints %}
+        {% if user.is_staff and user.is_active and not user.is_blocked and not user.email_verification_required and perms.moderation.review_complaints %}
         <a href="{% url 'moderation:queue' %}">
             {% if current_language == 'he' %}תור הבקרה{% elif current_language == 'en' %}Moderation queue{% else %}Очередь модерации{% endif %}
         </a>
