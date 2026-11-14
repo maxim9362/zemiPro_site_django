@@ -223,3 +223,31 @@ def open_message_image(*, attachment_id, actor):
     if not _ATTACHMENT_KEY.fullmatch(attachment.file_key):
         raise PermissionDenied('Attachment unavailable.')
     return private_portfolio_storage().open(attachment.file_key, 'rb')
+
+
+@transaction.atomic
+def take_poll_slot(*, conversation_id, actor):
+    """Shared, bounded polling quota; one opaque row per account and thread."""
+    import hashlib
+    import hmac
+    from django.conf import settings
+    from apps.accounts.models import SensitivePostCounter
+
+    get_conversation(conversation_id=conversation_id, actor=actor)
+    key = hmac.new(
+        settings.SECRET_KEY.encode('utf-8'),
+        f'chat-poll:{actor.pk}:{conversation_id}'.encode('ascii'),
+        hashlib.sha256,
+    ).hexdigest()
+    now = timezone.now()
+    row, _ = SensitivePostCounter.objects.select_for_update().get_or_create(
+        bucket_hash=key,
+        defaults={'attempts': 0, 'expires_at': now + timedelta(minutes=1)},
+    )
+    if row.expires_at <= now:
+        row.attempts = 0
+        row.expires_at = now + timedelta(minutes=1)
+    if row.attempts >= 24:
+        raise ChatConflict('Chat polling rate limit reached.')
+    row.attempts += 1
+    row.save(update_fields=['attempts', 'expires_at'])
