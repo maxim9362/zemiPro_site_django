@@ -2,7 +2,6 @@
 
 Synthetic HTTP regressions for review notification rollback and worker-name privacy.
 """
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from unittest.mock import patch
