@@ -1090,3 +1090,97 @@ class OrderQuestionnaireAnswer(models.Model):
 
     def __str__(self):
         return f'Анкета заказа #{self.order_id} / v{self.version.number}'
+
+
+class Conversation(models.Model):
+    """Private conversation bound to one existing, authorized worker offer."""
+
+    response = models.OneToOneField(
+        Response, on_delete=models.PROTECT, related_name='conversation',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_conversation'
+        ordering = ['-created_at', '-pk']
+
+    @property
+    def order_id(self):
+        return self.response.order_id
+
+    @property
+    def client_id(self):
+        return self.response.order.client_id
+
+    @property
+    def worker_id(self):
+        return self.response.worker_id
+
+
+class Message(models.Model):
+    """Original message is immutable; only recipient read status may change."""
+
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.PROTECT, related_name='messages',
+    )
+    sender = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='sent_chat_messages',
+    )
+    body = models.TextField()
+    client_nonce = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_message'
+        ordering = ['created_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['conversation', 'sender', 'client_nonce'],
+                name='chat_message_nonce_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['conversation', 'pk'], name='chat_message_page_idx',
+            ),
+            models.Index(
+                fields=['conversation', 'sender', '-created_at'],
+                name='chat_msg_actor_time_idx',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            previous = type(self).objects.filter(pk=self.pk).values(
+                'conversation_id', 'sender_id', 'body', 'client_nonce',
+            ).first()
+            if previous is not None and any(
+                previous[field] != getattr(self, field)
+                for field in ('conversation_id', 'sender_id', 'body', 'client_nonce')
+            ):
+                raise ValidationError('Original chat messages cannot be modified.')
+        return super().save(*args, **kwargs)
+
+
+class MessageAttachment(models.Model):
+    """Opaque private JPEG only; no direct URL, original filename or metadata."""
+
+    message = models.ForeignKey(
+        Message, on_delete=models.PROTECT, related_name='attachments',
+    )
+    file_key = models.CharField(max_length=120, unique=True, editable=False)
+    content_sha256 = models.CharField(max_length=64, editable=False)
+    byte_size = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_message_attachment'
+        ordering = ['pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['message', 'content_sha256'],
+                name='chat_attachment_digest_unique',
+            ),
+        ]

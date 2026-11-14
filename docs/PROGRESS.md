@@ -1088,3 +1088,11 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 - **Действительный Stage 06:** [PR #13](https://github.com/maxim9362/zemiPro_site_django/pull/13) **MERGED** 2026-11-14, merge SHA `d55a7144c8017f8be2b061dd39e5bfc23d52ebd4`; локальные 524/524 Django, независимая проверка и все три Actions финального SHA `d79f20e2a258364e771256b4dae03958a2fc1074` — PASS. Это **не DEPLOYED**.
 - **Входные гейты:** Stage 07 разрабатывается отдельно; Stage 08 начинается только после согласования работы по нему. Отложенный legacy URL inventory и 00.4 обязательны до теперь перенумерованного **SEO-этапа 09**; физические устройства, реальный Ashdod-пилот и эксплуатационная безопасность остаются отдельными публичными release-гейтами.
 - **Операция:** только изменение документации через отдельный PR, слияние после доступных проверок; без запуска фронтенд-разработки и без deployment.
+
+
+## 2026-11-14 — Stage 07.1: protected chat foundation
+
+- **Branch:** `stage-07-chat-notifications-moderation` from `576ef639e1b5944e333ac2829d47e16f51aa82a0` (PR #13 and #14 MERGED).
+- **CODE_IMPLEMENTED / CI_PENDING:** conversation bound to a persisted response, server-derived client and worker, no arbitrary peer IDs; original message and PostgreSQL mutation guard, nonce-replay and per-thread rate limit, private image metadata and gated access, negative permission tests.
+- **Checks:** source review performed; Django/PostgreSQL checks and CI not yet run. No production, deployment, secrets, or real user data accessed.
+- **Next:** Stage 07.2 minimal polling/UI and targeted GitHub CI; one full independent review only after 07.7.
