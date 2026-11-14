@@ -60,7 +60,7 @@ def complaint_create_view(request):
                 raise Http404 from None
             else:
                 messages.success(request, _('Жалоба отправлена. Спасибо!'))
-                return redirect('moderation:my_complaints')
+                return redirect('marketplace:home')
     elif request.method == 'GET':
         form = ComplaintForm()
     else:
