@@ -1,18 +1,18 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
 
 {% block title %}{% trans 'Отзыв на заказ' %} #{{ order.pk }} — ZemiPro{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header app-page-header">
     <div class="container">
         <h1>{% trans 'Оставить отзыв мастеру' %}</h1>
-        <p>{% trans 'Заказ' %} #{{ order.pk }} · {{ order.category.localized_name }} · {{ order.worker }}</p>
+        <p>{% trans 'Заказ' %} #{{ order.pk }} · {{ order.category.localized_name }}</p>
     </div>
-</section>
+</header>
 
-<section class="order-form">
-    <div class="container">
+<section class="order-form app-page">
+    <div class="container app-narrow"><div class="app-panel">
         <form method="post" class="form">
             {% csrf_token %}
 
@@ -44,10 +44,10 @@
             <button type="submit" class="btn btn--primary btn--lg">
                 {% trans 'Отправить отзыв' %}
             </button>
-            <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" style="margin-left: 12px;">
+            <a href="{% url 'marketplace:order_detail' pk=order.pk %}" class="btn btn--secondary" >
                 {% trans 'Назад' %}
             </a>
         </form>
-    </div>
+    </div></div>
 </section>
 {% endblock %}

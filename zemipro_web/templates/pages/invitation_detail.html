@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% block title %}{{ invite_copy.details }} — ZemiPro{% endblock %}
 {% block content %}
-<section class="dashboard"><div class="container" style="max-width:760px">
+<section class="dashboard app-page"><div class="container app-invite-shell"><div class="app-panel">
     <h1>{{ invite_copy.details }} #{{ invitation.pk }}</h1>
     <p><strong>{{ invite_copy.status }}:</strong> {{ invitation.localized_status }}</p>
     <div class="order-card">
@@ -24,10 +24,6 @@
         </form>
         {% endif %}
     {% endif %}
-    {% if is_client %}
-    <a href="{% url 'marketplace:order_detail' pk=invitation.order_id %}">{{ invite_copy.to_order }}</a>
-    {% else %}
-    <a href="{% url 'marketplace:order_detail' pk=invitation.order_id %}">{{ invite_copy.to_order }}</a>
-    {% endif %}
-</div></section>
+    <a class="btn btn--secondary" href="{% url 'marketplace:order_detail' pk=invitation.order_id %}">{{ invite_copy.to_order }}</a>
+</div></div></section>
 {% endblock %}
