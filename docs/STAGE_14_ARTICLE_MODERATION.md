@@ -1,7 +1,7 @@
 # Stage 14.2 — защищённый редактор и модерация экспертных статей
 
 > Нормативный объём: REQ-KNOW-001/002/006/011/012/013/015, требования 14.2
-> Статус: CODE_IMPLEMENTED / CI_PENDING. Публичная активация, пилот и реальный контент — PENDING.
+> Статус: **14.2 CODE_CI_VERIFIED** на кодовом SHA `21daf56d83c34fe108b09de20cc6afac95473a6b`. [GitHub Actions #43689847639](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43689847639) **SUCCESS**: адресные 27/27, полный Django 664/664, 38/38 CI steps, PostgreSQL 17 migrations, Ruff и браузерные регрессии. Публичная активация, пилот и реальный контент — **PENDING**.
 > База: `docs/STAGE_14_DOMAIN_MODEL.md`, Stage08 frontend baseline неизменён.
 
 ## Поведение и контроль прав
