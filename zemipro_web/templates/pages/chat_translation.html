@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Машинный перевод' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="container" style="max-width:760px;padding:24px">
+  <p><a href="{% url 'marketplace:chat_thread' conversation_id=message.conversation_id %}">
+    {% trans 'Назад к переписке' %}</a></p>
+  <h1>{% trans 'Машинный перевод' %}</h1>
+  {% if translation %}
+    <p role="note">{% trans 'Машинный перевод Gemini, не текст автора. Возможны ошибки.' %}</p>
+    <article lang="{{ translation.target_language }}" dir="{% if translation.target_language == 'he' %}rtl{% else %}ltr{% endif %}">
+      <p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ translation.translated_body }}</p>
+    </article>
+  {% else %}
+    <p role="status">{% trans 'Перевод недоступен. Оригинальное сообщение сохранено.' %}</p>
+  {% endif %}
+  <details>
+    <summary>{% trans 'Показать оригинал' %}</summary>
+    <p dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ message.body }}</p>
+  </details>
+</section>
+{% endblock %}

@@ -14,6 +14,7 @@ def _require_moderator(actor, permission):
     # All callers are transactional and keep this row locked during mutation.
     stored = User.objects.select_for_update().filter(
         pk=actor.pk, is_active=True, is_blocked=False, is_staff=True,
+        email_verification_required=False,
     ).first()
     if stored is None or not stored.has_perm(f'moderation.{permission}'):
         raise PermissionDenied('Недостаточно прав для модерации.')

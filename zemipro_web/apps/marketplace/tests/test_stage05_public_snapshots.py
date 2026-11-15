@@ -2,7 +2,7 @@
 import threading
 from unittest import mock
 
-from django.db import close_old_connections
+from django.db import DatabaseError, close_old_connections, transaction
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -472,9 +472,13 @@ class PublicSnapshotSecurityTests(TestCase):
             order=order, worker=self.worker_user, client=self.owner,
             rating=5, review_text='Synthetic review without contact.',
         )
-        Rating.objects.filter(pk=rating.pk).update(
-            review_text='john-at-example-dot-com',
-        )
+        # Stage 07 makes the verified original and its safe public snapshot
+        # append-only. A direct corrupting UPDATE is rejected even before
+        # the Stage 05 fail-closed read projection is exercised.
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            Rating.objects.filter(pk=rating.pk).update(
+                review_text='john-at-example-dot-com',
+            )
         rating.refresh_from_db()
         self.assertEqual(
             rating.public_review_text, 'Synthetic review without contact.',

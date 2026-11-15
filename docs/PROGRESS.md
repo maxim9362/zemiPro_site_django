@@ -1088,3 +1088,77 @@ Final targeted/adversarial/Ashdod run: **82/82 PASS**. Chromium Stage02 **90/90*
 - **Действительный Stage 06:** [PR #13](https://github.com/maxim9362/zemiPro_site_django/pull/13) **MERGED** 2026-11-14, merge SHA `d55a7144c8017f8be2b061dd39e5bfc23d52ebd4`; локальные 524/524 Django, независимая проверка и все три Actions финального SHA `d79f20e2a258364e771256b4dae03958a2fc1074` — PASS. Это **не DEPLOYED**.
 - **Входные гейты:** Stage 07 разрабатывается отдельно; Stage 08 начинается только после согласования работы по нему. Отложенный legacy URL inventory и 00.4 обязательны до теперь перенумерованного **SEO-этапа 09**; физические устройства, реальный Ashdod-пилот и эксплуатационная безопасность остаются отдельными публичными release-гейтами.
 - **Операция:** только изменение документации через отдельный PR, слияние после доступных проверок; без запуска фронтенд-разработки и без deployment.
+
+
+## 2026-11-14 — Stage 07.1: protected chat foundation
+
+- **Branch:** `stage-07-chat-notifications-moderation` from `576ef639e1b5944e333ac2829d47e16f51aa82a0` (PR #13 and #14 MERGED).
+- **CODE_IMPLEMENTED / CI_PENDING:** conversation bound to a persisted response, server-derived client and worker, no arbitrary peer IDs; original message and PostgreSQL mutation guard, nonce-replay and per-thread rate limit, private image metadata and gated access, negative permission tests.
+- **Checks:** source review performed; Django/PostgreSQL checks and CI not yet run. No production, deployment, secrets, or real user data accessed.
+- **Next:** Stage 07.2 minimal polling/UI and targeted GitHub CI; one full independent review only after 07.7.
+
+
+## 2026-11-14 — Stage 07.2: chat polling UI
+
+- **CODE_IMPLEMENTED / CI_PENDING:** existing offer is required for a POST-only conversation, paged history and nonce-replay POST, JSON 6-second polling recovery, shared per-thread rate limit, recipient read state, private attachment upload/stream, mobile RTL-compatible templates and CSRF/IDOR HTTP tests. No mandatory WebSocket or Gemini.
+- Stage 07.1 targeted CI revealed Django index name problem (fixed in `3b3259c`) and wrong expected PostgreSQL trigger exception type (test adjusted). CI on the final SHA remains to be checked.
+
+
+## 2026-11-14 — Stage 07.3: localised notifications and opt-in delivery
+
+- **CODE_IMPLEMENTED / CI_PENDING:** optional recipient preferences; mandatory security notices; RU/EN/HE recipient-specific content; immutable message event dedup; durable outbound email queue with bounded retry/dead-letter and explicit disabled-by-default worker. Existing Stage04–06 notification service is reused without removing its compatibility contract.
+- All provider tests use synthetic email and injected failures. No external emails/deploy/production touched.
+
+
+## 2026-11-14 — Stage 07.4: verified reviews and public answers
+
+- **CODE_IMPLEMENTED / CI_PENDING:** retained existing Rating and computed aggregate; added one-time selected-worker public response with private original/PII-safe snapshot, protected score integrity by PostgreSQL trigger/check, append-only rating audit entries, client notification on response, negative tests. Public order details now render only safe rating snapshot.
+- Stage 08 global redesign deliberately excluded. Production untouched.
+
+
+## 2026-11-14 — Stage 07.5: report queue and appeals
+
+- **CODE_IMPLEMENTED / CI_PENDING:** existing moderation/report work-dispute queue retained; complaint targets specialist/order/review/private message with owner/participant checks; staff permission-gated queue and decisions reuse append-only ModerationEvent; one auditable appeal per decision, notices and 5-per-hour rate quota, minimal RU/EN/HE-ready templates, CSRF and IDOR negative tests.
+- Reviewed Stage05 snapshot mutation test conflict: score/identity remain immutable; test-directed original review_text corruption stays possible to verify the fail-closed public snapshot; no public editing endpoint.
+
+
+## 2026-11-14 — Stage 07.6: optional, private AI translation
+
+- **CODE_IMPLEMENTED / CI_PENDING:** separate `MessageTranslation` original-preserving model and PostgreSQL append-only trigger (`marketplace.0022`); protected per-message POST and translated result page with explicit "Show original" and machine-translation label, RU/EN/HE. Fail-closed consent and PII/digit filter, 10/day user quota, bounded provider calls over HTTPS with key in header, no personal metadata sent; Gemini disabled by default. No AI dependency in sending/reading original messages.
+- Live Gemini calls deliberately NOT RUN: no provider credentials or production permitted. Confirmed adapter request shape from Google developer docs; synthetic tests required before stage acceptance.
+
+## 2026-11-14 — Stage 07.7: synthetic E2E and CI acceptance gates
+
+- **CODE_IMPLEMENTED / CI_PENDING:** Stage04→07 customer workflow and invitation→dispute→moderation workflow, negative permission and RU/EN/HE checks, synthetic Chromium mobile/RTL 320/390/768 with private-thread IDOR, and isolated PostgreSQL 17 legacy upgrade/rollback rehearsal.
+- Targeted CI found a test-only locale mismatch (now using HTTP Accept-Language), and Ruff import duplication; fixes committed in the same branch. The complete final SHA checks and independent reviewer are NOT YET VERIFIED.
+- Stage07 security hardening: persisted notification read gate, explicit SMTP opt-in, review text and public snapshot immutability. A Stage05 tampering regression is strengthened to assert database denial.
+- **Do not claim stage acceptance or merge until all final gates pass.** No live customer data, production, SMTP, Gemini, VPS or deployment touched.
+
+
+## 2026-11-14 — Stage 07: Codex audit remediation
+
+- **REVIEW / LOCALLY_VERIFIED / PR_METADATA_BLOCKED**; existing Draft PR #16 only.
+- Audited base `53e5352afa2495d5ad50592b469835691e50c588`; main remained
+  `576ef639e1b5944e333ac2829d47e16f51aa82a0` at audit start.
+- Reproduced and fixed ZP-07-001–013: conversation/sender/read integrity,
+  outer-rollback JPEG leak, revoked email/moderator/translation authorization,
+  appeal audit/quota, history/read/image delivery, notification cache policy,
+  browser readiness, and the existing dashboard SQL regression (15 > 14).
+- Added forward migrations marketplace.0023 and moderation.0006 plus independent
+  adversarial, failure-injection, retry and concurrency tests. Prior-stage
+  migrations and existing test thresholds were preserved.
+- PostgreSQL 17 clean and Stage06 legacy upgrade/rollback PASS. Chromium:
+  Stage02 90/90, Stage06 18/18, Stage07 39/39, including no-JavaScript send/read.
+- Final local Django: **580/580 PASS**, Stage07 **56/56 PASS**, zero failures/skips;
+  coverage gate 89.6% for marketplace/services.py. Exact-head GitHub CI is required;
+  see the final audit handoff and PR checks. No remote failure log is claimed:
+  unauthenticated GitHub job pages required sign-in.
+- PR remains Draft; merge, deployment, Stage08, production data and real provider
+  calls are excluded. Historical implementation/failure entries above are retained.
+
+- Кодовый commit `7dd98c8f13601b9a56c5f7dde72b95dcfbc9900c` отправлен в
+  существующую ветку; повторный suite на этом commit: 580/580 PASS.
+  Исправления и 20 новых тестов входят в PR #16. GitHub API отказал обновлению
+  описания PR: `Post "https://api.github.com/graphql": Forbidden`; описание
+  подготовлено вне репозитория. Технический финальный отчёт должен отдельно
+  подтвердить Actions на последнем SHA и этот оставшийся внешний блокер.

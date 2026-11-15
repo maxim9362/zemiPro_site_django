@@ -975,6 +975,12 @@ class Rating(models.Model):
         verbose_name_plural = 'Отзывы'
         db_table = 'marketplace_rating'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(rating__gte=1, rating__lte=5),
+                name='rating_score_five_point_valid',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.worker} — {self.rating}/5'
@@ -1005,6 +1011,9 @@ class Rating(models.Model):
                 })
                 kwargs['update_fields'] = updates
         return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Verified reviews cannot be deleted.')
 
 
 class ServiceQuestionnaire(models.Model):
@@ -1090,3 +1099,222 @@ class OrderQuestionnaireAnswer(models.Model):
 
     def __str__(self):
         return f'Анкета заказа #{self.order_id} / v{self.version.number}'
+
+
+class Conversation(models.Model):
+    """Private conversation bound to one existing, authorized worker offer."""
+
+    response = models.OneToOneField(
+        Response, on_delete=models.PROTECT, related_name='conversation',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_conversation'
+        ordering = ['-created_at', '-pk']
+
+    @property
+    def order_id(self):
+        return self.response.order_id
+
+    @property
+    def client_id(self):
+        return self.response.order.client_id
+
+    @property
+    def worker_id(self):
+        return self.response.worker_id
+
+
+class Message(models.Model):
+    """Original message is immutable; only recipient read status may change."""
+
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.PROTECT, related_name='messages',
+    )
+    sender = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='sent_chat_messages',
+    )
+    body = models.TextField()
+    client_nonce = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_message'
+        ordering = ['created_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['conversation', 'sender', 'client_nonce'],
+                name='chat_message_nonce_unique',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['conversation', 'id'], name='chat_message_page_idx',
+            ),
+            models.Index(
+                fields=['conversation', 'sender', '-created_at'],
+                name='chat_msg_actor_time_idx',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            previous = type(self).objects.filter(pk=self.pk).values(
+                'conversation_id', 'sender_id', 'body', 'client_nonce',
+            ).first()
+            if previous is not None and any(
+                previous[field] != getattr(self, field)
+                for field in ('conversation_id', 'sender_id', 'body', 'client_nonce')
+            ):
+                raise ValidationError('Original chat messages cannot be modified.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Original chat messages cannot be deleted.')
+
+
+class MessageAttachment(models.Model):
+    """Opaque private JPEG only; no direct URL, original filename or metadata."""
+
+    message = models.ForeignKey(
+        Message, on_delete=models.PROTECT, related_name='attachments',
+    )
+    jpeg_data = models.BinaryField(null=True, editable=False)
+    file_key = models.CharField(max_length=120, unique=True, editable=False)
+    content_sha256 = models.CharField(max_length=64, editable=False)
+    byte_size = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_message_attachment'
+        ordering = ['pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['message', 'content_sha256'],
+                name='chat_attachment_digest_unique',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Private attachment evidence is immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Private attachment evidence is immutable.')
+
+
+class RatingReply(models.Model):
+    """At most one public answer from the selected worker to a verified review."""
+
+    rating = models.OneToOneField(
+        Rating, on_delete=models.PROTECT, related_name='worker_reply',
+    )
+    worker = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='rating_replies',
+    )
+    body = models.TextField()
+    public_body_snapshot = models.TextField(blank=True, default='', editable=False)
+    policy_version = models.PositiveSmallIntegerField(default=0, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_rating_reply'
+
+    @property
+    def public_text(self):
+        from apps.accounts.public_text import MARKER, POLICY_VERSION
+        if self.policy_version == POLICY_VERSION:
+            return self.public_body_snapshot or MARKER
+        return MARKER
+
+    def save(self, *args, **kwargs):
+        from apps.accounts.public_text import POLICY_VERSION, build_caption_snapshot
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Review replies are append-only.')
+        self.public_body_snapshot = build_caption_snapshot(self.body) or ''
+        self.policy_version = POLICY_VERSION
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Review replies are append-only.')
+
+
+class RatingAuditEvent(models.Model):
+    """No mutable score history: a score and its creation/reply events are permanent."""
+
+    class Action(models.TextChoices):
+        CREATED = 'created', 'Review created'
+        REPLIED = 'replied', 'Worker replied'
+
+    rating = models.ForeignKey(
+        Rating, on_delete=models.PROTECT, related_name='audit_events',
+    )
+    actor = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT, related_name='review_actions',
+    )
+    action = models.CharField(max_length=12, choices=Action.choices)
+    score = models.PositiveSmallIntegerField()
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_rating_audit'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['rating', 'action'], name='rating_audit_action_unique',
+            ),
+        ]
+        ordering = ['occurred_at', 'pk']
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Review audit entries are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Review audit entries are immutable.')
+
+class MessageTranslation(models.Model):
+    """Optional private machine translation; never replaces the original Message."""
+
+    class Language(models.TextChoices):
+        RU = 'ru', 'Русский'
+        EN = 'en', 'English'
+        HE = 'he', 'עברית'
+
+    message = models.ForeignKey(
+        Message, on_delete=models.PROTECT, related_name='machine_translations',
+    )
+    requested_by = models.ForeignKey(
+        'accounts.User', on_delete=models.PROTECT,
+        related_name='requested_chat_translations',
+    )
+    target_language = models.CharField(max_length=2, choices=Language.choices)
+    translated_body = models.TextField()
+    engine = models.CharField(max_length=32, default='gemini')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'marketplace_message_translation'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['message', 'target_language'],
+                name='chat_translation_target_unique',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(target_language__in=['ru', 'en', 'he']),
+                name='chat_translation_language_valid',
+            ),
+        ]
+        ordering = ['created_at', 'pk']
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Machine translations are append-only.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Machine translations are append-only.')

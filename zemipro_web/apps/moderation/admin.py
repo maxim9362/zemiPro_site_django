@@ -15,9 +15,9 @@ class ComplaintAdmin(admin.ModelAdmin):
     search_fields = (
         'message', 'reporter__username', 'target_user__username', 'admin_note',
     )
-    raw_id_fields = ('reporter', 'target_user', 'target_order', 'target_rating')
+    raw_id_fields = ('reporter', 'target_user', 'target_order', 'target_rating', 'target_message')
     readonly_fields = (
-        'reporter', 'target_user', 'target_order', 'target_rating',
+        'reporter', 'target_user', 'target_order', 'target_rating', 'target_message',
         'reason', 'message', 'status', 'admin_note', 'created_at', 'resolved_at',
     )
     fields = readonly_fields

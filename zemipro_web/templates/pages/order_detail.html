@@ -174,6 +174,11 @@
                     {% trans 'Откликнуться' %}
                 </a>
                 {% elif not is_owner and worker_response %}
+                {% if worker_response.status == 'pending' or worker_response.status == 'sent' or worker_response.status == 'viewed' or worker_response.status == 'negotiating' or worker_response.status == 'accepted' %}
+                <form method="post" action="{% url 'marketplace:chat_open' response_id=worker_response.pk %}">
+                    {% csrf_token %}<button type="submit" class="btn btn--secondary">{% trans 'Переписка' %}</button>
+                </form>
+                {% endif %}
                 <span class="btn btn--secondary" style="opacity: 0.7; cursor: default;">
                     {% trans 'Вы уже откликались на эту заявку' %}
                 </span>
@@ -275,6 +280,11 @@
                         <p><strong>{{ offer_copy.message }}:</strong> <span dir="auto">{{ card.response.message }}</span></p>
                         {% endif %}
                         <p><strong>{{ offer_copy.status }}:</strong> {{ card.status_label }}</p>
+                        {% if card.response.status == 'pending' or card.response.status == 'sent' or card.response.status == 'viewed' or card.response.status == 'negotiating' or card.response.status == 'accepted' %}
+                        <form method="post" action="{% url 'marketplace:chat_open' response_id=card.response.pk %}">
+                          {% csrf_token %}<button type="submit" class="btn btn--secondary btn--sm">{% trans 'Переписка' %}</button>
+                        </form>
+                        {% endif %}
                         {% if order.status == 'published' or order.status == 'in_discussion' %}
                         {% if card.response.status == 'pending' or card.response.status == 'sent' or card.response.status == 'viewed' or card.response.status == 'negotiating' %}
                             <form method="post" action="{% url 'marketplace:order_accept_response' order_id=order.pk response_id=card.response.pk %}">
@@ -315,7 +325,19 @@
             <div class="order-card__body">
                 <p><strong>{% trans 'Оценка:' %}</strong> {{ existing_rating.rating }}/5</p>
                 {% if existing_rating.review_text %}
-                <p>{{ existing_rating.review_text }}</p>
+                <p>{{ existing_rating.public_review_text }}</p>
+                {% endif %}
+                {% if existing_rating.worker_reply %}
+                  <div class="form__hint"><strong>{% trans 'Ответ специалиста' %}:</strong>
+                    <p dir="auto">{{ existing_rating.worker_reply.public_text }}</p>
+                  </div>
+                {% elif order.worker_id == request.user.pk and order.status == 'completed' %}
+                  <form method="post" action="{% url 'marketplace:rating_reply' rating_id=existing_rating.pk %}">
+                    {% csrf_token %}
+                    <label for="review-reply">{% trans 'Ответить на отзыв' %}</label>
+                    <textarea id="review-reply" name="body" rows="3" maxlength="1000" required dir="auto"></textarea>
+                    <button type="submit" class="btn btn--secondary">{% trans 'Отправить ответ' %}</button>
+                  </form>
                 {% endif %}
             </div>
         </div>
