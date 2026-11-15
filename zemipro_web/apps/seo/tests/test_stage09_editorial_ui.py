@@ -194,3 +194,5 @@ class Stage09EditorialUiTests(TestCase):
                     'seo:editorial_detail', args=[page.pk],
                 ))
                 self.assertContains(detail, status)
+                listing = self.client.get(reverse('seo:editorial_list'))
+                self.assertContains(listing, status)

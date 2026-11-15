@@ -10,7 +10,7 @@
             <thead><tr><th>{% trans 'Заголовок' %}</th><th>{% trans 'Язык' %}</th><th>{% trans 'Статус' %}</th><th>{% trans 'Версия' %}</th></tr></thead>
             <tbody>{% for page in pages %}<tr>
                 <td><a href="{% url 'seo:editorial_detail' pk=page.pk %}">{{ page.title }}</a></td>
-                <td>{{ page.language }}</td><td>{{ page.get_status_display }}</td><td>{{ page.version }}</td>
+                <td>{{ page.language }}</td><td>{% if page.status == 'brief' %}{% trans 'Бриф' %}{% elif page.status == 'draft' %}{% trans 'Черновик' %}{% elif page.status == 'review' %}{% trans 'На проверке' %}{% elif page.status == 'approved' %}{% trans 'Одобрено' %}{% elif page.status == 'published' %}{% trans 'Опубликовано' %}{% endif %}</td><td>{{ page.version }}</td>
             </tr>{% empty %}<tr><td colspan="4">{% trans 'Материалов пока нет.' %}</td></tr>{% endfor %}</tbody>
         </table>
     </div>
