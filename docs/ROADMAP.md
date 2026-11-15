@@ -349,7 +349,7 @@ flowchart TD
 - **Результат этапа:** Старые SEO-страницы сохранены либо перенаправлены; Django обслуживает публичный сайт.
 - **Гейт закрытия:** Проверены значимые старые URL, 301/canonical/hreflang, готов откат, разрешено переключение домена.
 - **Особое условие:** Запрещены массовые 404, случайные редиректы на главную и переключение домена без согласования.
-- **Статус:** `IN_PROGRESS / CODEX_CLOUD` · **Ветка:** `stage-09-django-seo` · **Итоговый PR:** будет один Draft PR в `main`
+- **Статус:** `LOCAL_CODE_VERIFIED / EXTERNAL_GATES_PENDING / PR_API_BLOCKED` · **Ветка:** `stage-09-django-seo` · **Итоговый PR:** будет один Draft PR в `main`; создание из этого сеанса заблокировано отсутствием GitHub API auth
 
 - [ ] **09.1 — Подтверждение полного списка опубликованных URL.** `SAFE_PREPARATION_COMPLETE / EXTERNAL_EVIDENCE_PENDING` — 21 URL классифицирован, повторная HTTP-проверка заблокирована CONNECT proxy `403`, GSC недоступна; [доказательства и требуемый экспорт](STAGE_09_URL_AUDIT.md). Готово когда: нет неизвестных массовых шаблонов URL; решение по каждой важной странице документировано.
 - [x] **09.2 — Новый SEO-каталог и проверка соответствия URL.** `CODE_VERIFIED` — каталог использует только реальные Django-сущности, privacy-safe мастеров и серверный Ashdod-only; редакционный/legacy реестр fail-closed, история защищена PostgreSQL trigger. [Архитектура и тесты](STAGE_09_SEO_CATALOG.md). Окончательные решения legacy URL всё ещё зависят от внешнего гейта 09.1.
@@ -360,6 +360,8 @@ flowchart TD
 - [x] **09.7 — Редакционный конвейер нового SEO-контента.** `CODE_VERIFIED / NO_REAL_CONTENT_PUBLISHED` — permissioned brief→review→separate approval→publish/unpublish, CAS, immutable history, sources, duplicate/thin-content gates и CSRF UI. [Контракт](STAGE_09_EDITORIAL_WORKFLOW.md).
 
 **Решение по этапу 09:** закрывать только после выполненных подэтапов (или документированного `DEFERRED` с подтверждением), адресных проверок, необходимых интеграционных тестов и принятия единственного этапного PR.
+
+**Локальная приёмка 15.11.2026:** [полный отчёт](STAGE_09_FINAL_ACCEPTANCE.md) — Django 660/660, Stage09 29/29, PostgreSQL 17, Chromium 17/17 и независимый review PASS. Пять MEDIUM и один LOW исправлены; открытых code findings нет. 09.1, фактические решения 09.5, production cutover 09.6, GitHub Actions и создание Draft PR остаются внешними гейтами и не объявляются завершёнными.
 
 **Новое решение владельца (15.11.2026):** техническая реализация Stage 09 прямо разрешена от актуального `main`, хотя отдельный Draft PR #18 Stage 14 ещё не объединён, реальный пилот 14.4 и публичные GO остаются `PENDING`. Это не переписывает историю прежнего приоритета Stage 14 и не разрешает production cutover, DNS/Cloudflare/VPS, рабочую PostgreSQL, merge или активацию закрытых функций Stage 14.
 

@@ -218,6 +218,15 @@
 - **Реальные публикации/метрики/согласия:** `NONE`; только synthetic test DB.
 - **Следующий:** единый финальный цикл Stage09, browser/RTL, migration rehearsal, independent review, CI и один Draft PR.
 
+## 2026-11-15 — Stage 09: локальная финальная техническая приёмка
+
+- **Статус:** `LOCAL_CODE_VERIFIED / CUTOVER_PENDING / PR_API_BLOCKED / NOT_MERGED`.
+- **Проверки:** полный Django suite 660/660 PASS; Stage09 29/29 PASS; PostgreSQL 17 clean/upgrade/rollback PASS; Ruff/compileall/pip/check/migration drift/Compose/diff PASS; Chromium 17/17 на RU/EN/HE и четырёх viewport, no-JS 3/3.
+- **Independent review:** на исходном diff найдены пять MEDIUM и один LOW; все исправлены. Повторный read-only review exact `d706ba9a0cab6688ea7408f84442d0161cb0d219` — PASS, открытых CRITICAL/HIGH/MEDIUM/LOW нет.
+- **Дефекты:** approval reset/unpublish, admin workflow bypass, staff permission bypass, active legacy decision mutation, sitemap/noindex mismatch и неполная локализация закрыты регрессиями.
+- **GitHub:** code commits pushed; `gh` не авторизован, API/REST заблокирован proxy 403. Draft PR и Actions status нельзя объявить созданными/успешными; подготовлена compare-ссылка. `main` не изменялся.
+- **Внешние гейты:** 09.1 HTTP/GSC, реальные решения 09.5, combined rebase с Stage14, физические устройства и production cutover остаются PENDING. Полный отчёт: `docs/STAGE_09_FINAL_ACCEPTANCE.md`.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.

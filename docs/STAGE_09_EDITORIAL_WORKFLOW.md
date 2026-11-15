@@ -10,6 +10,8 @@
   фиксирует автора, язык, тему, источники и тип landing page.
 - Изменения используют optimistic CAS `expected_version` и PostgreSQL row lock.
   Каждая успешная операция сначала создаёт append-only revision snapshot.
+- Любое содержательное изменение ранее reviewed/published текста атомарно
+  возвращает материал в draft, снимает публикацию и требует нового review.
 - Автор видит/редактирует только свои материалы; staff видит очередь. Review и
   publish требуют отдельных Django permissions. Автор не может одобрить
   собственный материал.
@@ -32,10 +34,11 @@
 
 ## Проверки
 
-- `apps.seo.tests`: 21/21 PASS на PostgreSQL 17.
+- `apps.seo.tests`: 29/29 PASS на PostgreSQL 17.
 - Полный UI workflow create/submit/review/publish/unpublish и 4 immutable
   revisions: PASS.
 - Object permissions, separate reviewer, CSRF, unsupported methods, CAS stale
   write, thin-content/duplicate gates: PASS.
+- Staff permission bypass и Django Admin bypass: BLOCKED/PASS.
 - Прямые SQL update/delete history: BLOCKED/PASS.
 - Ruff, Django checks, migration drift: PASS.
