@@ -32,7 +32,10 @@ class KnowledgeArticleSchemaTests(TestCase):
         self.assertFalse(settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED)
         self.assertFalse(settings.ZEMIPRO_KNOWLEDGE_QA_ENABLED)
         self.assertFalse(settings.ZEMIPRO_RECOMMENDATION_REQUESTS_ENABLED)
-        self.assertEqual(settings.ZEMIPRO_PILOT_CITY_SLUG, 'ashdod')
+        # Test settings intentionally disable the city pilot gate for legacy
+        # multi-city fixtures. The production Ashdod-only guard is unchanged
+        # and separately tested by Stage 02.
+        self.assertFalse(settings.ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED)
 
     def test_cannot_publish_without_moderated_public_snapshot(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
