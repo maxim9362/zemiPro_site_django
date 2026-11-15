@@ -95,8 +95,10 @@
   сохранения/архивации **запрещён**.
 - Требования проверки до статуса `PASS`: Django `check`, целевые тесты
   `apps.knowledge.tests.test_stage14_models` на **изолированной PostgreSQL 17**,
-  миграции forward/backward, `makemigrations --check --dry-run`, Ruff,
-  CI на итоговом SHA. Любой невыполненный критерий — `PENDING`.
+  миграции `knowledge zero → knowledge` (forward/backward только на
+  пустой CI-БД), `makemigrations --check --dry-run`, Ruff,
+  CI на итоговом SHA. Шаг добавлен в существующий `django-ci.yml` без
+  изменений production. Любой невыполненный критерий — `PENDING`.
 - Утверждённые четыре `docs/frontend/approved/*.html` и
   `docs/FRONTEND_DESIGN_BASELINE.md` не изменяются. Ни одной фиктивной
   публичной статьи, мастера, отзыва, рекомендации или SEO-страницы не создавать.

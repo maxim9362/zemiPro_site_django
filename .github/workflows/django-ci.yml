@@ -92,6 +92,14 @@ jobs:
           python manage.py migrate --noinput
           python manage.py migrate --check
 
+      # Only isolated ephemeral PostgreSQL 17 CI data: no live content exists here.
+      - name: Stage 14.1 reversible article migration and targeted schema tests
+        run: |
+          python manage.py migrate knowledge zero --noinput
+          python manage.py migrate knowledge --noinput
+          python manage.py migrate --check
+          python manage.py test apps.knowledge.tests.test_stage14_models
+
       - name: Stage 02.1 catalog seed round-trip on isolated CI PostgreSQL
         run: |
           python manage.py seed_service_catalog --plan
