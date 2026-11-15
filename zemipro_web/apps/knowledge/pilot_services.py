@@ -114,11 +114,8 @@ def pilot_author_status(actor):
 def _moderator_read(actor):
     # Consent/selection can be managed while authoring is open but public
     # reading is disabled. It does not grant any release or Q&A permission.
-    if not (
-        settings.ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED
-        or settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED
-    ):
-        raise PermissionDenied('Pilot review unavailable.')
+    # Staff must retain access to revoke pilot admission after a global
+    # emergency stop. It is a strictly private permissioned view.
     user = _active_user(actor, lock=False)
     if not user.is_staff or not user.has_perm('knowledge.moderate_expert_articles'):
         raise PermissionDenied('Pilot reviewer permission required.')

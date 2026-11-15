@@ -206,6 +206,28 @@ class Stage14PilotTests(TestCase):
             ))
             self.assertEqual(self.client.get(self.detail(article)).status_code, 404)
 
+    def test_emergency_revoke_possible_when_all_feature_flags_off(self):
+        article, _ = self.select()
+        self.client.force_login(self.moderator)
+        with override_settings(
+            ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED=False,
+            ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED=False,
+        ):
+            self.assertEqual(self.client.get(
+                reverse('knowledge:pilot_moderation'),
+            ).status_code, 200)
+            response = self.client.post(
+                reverse('knowledge:pilot_moderation'), {
+                    'action': 'deselect', 'article_id': article.pk,
+                    'expected_version': article.content_version,
+                },
+            )
+            self.assertEqual(response.status_code, 302)
+        self.assertIsNotNone(
+            ArticlePilotSelection.objects.get(article=article).revoked_at,
+        )
+        self.assertEqual(self.client.get(self.detail(article)).status_code, 404)
+
     def test_pilot_audit_is_append_only_at_postgresql_layer(self):
         article, _ = self.select()
         with self.assertRaises(DatabaseError), transaction.atomic():

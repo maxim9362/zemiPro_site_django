@@ -1,5 +1,4 @@
 """Closed Stage14.4 pilot controls; do not expose an owner GO/NO-GO switch."""
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -16,14 +15,6 @@ from .pilot_services import (
     withdraw_from_pilot,
 )
 from .services import ArticleConflict
-
-
-def _feature():
-    if not (
-        settings.ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED
-        or settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED
-    ):
-        raise Http404
 
 
 @login_required
@@ -65,7 +56,7 @@ def consent_view(request):
 @require_http_methods(['GET', 'POST'])
 @never_cache
 def moderation_view(request):
-    _feature()
+    # Owner-disabled public flags never remove the staff emergency stop.
     try:
         snapshot = pilot_readiness(request.user)
     except PermissionDenied:
