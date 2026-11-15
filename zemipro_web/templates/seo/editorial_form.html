@@ -3,7 +3,7 @@
 {% block title %}{% if page %}{{ page.title }}{% else %}{% trans 'Новый SEO-бриф' %}{% endif %} — ZemiPro{% endblock %}
 {% block content %}
 <section class="public-content"><div class="container public-stack">
-    <header><h1>{% if page %}{{ page.title }}{% else %}{% trans 'Новый SEO-бриф' %}{% endif %}</h1>{% if page %}<p>{{ page.get_status_display }} · v{{ page.version }}</p>{% endif %}</header>
+    <header><h1>{% if page %}{{ page.title }}{% else %}{% trans 'Новый SEO-бриф' %}{% endif %}</h1>{% if page %}<p>{% if page.status == 'brief' %}{% trans 'Бриф' %}{% elif page.status == 'draft' %}{% trans 'Черновик' %}{% elif page.status == 'review' %}{% trans 'На проверке' %}{% elif page.status == 'approved' %}{% trans 'Одобрено' %}{% elif page.status == 'published' %}{% trans 'Опубликовано' %}{% endif %} · v{{ page.version }}</p>{% endif %}</header>
     <form method="post" class="form public-panel" novalidate>
         {% csrf_token %}{{ form.non_field_errors }}
         {% for field in form %}{% if not field.is_hidden %}<div class="form-group">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form__hint">{{ field.help_text }}</div>{% endif %}</div>{% else %}{{ field }}{% endif %}{% endfor %}

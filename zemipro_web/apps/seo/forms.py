@@ -4,6 +4,15 @@ from django.utils.translation import gettext_lazy as _
 from .models import SeoContentPage, SeoLegacyUrl
 
 
+PAGE_TYPE_LABELS = {
+    SeoContentPage.PageType.SECTION: _('Раздел услуг'),
+    SeoContentPage.PageType.CATEGORY: _('Категория'),
+    SeoContentPage.PageType.SERVICE: _('Услуга'),
+    SeoContentPage.PageType.CITY: _('Город'),
+    SeoContentPage.PageType.SERVICE_CITY: _('Услуга в городе'),
+}
+
+
 class SeoContentPageForm(forms.ModelForm):
     expected_version = forms.IntegerField(widget=forms.HiddenInput, required=False)
 
@@ -27,6 +36,19 @@ class SeoContentPageForm(forms.ModelForm):
             'body': _('Основной текст'),
             'source_facts': _('Источники фактов'),
         }
+        help_texts = {
+            'source_facts': _(
+                'Укажите проверяемые источники фактов; не добавляйте секреты '
+                'или персональные данные.'
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['page_type'].choices = [
+            (value, PAGE_TYPE_LABELS.get(value, label))
+            for value, label in self.fields['page_type'].choices
+        ]
 
 
 class SeoContentEditForm(forms.ModelForm):
@@ -44,6 +66,12 @@ class SeoContentEditForm(forms.ModelForm):
             'summary': _('Краткое описание'),
             'body': _('Основной текст'),
             'source_facts': _('Источники фактов'),
+        }
+        help_texts = {
+            'source_facts': _(
+                'Укажите проверяемые источники фактов; не добавляйте секреты '
+                'или персональные данные.'
+            ),
         }
 
 

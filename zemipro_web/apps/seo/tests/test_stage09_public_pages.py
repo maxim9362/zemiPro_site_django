@@ -202,6 +202,41 @@ class Stage09PublicPageTests(TestCase):
         self.assertContains(self.client.get(page_url), 'noindex,follow')
         self.assertNotContains(self.client.get(reverse('seo_sitemap')), page_url)
 
+    def test_city_sitemap_matches_worker_skill_translation_gate(self):
+        incomplete = Category.objects.create(
+            slug='stage09-inactive-incomplete-skill', name_ru='Неполный навык',
+            name_en='Incomplete skill', name_he='', is_active=False,
+        )
+        self.worker.skills.add(incomplete)
+        now = timezone.now()
+        for language in ('ru', 'en', 'he'):
+            SeoContentPage.objects.create(
+                page_type=SeoContentPage.PageType.CITY,
+                language=language, city=self.city,
+                topic=f'City topic {language}', title=f'City title {language}',
+                meta_description=(
+                    f'City description {language} with reviewed synthetic facts '
+                    'and no unsupported public claims.'
+                ),
+                summary=(
+                    f'City summary {language} with enough reviewed context for '
+                    'the public Ashdod catalog.'
+                ),
+                body=(
+                    f'City body {language} contains reviewed synthetic catalog context. '
+                    'It describes the protected request flow without invented prices, '
+                    'ratings, availability, guarantees or personal contact details, and '
+                    'is deliberately long enough for the editorial quality gate.'
+                ),
+                source_facts='Synthetic city and worker fixtures.',
+                status=SeoContentPage.Status.PUBLISHED, quality_approved=True,
+                author=self.worker.user, reviewer=self.reviewer,
+                reviewed_at=now, published_at=now,
+            )
+        city_url = self.localized('ru', 'city_detail', slug=self.city.slug)
+        self.assertContains(self.client.get(city_url), 'noindex,follow')
+        self.assertNotContains(self.client.get(reverse('seo_sitemap')), city_url)
+
     def test_new_public_navigation_copy_is_translated(self):
         Subcategory.objects.create(
             category=self.category, slug='stage09-related-service',

@@ -1,6 +1,8 @@
 from django.contrib.auth.models import Permission
+from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils.translation import override
 
 from apps.marketplace.models import Category
 from apps.marketplace.tests.factories import make_user
@@ -169,3 +171,26 @@ class Stage09EditorialUiTests(TestCase):
         page.refresh_from_db()
         self.assertEqual(page.title, self.content_data()['title'])
         self.assertEqual(page.version, 1)
+
+    def test_editorial_labels_and_status_are_localized(self):
+        page = SeoContentPage.objects.create(
+            author=self.author, **{
+                key: value for key, value in self.content_data().items()
+                if key not in {'section', 'category', 'service', 'city'}
+            }, category=self.category,
+        )
+        expected = {
+            'ru': ('Тип страницы', 'Бриф'),
+            'en': ('Page type', 'Brief'),
+            'he': ('סוג עמוד', 'בריף'),
+        }
+        self.client.force_login(self.author)
+        for language, (page_type, status) in expected.items():
+            self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = language
+            with self.subTest(language=language), override(language):
+                created = self.client.get(reverse('seo:editorial_create'))
+                self.assertContains(created, page_type)
+                detail = self.client.get(reverse(
+                    'seo:editorial_detail', args=[page.pk],
+                ))
+                self.assertContains(detail, status)

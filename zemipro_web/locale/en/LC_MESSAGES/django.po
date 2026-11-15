@@ -1625,3 +1625,27 @@ msgstr "The content was published."
 
 msgid "Материал снят с публикации."
 msgstr "The content was unpublished."
+
+msgid "Раздел услуг"
+msgstr "Service section"
+
+msgid "Услуга в городе"
+msgstr "Service in the city"
+
+msgid "Бриф"
+msgstr "Brief"
+
+msgid "Черновик"
+msgstr "Draft"
+
+msgid "На проверке"
+msgstr "In review"
+
+msgid "Одобрено"
+msgstr "Approved"
+
+msgid "Опубликовано"
+msgstr "Published"
+
+msgid "Укажите проверяемые источники фактов; не добавляйте секреты или персональные данные."
+msgstr "Provide verifiable fact sources; do not add secrets or personal data."

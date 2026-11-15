@@ -104,10 +104,17 @@ def _has_real_value(page):
         ) | Category.objects.filter(
             is_active=True, section__is_active=True,
         )
+        city_workers = workers_serving_city(
+            workers.prefetch_related('skills'), page.city,
+        )
         return bool(
             complete_names(page.city)
-            and workers.filter(city=page.city).exists()
+            and city_workers.exists()
             and complete_collection(categories)
+            and all(
+                complete_collection(worker.skills.all())
+                for worker in city_workers
+            )
         )
     return False
 
