@@ -1,0 +1,10 @@
+{% extends 'pages/communication_base.html' %}
+{% load i18n %}{% get_current_language as lang %}
+{% block title %}Q&A moderation — ZemiPro{% endblock %}
+{% block content %}<section class="comm-page"><div class="container comm-container comm-stack">
+  <h1>{% if lang == 'he' %}בקרת שאלות ותשובות{% elif lang == 'en' %}Q&A moderation{% else %}Модерация вопросов и ответов{% endif %}</h1>
+  <p>{% if lang == 'he' %}בדקו תוכן, פרטים אישיים ועצות מסוכנות לפני פרסום.{% elif lang == 'en' %}Review content, private details and unsafe advice before publication.{% else %}Проверьте содержание, персональные данные и опасные советы до публикации.{% endif %}</p>
+  <h2>Questions</h2>{% for item in questions %}<article class="comm-panel"><h3 dir="auto">{{ item.title }}</h3><div dir="auto">{{ item.body|linebreaks }}</div><form method="post" action="{% url 'knowledge:qa_moderate_question' item.pk %}">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ item.content_version }}"><textarea name="note" maxlength="500" aria-label="Reason"></textarea><button name="action" value="approve">Approve</button><button name="action" value="reject">Reject</button></form></article>{% empty %}<p>—</p>{% endfor %}
+  <h2>Answers</h2>{% for item in answers %}<article class="comm-panel"><h3 dir="auto">{{ item.question.title }}</h3><div dir="auto">{{ item.body|linebreaks }}</div><form method="post" action="{% url 'knowledge:qa_moderate_answer' item.pk %}">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ item.content_version }}"><textarea name="note" maxlength="500" aria-label="Reason"></textarea><button name="action" value="approve">Approve</button><button name="action" value="reject">Reject</button></form></article>{% empty %}<p>—</p>{% endfor %}
+  <h2>Reports</h2>{% for item in reports %}<article class="comm-panel"><p dir="auto">{{ item.message }}</p><form method="post" action="{% url 'knowledge:qa_moderate_report' item.pk %}">{% csrf_token %}<button name="action" value="dismiss">Dismiss</button><button name="action" value="remove">Remove content</button></form></article>{% empty %}<p>—</p>{% endfor %}
+</div></section>{% endblock %}

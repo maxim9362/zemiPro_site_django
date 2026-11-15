@@ -13,6 +13,7 @@
 <section class="order-form app-auth-section app-page">
     <div class="container app-narrow">
         <div class="app-panel">
+            {% if external_worker_invite %}<div class="ui-alert" role="status">{% if current_language == 'he' %}הוזמנת להירשם באופן עצמאי כבעל מקצוע. לאחר אימות האימייל ניתן ליצור פרופיל; לא נוצר עבורך פרופיל אוטומטי.{% elif current_language == 'en' %}You were invited to register independently as a specialist. After email verification you can create your profile; no profile is created automatically.{% else %}Вас пригласили самостоятельно зарегистрироваться как мастер. После подтверждения email вы сможете создать профиль; автоматически анкета не создаётся.{% endif %}</div>{% endif %}
             <form method="post" class="form app-stack">
                 {% csrf_token %}
                 {% if form.non_field_errors %}

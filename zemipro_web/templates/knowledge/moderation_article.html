@@ -1,0 +1,44 @@
+{% extends 'pages/communication_base.html' %}
+{% load i18n knowledge_i18n %}
+{% get_current_language as lang %}
+{% block title %}{% if lang == 'he' %}בדיקת מאמר{% elif lang == 'en' %}Review article{% else %}Проверка статьи{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<header class="page-header app-page-header comm-page-header"><div class="container comm-container">
+    <h1>{% if lang == 'he' %}בדיקת מאמר{% elif lang == 'en' %}Article review{% else %}Модерация статьи{% endif %} <bdi dir="ltr">#{{ article.pk }}</bdi></h1>
+    <p>{{ article.status|article_status }} · {{ article.get_language_display }} · v{{ article.content_version }}</p>
+</div></header>
+<section class="comm-page"><div class="container comm-container comm-stack">
+    {% include 'components/flash_messages.html' %}
+    <p><a href="{% url 'knowledge:moderation_queue' %}">{% if lang == 'he' %}חזרה לתור{% elif lang == 'en' %}Back to queue{% else %}К очереди{% endif %}</a></p>
+    <section class="comm-panel">
+        <h2 dir="auto">{{ article.title }}</h2>
+        <p dir="auto">{{ article.excerpt }}</p>
+        <div dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ article.body }}</div>
+        <p>{% if lang == 'he' %}המחבר אישר את הזכויות{% elif lang == 'en' %}Author confirmed rights{% else %}Автор подтвердил права{% endif %}: {% if article.rights_confirmed_at %}✓{% else %}—{% endif %}</p>
+        {% for photo in images %}
+        <figure>
+            <img src="{% url 'knowledge:article_image_private' image_id=photo.pk %}" loading="lazy" alt="{% if lang == 'he' %}תמונה לבדיקה{% elif lang == 'en' %}Image for review{% else %}Изображение для модерации{% endif %}" style="max-width:100%;max-height:220px;object-fit:contain;">
+            <figcaption dir="auto">{{ photo.caption }}</figcaption>
+        </figure>
+        {% endfor %}
+    </section>
+    {% if article.status == 'pending_review' %}
+    <section class="comm-panel">
+        <h2>{% if lang == 'he' %}החלטת בקרת תוכן{% elif lang == 'en' %}Moderation decision{% else %}Решение модератора{% endif %}</h2>
+        <p>{% if lang == 'he' %}בדיקה ידנית כוללת מידע אישי, פרסום, סיכונים, זכויות וסמכות מקצועית. בדקו גם את התמונות.{% elif lang == 'en' %}Manually inspect privacy, spam, dangerous advice, authorship and image contents. Approval does not verify professional licensing.{% else %}Проверьте PII, рекламу, опасные советы, авторские права и изображения. Одобрение не подтверждает лицензии.{% endif %}</p>
+        <form method="post" action="{% url 'knowledge:moderation_article' pk=article.pk %}" class="comm-form">
+            {% csrf_token %}<input type="hidden" name="expected_version" value="{{ article.content_version }}">
+            {{ form.non_field_errors }}
+            <label><input type="checkbox" name="content_reviewed"> {% if lang == 'he' %}בדקתי את התוכן והזכויות{% elif lang == 'en' %}I reviewed content, rights and safety{% else %}Я проверил содержание, права и безопасность{% endif %}</label>
+            <label><input type="checkbox" name="media_reviewed"> {% if lang == 'he' %}בדקתי את כל התמונות{% elif lang == 'en' %}I reviewed all images for privacy and rights{% else %}Я проверил все изображения на персональные данные и права{% endif %}</label>
+            <label for="moderation-note">{% if lang == 'he' %}הערה או סיבת דחייה{% elif lang == 'en' %}Comment or rejection reason{% else %}Комментарий или причина отклонения{% endif %}</label>
+            <textarea id="moderation-note" name="note" maxlength="500" rows="3"></textarea>
+            <div class="comm-case__actions">
+                <button class="btn btn--primary" type="submit" name="action" value="approve">{% if lang == 'he' %}אישור{% elif lang == 'en' %}Approve{% else %}Одобрить{% endif %}</button>
+                <button class="btn btn--secondary" type="submit" name="action" value="reject">{% if lang == 'he' %}דחייה{% elif lang == 'en' %}Reject{% else %}Отклонить{% endif %}</button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+</div></section>
+{% endblock %}

@@ -1,6 +1,7 @@
 import logging
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -475,8 +476,31 @@ def worker_public_profile_view(request, pk):
     avg_rating = review_stats['avg'] or 0
     review_count = review_stats['count']
 
+    # Additive Stage14.3 sidebar: empty/zero queries when public rollout is off.
+    published_expert_articles = []
+    if settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED:
+        from apps.knowledge.public_content import public_articles
+        from apps.knowledge.public_seo import public_path
+
+        published_expert_articles = list(
+            public_articles().filter(author_id=profile.pk).order_by(
+                '-published_at', '-pk',
+            )[:3]
+        )
+        for article in published_expert_articles:
+            article.public_path = public_path(article)
+
+    published_personal_recommendations = []
+    if settings.ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED:
+        from apps.knowledge.recommendation_services import public_recommendations
+        published_personal_recommendations = list(
+            public_recommendations(worker_id=profile.pk)[:5],
+        )
+
     response = render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
+        'published_expert_articles': published_expert_articles,
+        'published_personal_recommendations': published_personal_recommendations,
         'public_photos': profile.portfolio_photos.filter(is_public=True),
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),
@@ -714,6 +738,10 @@ def order_wizard_start_view(request):
                 form.add_error(None, str(error))
             else:
                 request.session.pop('order_wizard_token', None)
+                # Attach pilot provenance only to this authenticated draft.
+                # Any failure is observational; it must never block an order.
+                from apps.knowledge.pilot_metrics import safe_bind_started_order
+                safe_bind_started_order(request, order)
                 return redirect('marketplace:order_wizard_edit', pk=order.pk)
     else:
         token = str(uuid.uuid4())
@@ -790,6 +818,9 @@ def order_wizard_edit_view(request, pk):
                         confirmation_form=form,
                     )
                     _flush_order_events(published)
+                    # Count verified published requests, not intent clicks.
+                    from apps.knowledge.pilot_metrics import safe_record_published_order
+                    safe_record_published_order(request, published)
                     invite_id = (published.wizard_data or {}).get('invite_worker_id')
                     if invite_id and worker_matches_order(invite_id, published):
                         return redirect(

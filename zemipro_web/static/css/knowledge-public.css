@@ -1,0 +1,29 @@
+/* Stage14.3: additive article layouts using existing Stage08 design tokens. */
+.knowledge-page { padding-block: 1.25rem 2.5rem; }
+.knowledge-search { padding: 1rem; border: 1px solid var(--border, #e3e6ea); border-radius: 12px; }
+.knowledge-search__fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.knowledge-search__fields .form__group, .knowledge-card, .knowledge-article, .knowledge-sidebar { min-width: 0; }
+.knowledge-search__fields input, .knowledge-search__fields select { width: 100%; max-width: 100%; }
+.knowledge-search__actions { display: flex; flex-wrap: wrap; gap: .625rem; margin-block-start: 1rem; }
+.knowledge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
+.knowledge-card { display: flex; flex-direction: column; gap: .625rem; overflow-wrap: anywhere; }
+.knowledge-card .btn { align-self: flex-start; margin-block-start: auto; }
+.knowledge-card__byline, .knowledge-card__notice, .knowledge-article__notice { font-size: .925rem; line-height: 1.6; overflow-wrap: anywhere; }
+.knowledge-card__excerpt { max-width: 65ch; white-space: pre-wrap; overflow-wrap: anywhere; }
+.knowledge-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem); align-items: start; gap: 1.25rem; }
+.knowledge-article { overflow-wrap: anywhere; }
+.knowledge-article__body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; }
+.knowledge-article__intro { font-weight: 600; overflow-wrap: anywhere; }
+.knowledge-sidebar { display: grid; gap: 1rem; }
+.knowledge-sidebar .public-panel { display: grid; gap: .75rem; overflow-wrap: anywhere; }
+.knowledge-article__images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: .75rem; margin-block: 1.25rem; }
+.knowledge-article__figure { min-width: 0; margin: 0; }
+.knowledge-article__figure img { display: block; max-width: 100%; height: auto; border-radius: .5rem; }
+.knowledge-article__figure figcaption { overflow-wrap: anywhere; padding-block-start: .5rem; }
+.knowledge-empty { grid-column: 1 / -1; }
+.knowledge-page a:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+@media (max-width: 800px) { .knowledge-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .knowledge-search__fields { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-search__actions .btn { width: 100%; text-align: center; }
+}

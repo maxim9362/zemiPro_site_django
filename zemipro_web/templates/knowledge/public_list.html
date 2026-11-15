@@ -1,0 +1,89 @@
+{% extends 'pages/public_base.html' %}
+{% load static i18n %}
+{% get_current_language as current_language %}
+{% block page_styles %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/knowledge-public.css' %}">{% endblock %}
+{% block title %}{% if current_language == 'he' %}עצות מבעלי מקצוע{% elif current_language == 'en' %}Specialist advice{% else %}Советы мастеров{% endif %} — ZemiPro{% endblock %}
+{% block meta_description %}{% if current_language == 'he' %}מאמרים שנבדקו ונכתבו בידי בעלי מקצוע מאשדוד.{% elif current_language == 'en' %}Reviewed practical articles from Ashdod specialists.{% else %}Проверенные полезные статьи специалистов Ашдода.{% endif %}{% endblock %}
+{% block content %}
+<header class="page-header public-page-header">
+  <div class="container">
+    <p class="public-kicker">{% if current_language == 'he' %}אשדוד בלבד{% elif current_language == 'en' %}Ashdod only{% else %}Только Ашдод{% endif %}</p>
+    <h1>{% if current_language == 'he' %}עצות מבעלי מקצוע{% elif current_language == 'en' %}Specialist advice{% else %}Советы мастеров{% endif %}</h1>
+    <p>{% if current_language == 'he' %}מאמרים שאושרו לאחר בדיקת תוכן. אין כאן הזמנת עבודה או אימות רישיון מקצועי.{% elif current_language == 'en' %}Articles reviewed for publication, separate from service orders. Publication is not proof of licensing or service quality.{% else %}Статьи, прошедшие модерацию. Это не заказы, не подтверждение лицензии или качества работы.{% endif %}</p>
+  </div>
+</header>
+<section class="public-content knowledge-page" aria-label="{% if current_language == 'he' %}רשימת מאמרים{% elif current_language == 'en' %}Article directory{% else %}Каталог статей{% endif %}">
+  <div class="container public-stack">
+    <form method="get" action="{% url 'knowledge_public:article_list' %}" class="form public-search-form knowledge-search" role="search">
+      {% if invalid_query %}
+        <p class="ui-alert ui-alert--error" role="alert">{% if current_language == 'he' %}יש לתקן את מסנני החיפוש. לא הוצגו תוצאות.{% elif current_language == 'en' %}Check the search filters. No results are shown for invalid input.{% else %}Проверьте параметры поиска. При ошибке результаты не показываются.{% endif %}</p>
+      {% endif %}
+      <div class="knowledge-search__fields">
+        {% for field in form.visible_fields %}
+        <div class="form__group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {{ field.errors }}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="knowledge-search__actions">
+        <button type="submit" class="btn btn--primary">{% if current_language == 'he' %}חיפוש{% elif current_language == 'en' %}Find advice{% else %}Найти статьи{% endif %}</button>
+        <a href="{% url 'knowledge_public:article_list' %}" class="btn btn--secondary">{% if current_language == 'he' %}איפוס{% elif current_language == 'en' %}Reset{% else %}Сбросить{% endif %}</a>
+      </div>
+    </form>
+
+    <section class="public-results" aria-labelledby="knowledge-results">
+      <div class="public-section__heading">
+        <h2 id="knowledge-results">{% if current_language == 'he' %}מאמרים שפורסמו{% elif current_language == 'en' %}Published articles{% else %}Опубликованные статьи{% endif %}</h2>
+      </div>
+      <p class="public-result-heading" role="status">
+        {% if current_language == 'he' %}נמצאו מאמרים: {{ page_obj.paginator.count }}{% elif current_language == 'en' %}Articles found: {{ page_obj.paginator.count }}{% else %}Найдено статей: {{ page_obj.paginator.count }}{% endif %}
+      </p>
+      <div class="knowledge-grid">
+        {% for article in page_obj %}
+        <article class="public-panel knowledge-card">
+          <p class="public-kicker">{{ article.category.localized_name }} · <bdi lang="{{ article.language }}" dir="auto">{{ article.get_language_display }}</bdi></p>
+          <h3 class="public-panel__title" lang="{{ article.language }}" dir="auto">
+            <a href="{{ article.public_path }}">{{ article.public_title }}</a>
+          </h3>
+          {% if article.public_excerpt %}
+          <p class="knowledge-card__excerpt" lang="{{ article.language }}" dir="auto">{{ article.public_excerpt }}</p>
+          {% endif %}
+          <p class="knowledge-card__byline">
+            {% if current_language == 'he' %}נכתב על ידי{% elif current_language == 'en' %}By{% else %}Автор:{% endif %}
+            <bdi dir="auto">{{ article.author.public_display_name_snapshot }}</bdi>
+            · <time datetime="{{ article.published_at|date:'Y-m-d' }}">{{ article.published_at|date:"d.m.Y" }}</time>
+          </p>
+          {% if article.translation_kind == 'machine' %}
+          <p class="knowledge-card__notice">{% if current_language == 'he' %}תרגום מכונה — לא ציטוט של המחבר{% elif current_language == 'en' %}Machine translation — not the author's original words{% else %}Машинный перевод — не оригинальный текст автора{% endif %}</p>
+          {% endif %}
+          <a href="{{ article.public_path }}" class="btn btn--secondary btn--sm">{% if current_language == 'he' %}קריאה{% elif current_language == 'en' %}Read article{% else %}Читать статью{% endif %}</a>
+        </article>
+        {% empty %}
+        <div class="public-panel knowledge-empty" role="status">
+          <h3>{% if current_language == 'he' %}אין מאמרים מתאימים{% elif current_language == 'en' %}No matching articles yet{% else %}Подходящих статей пока нет{% endif %}</h3>
+          <p>{% if current_language == 'he' %}מוצגים רק מאמרים שאושרו בפועל.{% elif current_language == 'en' %}Only actually approved materials can appear here.{% else %}Здесь показываются только действительно одобренные материалы.{% endif %}</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% if page_obj.has_other_pages %}
+      <nav class="pagination" aria-label="{% if current_language == 'he' %}עמודי מאמרים{% elif current_language == 'en' %}Article pages{% else %}Страницы статей{% endif %}">
+        {% if page_obj.has_previous %}
+        <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">{% if current_language == 'he' %}הקודם{% elif current_language == 'en' %}Previous{% else %}Назад{% endif %}</a>
+        {% endif %}
+        <span class="pagination__current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a class="btn btn--secondary btn--sm" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">{% if current_language == 'he' %}הבא{% elif current_language == 'en' %}Next{% else %}Далее{% endif %}</a>
+        {% endif %}
+      </nav>
+      {% endif %}
+    </section>
+    <div class="cta-block public-cta">
+      <h2>{% if current_language == 'he' %}צריכים בעל מקצוע?{% elif current_language == 'en' %}Need a specialist?{% else %}Нужен специалист?{% endif %}</h2>
+      <p>{% if current_language == 'he' %}השאלה או המאמר אינם בקשת עבודה. תוכלו ליצור בקשה רגילה ונפרדת.{% elif current_language == 'en' %}Reading advice never creates a job request. Start a separate normal request if needed.{% else %}Чтение статьи не создаёт заявку. При необходимости оформите обычный заказ отдельно.{% endif %}</p>
+      <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">{% if current_language == 'he' %}יצירת בקשה{% elif current_language == 'en' %}Create a service request{% else %}Создать заявку{% endif %}</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
