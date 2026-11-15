@@ -102,6 +102,7 @@ ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED = False
 # Observation is distinct from releasing articles and cannot be enabled by .env.
 ZEMIPRO_KNOWLEDGE_PILOT_METRICS_ENABLED = False
 ZEMIPRO_KNOWLEDGE_QA_ENABLED = False
+ZEMIPRO_KNOWLEDGE_ROLLOUT_METRICS_ENABLED = False
 ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED = False
 ZEMIPRO_RECOMMENDATION_REQUESTS_ENABLED = False
 # Stage 07.6: external AI translation is strictly opt-in and disabled by default.

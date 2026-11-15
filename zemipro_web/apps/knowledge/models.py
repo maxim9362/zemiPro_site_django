@@ -739,3 +739,42 @@ class KnowledgeQAReport(models.Model):
                 name='knowledge_answer_report_once_uq',
             ),
         ]
+
+
+class KnowledgeDailyMetric(models.Model):
+    """Anonymous aggregate rollout signal; never a visitor/session record."""
+
+    class Event(models.TextChoices):
+        ARTICLE_VIEW = 'article_view', 'Article view'
+        QUESTION_VIEW = 'question_view', 'Question view'
+        PROFILE_CLICK = 'profile_click', 'Profile click'
+        ORDER_STARTED = 'order_started', 'Order started'
+        SHARE_CLICK = 'share_click', 'Share link used'
+        INVITE_OPEN = 'invite_open', 'Invite link opened'
+
+    class Source(models.TextChoices):
+        ARTICLE = 'article', 'Article'
+        QUESTION = 'question', 'Question'
+        RECOMMENDATION = 'recommendation', 'Recommendation'
+        REQUEST = 'request', 'Recommendation request'
+        INVITE = 'invite', 'External worker invite'
+
+    day = models.DateField()
+    source = models.CharField(max_length=16, choices=Source.choices)
+    source_object_id = models.PositiveBigIntegerField(null=True, blank=True)
+    event = models.CharField(max_length=20, choices=Event.choices)
+    total = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        db_table = 'knowledge_daily_metric'
+        default_permissions = ('view',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['day', 'source', 'source_object_id', 'event'],
+                name='knowledge_daily_metric_uq',
+                nulls_distinct=False,
+            ),
+            models.CheckConstraint(
+                condition=models.Q(total__gte=0), name='knowledge_metric_total_ck',
+            ),
+        ]

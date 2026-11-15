@@ -9,7 +9,10 @@ from apps.marketplace.tests.factories import (
 )
 
 
-@override_settings(ZEMIPRO_KNOWLEDGE_QA_ENABLED=True)
+@override_settings(
+    ZEMIPRO_KNOWLEDGE_QA_ENABLED=True,
+    ZEMIPRO_KNOWLEDGE_ROLLOUT_METRICS_ENABLED=True,
+)
 class Stage14QAInterfaceTests(TestCase):
     def setUp(self):
         self.city = make_city(slug='ashdod', name_ru='Synthetic Ashdod')
@@ -117,3 +120,30 @@ class Stage14QAInterfaceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, '+972501234567')
         self.assertContains(response, 'Проверьте поисковый запрос')
+
+    def test_detail_and_whitelisted_outbound_routes_record_only_aggregates(self):
+        from apps.knowledge.models import KnowledgeDailyMetric
+
+        question = self.publish()
+        detail = self.client.get(reverse('knowledge_qa:detail', args=[question.slug]))
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(KnowledgeDailyMetric.objects.get(
+            source='question', event='question_view',
+        ).total, 1)
+        outbound = self.client.get(reverse(
+            'knowledge_qa:outbound', kwargs={
+                'slug': question.slug, 'destination': 'order',
+            },
+        ))
+        self.assertRedirects(
+            outbound, reverse('marketplace:order_wizard_start'),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(KnowledgeDailyMetric.objects.get(
+            source='question', event='order_started',
+        ).total, 1)
+        self.assertEqual(self.client.get(reverse(
+            'knowledge_qa:outbound', kwargs={
+                'slug': question.slug, 'destination': 'external',
+            },
+        )).status_code, 404)

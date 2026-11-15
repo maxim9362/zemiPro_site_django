@@ -88,11 +88,38 @@ def question_detail(request, slug):
         qa_services.public_questions(), slug=slug, language=_language(),
     )
     answers = list(qa_services.public_answers(question))
-    return render(request, 'knowledge/qa_detail.html', {
+    response = render(request, 'knowledge/qa_detail.html', {
         'question': question, 'answers': answers,
         'answer_form': AnswerForm(), 'report_form': ReportForm(),
         'seo_noindex': True,
     })
+    from .rollout_metrics import record
+    record('question', 'question_view', question.pk)
+    return response
+
+
+@require_GET
+@never_cache
+def question_outbound(request, slug, destination, answer_id=None):
+    _allow()
+    question = get_object_or_404(
+        qa_services.public_questions(), slug=slug, language=_language(),
+    )
+    from .rollout_metrics import record
+    if destination == 'profile' and answer_id:
+        answer = get_object_or_404(
+            qa_services.public_answers(question), pk=answer_id,
+        )
+        record('question', 'profile_click', question.pk)
+        target = reverse('marketplace:worker_public_profile', args=[answer.author_id])
+    elif destination == 'order' and answer_id is None:
+        record('question', 'order_started', question.pk)
+        target = reverse('marketplace:order_wizard_start')
+    else:
+        raise Http404
+    response = redirect(target)
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @login_required

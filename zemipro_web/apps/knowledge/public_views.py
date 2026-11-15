@@ -101,6 +101,8 @@ def article_detail(request, slug):
     })
     from .pilot_metrics import safe_record_metric
     safe_record_metric(article, 'article_view')
+    from .rollout_metrics import record
+    record('article', 'article_view', article.pk)
     return response
 
 
@@ -120,9 +122,13 @@ def article_outbound(request, slug, destination):
 
     if destination == 'profile':
         safe_record_metric(article, 'profile_click')
+        from .rollout_metrics import record
+        record('article', 'profile_click', article.pk)
         target = reverse('marketplace:worker_public_profile', args=[article.author_id])
     else:
         safe_record_metric(article, 'order_click')
+        from .rollout_metrics import record
+        record('article', 'order_started', article.pk)
         start_order_ref(request, article)
         target = reverse('marketplace:order_wizard_start')
     response = redirect(target)
