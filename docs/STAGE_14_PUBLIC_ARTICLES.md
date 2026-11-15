@@ -1,6 +1,6 @@
 # Stage 14.3 — Публичные экспертные статьи: контракт интерфейса и видимости
 
-> Статус: `CODE_IMPLEMENTED / CI_PENDING` (перед CI). Публичный запуск: `PENDING_GO`.
+> Статус: `14.3 CODE_CI_VERIFIED` на кодовом SHA `83bb874276ccbfb3d645163dd66693852b1e66d2` — [GitHub Actions #43693188715](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43693188715) SUCCESS, 22/22 targeted, 686/686 Django, 39/39 steps (PostgreSQL 17, Ruff, Chrome). Публичный запуск: `PENDING_GO`; реальная индексация/SEO: `STAGE09_PENDING`.
 > Наследует `docs/STAGE_14_DOMAIN_MODEL.md`, `docs/STAGE_14_ARTICLE_MODERATION.md` и утверждённые Stage08 HTML без изменения оригиналов.
 
 ## Только проверенный публичный снимок
