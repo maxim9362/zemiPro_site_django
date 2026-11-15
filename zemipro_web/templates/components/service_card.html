@@ -1,0 +1,5 @@
+<a href="{% if catalog_localized %}{% url 'catalog_i18n:category_detail' slug=category.slug %}{% else %}{% url 'marketplace:category_detail' slug=category.slug %}{% endif %}" class="category-card">
+    <span class="category-card__emoji" aria-hidden="true">{{ category.emoji }}</span>
+    <h3 class="category-card__title">{{ category.localized_name }}</h3>
+    <p class="category-card__desc">{{ category.localized_description }}</p>
+</a>

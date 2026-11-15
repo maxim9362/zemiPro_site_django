@@ -1,79 +1,71 @@
-{% extends 'base.html' %}
-{% load i18n public_text %}
-
+{% extends 'pages/public_base.html' %}
+{% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{{ city.localized_name }} — ZemiPro{% endblock %}
 {% block meta_description %}{% trans 'Поиск специалистов в городе' %} {{ city.localized_name }}.{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header public-page-header">
     <div class="container">
+        <p class="public-kicker">{% if current_language == 'he' %}אזור הפיילוט{% elif current_language == 'en' %}Pilot city{% else %}Город пилота{% endif %}</p>
         <h1>{% trans 'Специалисты в городе' %} {{ city.localized_name }}</h1>
         <p>{% trans 'Выберите категорию или просматривайте всех мастеров города' %}</p>
     </div>
-</section>
-
-<section class="category-content">
-    <div class="container">
-
-        <div class="filter-bar">
-            <form method="get" class="filter-form">
-                <select name="category" class="form__select" onchange="this.form.submit()">
-                    <option value="">{% trans 'Все категории' %}</option>
-                    {% for cat in categories %}
-                    <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>
-                        {{ cat.emoji }} {{ cat.localized_name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </form>
-        </div>
-
-        {% if page_obj.object_list %}
-        <div class="orders-list" style="margin-top: 24px;">
-            {% for wp in page_obj %}
-            <div class="order-card-sm">
-                <div class="order-card-sm__header">
-                    <span class="order-card__category">{{ wp.public_display_name }}</span>
-                    {% if wp.avg_rating %}
-                    <span style="font-size: 0.875rem;">★ {{ wp.avg_rating|floatformat:1 }} ({{ wp.review_count }})</span>
-                    {% endif %}
-                </div>
-                <div class="order-card-sm__body">
-                    <p class="order-card-sm__desc">{{ wp.public_description|truncatewords:20 }}</p>
-                    <p>
-                        {% for skill in wp.skills.all %}
-                        <span class="tag">{{ skill.emoji }} {{ skill.localized_name }}</span>
-                        {% endfor %}
-                    </p>
-                </div>
-                <div class="order-card-sm__actions">
-                    <a href="{% url 'marketplace:worker_public_profile' pk=wp.pk %}" class="btn btn--primary btn--sm">{% trans 'Открыть профиль' %}</a>
-                </div>
+</header>
+<section class="category-content public-content">
+    <div class="container public-stack">
+        <section class="public-results" aria-labelledby="city-workers-title">
+            <div class="public-section__heading">
+                <h2 id="city-workers-title">{% if current_language == 'he' %}בעלי מקצוע בעיר{% elif current_language == 'en' %}Professionals in this city{% else %}Мастера в городе{% endif %}</h2>
             </div>
-            {% endfor %}
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <div class="pagination">
-            {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn--secondary btn--sm">← {% trans 'Назад' %}</a>
+            <form method="get" class="public-filter-form" aria-label="{% if current_language == 'he' %}סינון לפי קטגוריה{% elif current_language == 'en' %}Filter by category{% else %}Фильтр по категории{% endif %}">
+                <div class="public-filter-form__group">
+                    <label for="city-category-filter">{% trans 'Категория' %}</label>
+                    <select id="city-category-filter" name="category" class="form__select">
+                        <option value="">{% trans 'Все категории' %}</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>{{ cat.emoji }} {{ cat.localized_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn--secondary">{% trans 'Применить' %}</button>
+                <a class="btn btn--secondary" href="{% if catalog_localized %}{% url 'catalog_i18n:city_detail' slug=city.slug %}{% else %}{% url 'marketplace:city_detail' slug=city.slug %}{% endif %}">{% if current_language == 'he' %}איפוס{% elif current_language == 'en' %}Reset{% else %}Сбросить{% endif %}</a>
+            </form>
+            <p class="public-result-heading" role="status">
+                {% if current_language == 'he' %}נמצאו בעלי מקצוע: {{ page_obj.paginator.count }}{% elif current_language == 'en' %}Specialists found: {{ page_obj.paginator.count }}{% else %}Найдено специалистов: {{ page_obj.paginator.count }}{% endif %}
+            </p>
+            {% if page_obj.object_list %}
+            <div class="public-result-grid">
+                {% for wp in page_obj %}
+                {% include 'components/worker_summary_card.html' with worker=wp show_skills=True %}
+                {% endfor %}
+            </div>
+            {% if page_obj.has_other_pages %}
+            <nav class="pagination" aria-label="{% if current_language == 'he' %}עמודי תוצאות{% elif current_language == 'en' %}Result pages{% else %}Страницы результатов{% endif %}">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&amp;category={{ selected_category }}{% endif %}" class="btn btn--secondary btn--sm">{% trans 'Назад' %}</a>
+                {% endif %}
+                <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&amp;category={{ selected_category }}{% endif %}" class="btn btn--secondary btn--sm">{% trans 'Далее' %}</a>
+                {% endif %}
+            </nav>
             {% endif %}
-            <span class="pagination__current">{% trans 'Страница' %} {{ page_obj.number }} {% trans 'из' %} {{ page_obj.paginator.num_pages }}</span>
-            {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn--secondary btn--sm">{% trans 'Далее' %} →</a>
+            {% else %}
+                {% if current_language == 'he' %}{% include 'components/empty_state.html' with empty_title='אין עדיין בעלי מקצוע מתאימים.' %}
+                {% elif current_language == 'en' %}{% include 'components/empty_state.html' with empty_title='No matching specialists yet.' %}
+                {% else %}{% include 'components/empty_state.html' with empty_title='Пока нет подходящих специалистов' %}
+                {% endif %}
             {% endif %}
-        </div>
-        {% endif %}
-
-        {% else %}
-        <p class="empty-state">{% trans 'Пока нет подходящих специалистов' %} — {{ city.localized_name }}</p>
-        {% endif %}
-
-        <div class="cta-block" style="margin-top: 32px;">
+        </section>
+        <div class="cta-block public-cta">
             <h2>{% trans 'Создать заявку' %} — {{ city.localized_name }}</h2>
-            <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
+            <p>{% if current_language == 'he' %}תארו את המשימה בלי לפרסם כתובת מדויקת או מספר טלפון.{% elif current_language == 'en' %}Describe the task without posting an exact address or phone publicly.{% else %}Опишите задачу без публикации точного адреса или телефона.{% endif %}</p>
+            <div class="public-actions">
+                <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary">{% trans 'Создать заявку' %}</a>
+                <a href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}?city={{ city.pk }}" class="btn btn--secondary">{% if current_language == 'he' %}חיפוש מפורט{% elif current_language == 'en' %}Detailed search{% else %}Подробный поиск{% endif %}</a>
+            </div>
         </div>
-
     </div>
 </section>
 {% endblock %}

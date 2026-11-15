@@ -1,77 +1,108 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'pages/communication_base.html' %}
+{% load i18n static %}
+{% get_current_language as current_language %}
 {% block title %}{{ copy.thread }} — ZemiPro{% endblock %}
 {% block content %}
-<section class="container" style="padding-block:20px;max-width:820px;min-width:0">
-  <p><a href="{% url 'marketplace:chat_index' %}">{{ copy.back }}</a></p>
-  <h1>{{ copy.thread }} <bdi dir="ltr">#{{ conversation.response.order_id }}</bdi></h1>
-  <div id="chat-scroll" style="border:1px solid #cbd5e1;border-radius:12px;padding:12px;max-height:65vh;overflow-y:auto">
-    <ol id="chat-log" aria-live="polite" aria-relevant="additions"
-        style="list-style:none;display:grid;gap:10px;padding:0;margin:0"
-        data-poll-url="{% url 'marketplace:chat_poll' conversation_id=conversation.pk %}"
-        data-read-url="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}"
-        data-history="{{ history_page|yesno:'1,0' }}" data-read-label="{{ copy.read }}" data-delivered-label="{{ copy.delivered }}" data-files-label="{{ copy.files }}" data-me="{{ request.user.pk }}" data-last-id="{{ last_id }}">
-      {% for item in rows %}
-        <li data-message-id="{{ item.pk }}" style="padding:10px;border:1px solid #e2e8f0;border-radius:12px;overflow-wrap:anywhere;min-width:0">
-          <small><bdi dir="ltr">{{ item.created_at|date:"d.m.Y H:i" }}</bdi> ·
-          <span data-read-state>{% if item.read_at %}{{ copy.read }}{% else %}{{ copy.delivered }}{% endif %}</span>
-          </small>
-          <p dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ item.body }}</p>
-          {% for image in item.attachments.all %}
-            <a data-attachment-id="{{ image.pk }}" href="{% url 'marketplace:chat_attachment' pk=image.pk %}">
-              <img src="{% url 'marketplace:chat_attachment' pk=image.pk %}"
-                   width="160" height="120" loading="lazy" alt="{{ copy.files }}"
-                   style="max-width:100%;object-fit:contain">
-            </a>
-          {% endfor %}
-          {% if item.sender_id == request.user.pk and can_send %}
-            <form method="post" enctype="multipart/form-data"
-                  action="{% url 'marketplace:chat_image_upload' message_id=item.pk %}">
-              {% csrf_token %}
-              <label>{{ copy.files }} <input type="file" name="image"
-                accept="image/jpeg,image/png,image/webp" style="max-width:100%;min-width:0" required></label>
-              <button class="btn btn--secondary" type="submit">{{ copy.files }}</button>
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <p class="comm-eyebrow">{% if current_language == 'he' %}שיחה פרטית{% elif current_language == 'en' %}Private conversation{% else %}Личная переписка{% endif %}</p>
+        <h1>{{ copy.thread }} <bdi dir="ltr">#{{ conversation.response.order_id }}</bdi></h1>
+        <p>{% if current_language == 'he' %}שלחו הודעות בנוגע לבקשה. אין לפרסם כאן מידע אישי שאינכם רוצים לשתף עם המשתתף השני.{% elif current_language == 'en' %}Discuss the request privately. Share only details you are comfortable disclosing to the other participant.{% else %}Обсуждайте заявку в личном чате. Передавайте только сведения, которыми готовы поделиться с собеседником.{% endif %}</p>
+    </div>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow">
+        <nav class="comm-toolbar" aria-label="{{ copy.thread }}">
+            <a class="btn btn--secondary" href="{% url 'marketplace:chat_index' %}">{{ copy.back }}</a>
+            <a class="btn btn--secondary" href="{% url 'marketplace:order_detail' pk=conversation.response.order_id %}">{% if current_language == 'he' %}צפייה בבקשה{% elif current_language == 'en' %}View request{% else %}К заявке{% endif %}</a>
+        </nav>
+        <div class="comm-panel">
+            <p class="comm-help">{% if current_language == 'he' %}הודעות נשמרות בשרת. בדיקת הודעות חדשות מתבצעת כל כמה שניות בזמן שהעמוד פעיל. אפשר לרענן את הדף בכל עת.{% elif current_language == 'en' %}Messages are saved on the server. New messages are checked every few seconds while this page is active. You can also reload the page.{% else %}Сообщения сохраняются на сервере. Пока вкладка активна, новые сообщения проверяются каждые несколько секунд. Страницу также можно обновить вручную.{% endif %}</p>
+            <div class="comm-chat-window" id="chat-scroll">
+                <ol class="comm-chat-log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions"
+                    aria-label="{{ copy.thread }}"
+                    data-poll-url="{% url 'marketplace:chat_poll' conversation_id=conversation.pk %}"
+                    data-read-url="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}"
+                    data-history="{{ history_page|yesno:'1,0' }}"
+                    data-can-send="{{ can_send|yesno:'1,0' }}"
+                    data-read-label="{{ copy.read }}"
+                    data-delivered-label="{{ copy.delivered }}"
+                    data-files-label="{{ copy.files }}"
+                    data-me="{{ request.user.pk }}"
+                    data-last-id="{{ last_id }}">
+                    {% for item in rows %}
+                    <li class="comm-message{% if item.sender_id == request.user.pk %} comm-message--mine{% endif %}"
+                        data-message-id="{{ item.pk }}">
+                        <small class="comm-message__meta">
+                            <bdi dir="ltr">{{ item.created_at|date:"d.m.Y H:i" }}</bdi> ·
+                            <span data-read-state>{% if item.read_at %}{{ copy.read }}{% else %}{{ copy.delivered }}{% endif %}</span>
+                        </small>
+                        <p class="comm-message__body" dir="auto">{{ item.body }}</p>
+                        <div class="comm-message__attachments">
+                            {% for image in item.attachments.all %}
+                            <a data-attachment-id="{{ image.pk }}" href="{% url 'marketplace:chat_attachment' pk=image.pk %}">
+                                <img src="{% url 'marketplace:chat_attachment' pk=image.pk %}"
+                                     width="160" height="120" loading="lazy" alt="{{ copy.files }}">
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% if item.sender_id == request.user.pk and can_send %}
+                            {% include 'components/chat_message_actions.html' with message_id=item.pk can_upload=True %}
+                        {% else %}
+                            {% include 'components/chat_message_actions.html' with message_id=item.pk can_upload=False %}
+                        {% endif %}
+                    </li>
+                    {% empty %}
+                    <li id="chat-empty" class="comm-empty">{{ copy.empty }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+
+            <template id="chat-actions-sender">
+                {% include 'components/chat_message_actions.html' with message_id=999999999 can_upload=True %}
+            </template>
+            <template id="chat-actions-receiver">
+                {% include 'components/chat_message_actions.html' with message_id=999999999 can_upload=False %}
+            </template>
+            <p id="chat-poll-status" class="comm-poll-status" role="status"
+                data-online-label="{% if current_language == 'he' %}החיבור חודש. בודקים הודעות חדשות.{% elif current_language == 'en' %}Connection restored. Checking for messages.{% else %}Соединение восстановлено. Проверяем новые сообщения.{% endif %}"
+                data-offline-label="{% if current_language == 'he' %}אין חיבור לרשת. ההודעות השמורות עדיין זמינות.{% elif current_language == 'en' %}Offline. Saved messages remain visible.{% else %}Нет подключения. Сохранённые сообщения доступны.{% endif %}"></p>
+            <nav class="comm-chat-pager" aria-label="{{ copy.thread }}">
+                {% if older_cursor %}<a href="?before={{ older_cursor }}">{{ copy.older }}</a>{% endif %}
+                {% if history_page %}<a href="?">{{ copy.latest }}</a>{% endif %}
+            </nav>
+            {% if last_id %}
+            <div class="comm-mark-read">
+                <form method="post" action="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="through_id" value="{{ last_id }}">
+                    <input type="hidden" name="return_to_thread" value="1">
+                    <button class="btn btn--secondary btn--sm" type="submit">{{ copy.mark_read }}</button>
+                </form>
+            </div>
+            {% endif %}
+            {% if error %}<div class="ui-alert ui-alert--error" role="alert"><p>{{ error }}</p></div>{% endif %}
+            {% if can_send %}
+            <form class="comm-chat-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="client_nonce" value="{{ nonce }}">
+                <label for="chat-body">{{ copy.message }}</label>
+                <textarea id="chat-body" name="body" rows="3" maxlength="5000" required dir="auto">{{ request.POST.body }}</textarea>
+                <button class="btn btn--primary" type="submit">{{ copy.send }}</button>
             </form>
-          {% endif %}
-          <form method="post" action="{% url 'marketplace:chat_translate' message_id=item.pk %}"
-                style="display:grid;gap:6px;margin-top:8px">
-            {% csrf_token %}
-            <label>{{ copy.translate }}
-              <select name="target_language" required>
-                <option value="ru">Русский</option>
-                <option value="en">English</option>
-                <option value="he">עברית</option>
-              </select>
-            </label>
-            <label><input type="checkbox" name="consent" value="yes" required>
-              {{ copy.consent }}</label>
-            <small>{{ copy.privacy }}</small>
-            <button class="btn btn--secondary" type="submit">{{ copy.translate }}</button>
-          </form>
-          <a href="{% url 'moderation:complaint_create' %}?message={{ item.pk }}">{{ copy.message }} ⚑</a>
-        </li>
-      {% empty %}
-        <li id="chat-empty">{{ copy.empty }}</li>
-      {% endfor %}
-    </ol>
-  </div>
-  <nav>{% if older_cursor %}<a href="?before={{ older_cursor }}">{{ copy.older }}</a>{% endif %}
-  {% if history_page %}<a href="?">{{ copy.latest }}</a>{% endif %}</nav>
-  {% if last_id %}<form method="post" action="{% url 'marketplace:chat_read' conversation_id=conversation.pk %}">
-    {% csrf_token %}<input type="hidden" name="through_id" value="{{ last_id }}">
-    <input type="hidden" name="return_to_thread" value="1"><button type="submit">{{ copy.mark_read }}</button>
-  </form>{% endif %}
-  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
-  {% if can_send %}
-    <form method="post" style="display:grid;gap:12px;margin-top:16px">
-      {% csrf_token %}
-      <input type="hidden" name="client_nonce" value="{{ nonce }}">
-      <label for="chat-body">{{ copy.message }}</label>
-      <textarea id="chat-body" name="body" rows="3" maxlength="5000" required
-                style="width:100%;box-sizing:border-box" dir="auto"></textarea>
-      <button class="btn btn--primary" type="submit">{{ copy.send }}</button>
-    </form>
-  {% endif %}
+            {% else %}
+            <p class="comm-help comm-help--warning">
+                {% if current_language == 'he' %}אי אפשר לשלוח הודעות חדשות במצב הנוכחי של הבקשה או ההצעה.{% elif current_language == 'en' %}New messages are unavailable in the current request or offer state.{% else %}Отправка новых сообщений недоступна в текущем статусе заявки или предложения.{% endif %}
+            </p>
+            {% endif %}
+            <noscript>
+                <p class="comm-help">
+                    {% if current_language == 'he' %}כדי לראות הודעות חדשות יש לרענן את העמוד.{% elif current_language == 'en' %}Reload the page to check new messages.{% else %}Для просмотра новых сообщений обновите страницу.{% endif %}
+                </p>
+                <a class="btn btn--secondary" href="?">{{ copy.latest }}</a>
+            </noscript>
+        </div>
+    </div>
 </section>
 <script src="{% static 'js/stage07_chat.js' %}" defer></script>
 {% endblock %}

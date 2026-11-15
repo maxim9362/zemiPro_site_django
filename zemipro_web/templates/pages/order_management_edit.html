@@ -1,33 +1,37 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
 {% block title %}{{ copy.edit }} — ZemiPro{% endblock %}
 {% block content %}
-<section class="page-header">
+<header class="page-header app-page-header">
     <div class="container">
         <h1>{{ copy.edit }} #{{ order.pk }}</h1>
         <p>{{ copy.privacy }}</p>
     </div>
-</section>
-<section class="order-form">
-    <div class="container" style="max-width:780px;">
+</header>
+<section class="order-form app-page">
+    <div class="container app-medium">
+        <div class="app-panel">
         <form method="post" class="form" autocomplete="off">
             {% csrf_token %}
             <input type="hidden" name="operation_key" value="{{ operation_key }}">
-            {% for error in form.non_field_errors %}
-                <p class="form__error">{{ error }}</p>
-            {% endfor %}
+            {% if form.non_field_errors %}
+            <div class="form__errors ui-alert ui-alert--error" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
             {% for field in form %}
-            <div class="form__group" style="margin-bottom:18px;">
+            <div class="form__group">
                 <label class="form__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
                 {% for error in field.errors %}
-                <p class="form__error">{{ error }}</p>
+                <p class="form__error" role="alert">{{ error }}</p>
                 {% endfor %}
             </div>
             {% endfor %}
+            <div class="app-form-actions">
             <button type="submit" class="btn btn--primary">{{ copy.save_changes }}</button>
             <a class="btn btn--secondary" href="{% url 'marketplace:order_detail' pk=order.pk %}">{{ copy.back }}</a>
+            </div>
         </form>
+        </div>
     </div>
 </section>
 {% endblock %}

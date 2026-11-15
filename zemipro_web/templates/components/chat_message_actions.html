@@ -1,0 +1,38 @@
+{% load i18n %}
+<div class="comm-message__actions">
+    {% if can_upload %}
+    <details class="comm-disclosure">
+        <summary>{{ copy.files }}</summary>
+        <form method="post" enctype="multipart/form-data"
+              action="{% url 'marketplace:chat_image_upload' message_id=message_id %}">
+            {% csrf_token %}
+            <label for="chat-image-{{ message_id }}">{{ copy.files }}</label>
+            <input id="chat-image-{{ message_id }}" type="file" name="image"
+                   accept="image/jpeg,image/png,image/webp" required>
+            <button class="btn btn--secondary btn--sm" type="submit">{{ copy.files }}</button>
+        </form>
+    </details>
+    {% endif %}
+    <details class="comm-translate">
+        <summary>{{ copy.translate }}</summary>
+        <form method="post" action="{% url 'marketplace:chat_translate' message_id=message_id %}">
+            {% csrf_token %}
+            <label for="translation-language-{{ message_id }}">{{ copy.translate }}</label>
+            <select name="target_language" id="translation-language-{{ message_id }}" required>
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+                <option value="he">עברית</option>
+            </select>
+            <label class="comm-consent" for="translation-consent-{{ message_id }}">
+                <input id="translation-consent-{{ message_id }}" type="checkbox"
+                       name="consent" value="yes" required>
+                <span>{{ copy.consent }}</span>
+            </label>
+            <small class="app-muted">{{ copy.privacy }}</small>
+            <button class="btn btn--secondary btn--sm" type="submit">{{ copy.translate }}</button>
+        </form>
+    </details>
+    <a class="comm-report-link" href="{% url 'moderation:complaint_create' %}?message={{ message_id }}">
+        {{ copy.message }} ⚑
+    </a>
+</div>

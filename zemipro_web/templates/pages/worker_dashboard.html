@@ -1,28 +1,28 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
 
 {% block title %}{% trans 'Кабинет мастера — ZemiPro' %}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header app-page-header">
     <div class="container">
         <h1>{% trans 'Кабинет мастера' %}</h1>
         <p>{{ profile.city.localized_name }} · {{ profile.skills.count }} {% trans 'категорий' %}</p>
     </div>
-</section>
+</header>
 
-<section class="dashboard">
-    <div class="container">
+<section class="dashboard app-page app-dashboard">
+    <div class="container app-wide">
 
-        {% if messages %}
-        <div class="form__errors" style="background: #d1fae5; border-color: #6ee7b7; margin-bottom: 24px;">
-            {% for message in messages %}
-            <p class="form__error" style="color: #065f46;">{{ message }}</p>
-            {% endfor %}
-        </div>
-        {% endif %}
+        {% include 'components/flash_messages.html' %}
 
-        <div class="dashboard__profile">
+        <nav class="app-section-tabs" aria-label="{% trans 'Кабинет мастера' %}">
+            <a href="#worker-profile">{% trans 'Ваш профиль' %}</a>
+            <a href="#worker-invitations">{{ invite_copy.invitations_worker }}</a>
+            <a href="#worker-matches">{% trans 'Подходящие заявки' %}</a>
+            <a href="#worker-responses">{% trans 'Мои отклики' %}</a>
+        </nav>
+        <div class="dashboard__profile" id="worker-profile">
             <h2>{% trans 'Ваш профиль' %}</h2>
             <p><strong>{% trans 'Город:' %}</strong> {{ profile.city.localized_name }}</p>
             <p><strong>{% trans 'Контакт:' %}</strong> {{ profile.contact }}</p>
@@ -35,7 +35,7 @@
             {% if not profile.is_published %}<p>{% trans 'Анкета пока не опубликована.' %}</p>{% endif %}
         </div>
 
-        <section class="dashboard__section">
+        <section class="dashboard__section" id="worker-invitations">
             <h2>{{ invite_copy.invitations_worker }}</h2>
             {% for invitation in worker_invitations %}
             <article class="order-card-sm">
@@ -46,7 +46,7 @@
             </article>
             {% empty %}<p class="empty-state">{{ invite_copy.no_invitations }}</p>{% endfor %}
         </section>
-        <div class="dashboard__section">
+        <div class="dashboard__section" id="worker-matches">
             <h2>{% trans 'Подходящие заявки' %}</h2>
 
             {% if page_obj.object_list %}
@@ -87,7 +87,7 @@
             {% endif %}
         </div>
 
-        <div class="dashboard__section">
+        <div class="dashboard__section" id="worker-responses">
             <h2>{% trans 'Мои отклики' %}</h2>
 
             {% if my_responses %}
