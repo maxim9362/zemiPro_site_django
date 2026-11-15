@@ -15,7 +15,7 @@ from .forms import (
     ArticleActionForm, ArticleDecisionForm, ArticleForm, ArticleImageForm,
     ArticleReportDecisionForm, ArticleReportForm,
 )
-from .models import ExpertArticle, ExpertArticleImage, ExpertArticleReport
+from .models import ExpertArticle, ExpertArticleImage
 
 
 def _feature():

@@ -2,6 +2,9 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _, get_language
 
+from apps.marketplace.models import Category, Subcategory
+from .models import ExpertArticle, ExpertArticleReport
+
 _LABELS = {
     'title': ('Заголовок', 'Title', 'כותרת'),
     'excerpt': ('Краткое описание', 'Summary', 'תקציר'),
@@ -31,8 +34,6 @@ class LocalizedLabels:
                 field.label = _LABELS[name][column]
 
 
-from apps.marketplace.models import Category, Subcategory
-from .models import ExpertArticle, ExpertArticleReport
 
 
 class ArticleForm(LocalizedLabels, forms.Form):
