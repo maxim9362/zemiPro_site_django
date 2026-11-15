@@ -88,6 +88,10 @@ USE_I18N = True
 LOCALE_PATHS = [BASE_DIR / 'locale']
 # New prefixed catalog pages remain noindex until explicit editorial/SEO approval.
 ZEMIPRO_CATALOG_INDEXING_ENABLED = env_bool('ZEMIPRO_CATALOG_INDEXING_ENABLED', False)
+# Stage 09 exact legacy decisions remain inert until the owner-approved cutover.
+ZEMIPRO_LEGACY_REDIRECTS_ENABLED = env_bool(
+    'ZEMIPRO_LEGACY_REDIRECTS_ENABLED', False,
+)
 # Owner-approved first public pilot: only Ashdod. Expansion requires a code review.
 # Not environment-overridable, so a production .env cannot silently open all cities.
 ZEMIPRO_PILOT_CITY_SLUG = 'ashdod'

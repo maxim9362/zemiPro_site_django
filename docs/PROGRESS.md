@@ -191,6 +191,15 @@
 - **Проверки:** technical SEO+i18n 23/23 PASS; schema XSS, PII, ложные rating/price, другая география, canonical/hreflang и robots PASS; Django check/Ruff/diff check PASS.
 - **Следующий:** 09.5 — точный legacy resolver, URL matrix и rollback без wildcard.
 
+## 2026-11-15 — 09.5: exact legacy URL migration
+
+- **Статус:** `MECHANISM_VERIFIED / REAL_DECISIONS_PENDING_09.1`; реальный redirect не активирован.
+- **Сделано:** 21 inventory row seeded inactive/review-only; exact DB resolver, staff/evidence approval, public target ORM validation, 301/308/404/410, feature flag и rollback service.
+- **Защита:** нет wildcard destination, query forwarding, home fallback, open/self redirect, chain/cycle или не-Ashdod target. Неизвестные/неодобренные пути 404.
+- **Проверки:** synthetic activation/deactivation, feature-off, permission denial, chain rejection, 410, POST 405 и все 21 review-only URL PASS; PostgreSQL constraints PASS.
+- **Осталось:** HTTP/GSC и утверждение фактического решения каждой строки. До этого ни одна запись не активна.
+- **Следующий:** 09.6 — технический cutover/rollback/monitoring plan без production действий.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.

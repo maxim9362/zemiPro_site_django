@@ -1,4 +1,6 @@
 from django.test import TestCase, override_settings
+from django.contrib.auth.models import Permission
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import override
@@ -8,6 +10,8 @@ from apps.locations.models import City
 from apps.marketplace.models import Category, Subcategory
 from apps.marketplace.tests.factories import make_user
 from apps.seo.models import SeoContentPage
+from apps.seo.models import SeoLegacyUrl
+from apps.seo.legacy import activate_legacy_url, deactivate_legacy_url
 
 
 @override_settings(
@@ -178,3 +182,68 @@ class Stage09PublicPageTests(TestCase):
         self.assertContains(robots, 'Disallow: /')
         sitemap = self.client.get(reverse('seo_sitemap'))
         self.assertNotContains(sitemap, '<url>')
+
+    def grant_legacy_approval(self):
+        self.reviewer.user_permissions.add(Permission.objects.get(
+            codename='approve_legacy_url',
+        ))
+        self.reviewer.refresh_from_db()
+
+    def test_legacy_registry_is_seeded_review_only(self):
+        seeded = SeoLegacyUrl.objects.filter(
+            evidence_source__contains='Stage09.1 external HTTP/GSC pending',
+        )
+        self.assertEqual(seeded.count(), 21)
+        self.assertFalse(seeded.filter(is_active=True).exists())
+        self.assertFalse(seeded.exclude(decision=SeoLegacyUrl.Decision.REVIEW).exists())
+        with override_settings(ZEMIPRO_LEGACY_REDIRECTS_ENABLED=True):
+            for row in seeded.exclude(path='/'):
+                with self.subTest(path=row.path):
+                    self.assertEqual(self.client.get(row.path).status_code, 404)
+
+    def test_exact_legacy_redirect_activation_and_rollback(self):
+        target = self.localized(
+            'ru', 'service_city_detail', category_slug=self.category.slug,
+            service_slug=self.service.slug, city_slug=self.city.slug,
+        )
+        row = SeoLegacyUrl.objects.create(
+            path='/master/stage09-exact/', page_type='service_page',
+            decision=SeoLegacyUrl.Decision.REDIRECT, target_path=target,
+            evidence_source='Synthetic HTTP and GSC evidence for isolated tests.',
+        )
+        with self.assertRaises(PermissionDenied):
+            activate_legacy_url(row_id=row.pk, actor=self.worker.user)
+        self.grant_legacy_approval()
+        activate_legacy_url(row_id=row.pk, actor=self.reviewer)
+        with override_settings(ZEMIPRO_LEGACY_REDIRECTS_ENABLED=True):
+            response = self.client.get(row.path + '?utm_source=legacy')
+            self.assertEqual(response.status_code, 301)
+            self.assertEqual(response['Location'], target)
+            self.assertEqual(self.client.get('/master/not-registered/').status_code, 404)
+            self.assertEqual(self.client.post(row.path).status_code, 405)
+        deactivate_legacy_url(row_id=row.pk, actor=self.reviewer)
+        with override_settings(ZEMIPRO_LEGACY_REDIRECTS_ENABLED=True):
+            self.assertEqual(self.client.get(row.path).status_code, 404)
+        row.refresh_from_db()
+        row.redirect_status = SeoLegacyUrl.RedirectStatus.PERMANENT_REDIRECT
+        row.save()
+        activate_legacy_url(row_id=row.pk, actor=self.reviewer)
+        with override_settings(ZEMIPRO_LEGACY_REDIRECTS_ENABLED=True):
+            self.assertEqual(self.client.get(row.path).status_code, 308)
+
+    def test_legacy_feature_flag_and_chain_validation_fail_closed(self):
+        self.grant_legacy_approval()
+        gone = SeoLegacyUrl.objects.create(
+            path='/master/stage09-gone/', decision=SeoLegacyUrl.Decision.GONE,
+            evidence_source='Synthetic removal evidence.',
+        )
+        activate_legacy_url(row_id=gone.pk, actor=self.reviewer)
+        self.assertEqual(self.client.get(gone.path).status_code, 404)
+        with override_settings(ZEMIPRO_LEGACY_REDIRECTS_ENABLED=True):
+            self.assertEqual(self.client.get(gone.path).status_code, 410)
+        chain = SeoLegacyUrl.objects.create(
+            path='/master/stage09-chain/', decision=SeoLegacyUrl.Decision.REDIRECT,
+            target_path=gone.path, evidence_source='Synthetic evidence.',
+        )
+        with self.assertRaises(ValidationError):
+            activate_legacy_url(row_id=chain.pk, actor=self.reviewer)

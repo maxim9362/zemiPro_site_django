@@ -3,7 +3,8 @@ from collections import defaultdict
 from xml.etree import ElementTree
 
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseGone
+from django.http.response import HttpResponseRedirectBase
 from django.urls import reverse
 from django.utils.translation import override
 from django.views.decorators.http import require_GET
@@ -12,7 +13,8 @@ from apps.accounts.client_favorites import public_worker_queryset
 from apps.locations.services import get_public_cities
 from apps.marketplace.services import workers_serving_city
 
-from .models import SeoContentPage
+from .legacy import redirect_target_is_safe
+from .models import SeoContentPage, SeoLegacyUrl
 
 
 LANGUAGES = ('ru', 'en', 'he')
@@ -148,3 +150,27 @@ def robots(request):
         ]
     lines.extend(['', f'Sitemap: {request.build_absolute_uri(reverse("seo_sitemap"))}', ''])
     return HttpResponse('\n'.join(lines), content_type='text/plain; charset=utf-8')
+
+
+@require_GET
+def legacy_url(request, legacy_path):
+    """Resolve only an exact approved row; unknown paths never redirect."""
+    if not settings.ZEMIPRO_LEGACY_REDIRECTS_ENABLED:
+        raise Http404
+    exact_path = f'/master/{legacy_path}'
+    row = SeoLegacyUrl.objects.filter(path=exact_path, is_active=True).first()
+    if row is None:
+        raise Http404
+    if row.decision == SeoLegacyUrl.Decision.GONE:
+        response = HttpResponseGone()
+        response['Cache-Control'] = 'public, max-age=300'
+        return response
+    if row.decision == SeoLegacyUrl.Decision.NOT_FOUND:
+        raise Http404
+    if row.decision != SeoLegacyUrl.Decision.REDIRECT or not redirect_target_is_safe(row):
+        raise Http404
+    response = HttpResponseRedirectBase(
+        row.target_path, status=row.redirect_status,
+    )
+    response['Cache-Control'] = 'public, max-age=300'
+    return response

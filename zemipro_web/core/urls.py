@@ -10,6 +10,7 @@ from apps.seo import views as seo_views
 urlpatterns = [
     path('sitemap.xml', seo_views.sitemap, name='seo_sitemap'),
     path('robots.txt', seo_views.robots, name='seo_robots'),
+    path('master/<path:legacy_path>', seo_views.legacy_url, name='seo_legacy_url'),
     path('health/live/', health.liveness, name='health_live'),
     path('health/ready/', health.readiness, name='health_ready'),
     path('admin/', admin.site.urls),
