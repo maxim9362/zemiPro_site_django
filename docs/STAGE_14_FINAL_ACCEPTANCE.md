@@ -43,10 +43,12 @@ Codex Cloud. После R7 отдельно прошли environment-settings и
   safe profile/share и отсутствие private-email leakage — PASS. Это desktop
   Chromium emulation, не физические Android/iPhone.
 - Ruff, compileall и `git diff --check` — PASS на локальном финальном diff.
-- Полный Django suite: **761/761 PASS** на финальном локальном diff после R7.
-  GitHub Actions фиксируется отдельно на итоговом commit/PR; промежуточный
-  запуск обнаружил и привёл к исправлению R7, поэтому его FAIL не считается
-  приёмкой финального diff.
+- Полный Django suite: **761/761 PASS** локально после R7 и в GitHub coverage
+  gate. [GitHub Actions #43710658294](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43710658294)
+  — **SUCCESS, 47/47 шагов** на кодовом SHA
+  `5448bd0fc8fe6d428e430512d173e2c90bab17eb`. Промежуточный запуск обнаружил
+  и привёл к исправлению R7, поэтому его FAIL не считается приёмкой финального
+  diff.
 
 ## Неизменяемые границы
 
