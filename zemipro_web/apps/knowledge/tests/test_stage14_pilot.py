@@ -79,7 +79,7 @@ class Stage14PilotTests(TestCase):
         self.assertEqual(self.client.get(self.detail(article)).status_code, 404)
         pilot_services.consent_to_pilot(self.writer, confirmed=True)
         self.assertEqual(self.client.get(self.detail(article)).status_code, 404)
-        _, selected = pilot_services.select_for_pilot(
+        selected, _ = pilot_services.select_for_pilot(
             self.moderator, article_id=article.pk,
             expected_version=article.content_version,
         )
