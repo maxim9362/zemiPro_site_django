@@ -192,6 +192,43 @@ class Stage09PublicPageTests(TestCase):
         self.assertContains(robots, 'Disallow: /knowledge/')
         self.assertContains(robots, 'Sitemap: http://testserver/sitemap.xml')
 
+    def test_sitemap_excludes_page_that_the_renderer_marks_noindex(self):
+        self.service.description_he = ''
+        self.service.save(update_fields=['description_he'])
+        page_url = self.localized(
+            'ru', 'service_city_detail', category_slug=self.category.slug,
+            service_slug=self.service.slug, city_slug=self.city.slug,
+        )
+        self.assertContains(self.client.get(page_url), 'noindex,follow')
+        self.assertNotContains(self.client.get(reverse('seo_sitemap')), page_url)
+
+    def test_new_public_navigation_copy_is_translated(self):
+        Subcategory.objects.create(
+            category=self.category, slug='stage09-related-service',
+            name_ru='Связанная услуга', name_en='Related service',
+            name_he='שירות קשור', description_ru='Описание',
+            description_en='Description', description_he='תיאור',
+        )
+        expected = {
+            'ru': ('Связанные услуги', 'Страница услуги в городе'),
+            'en': ('Related services', 'Service page in the city'),
+            'he': ('שירותים קשורים', 'עמוד השירות בעיר'),
+        }
+        for language, (related_copy, city_copy) in expected.items():
+            with self.subTest(language=language):
+                city_page = self.client.get(self.localized(
+                    language, 'service_city_detail',
+                    category_slug=self.category.slug,
+                    service_slug=self.service.slug, city_slug=self.city.slug,
+                ))
+                self.assertContains(city_page, related_copy)
+                service_page = self.client.get(self.localized(
+                    language, 'service_detail',
+                    category_slug=self.category.slug,
+                    service_slug=self.service.slug,
+                ))
+                self.assertContains(service_page, city_copy)
+
     @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=False)
     def test_indexing_switch_fails_closed(self):
         robots = self.client.get(reverse('seo_robots'))

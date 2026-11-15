@@ -19,6 +19,11 @@ def validate_local_path(value):
 class SeoLegacyUrl(models.Model):
     """One exact legacy path and its evidence-backed decision."""
 
+    APPROVED_FIELDS = (
+        'path', 'page_type', 'decision', 'target_path', 'redirect_status',
+        'evidence_source',
+    )
+
     class Decision(models.TextChoices):
         REVIEW = 'review', 'Review'
         KEEP = 'keep', 'Keep'
@@ -77,6 +82,15 @@ class SeoLegacyUrl(models.Model):
     def clean(self):
         super().clean()
         errors = {}
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).first()
+            if previous is not None and previous.is_active and any(
+                getattr(previous, field) != getattr(self, field)
+                for field in self.APPROVED_FIELDS
+            ):
+                errors['is_active'] = (
+                    'Deactivate the approved legacy decision before editing it.'
+                )
         if self.target_path:
             try:
                 validate_local_path(self.target_path)

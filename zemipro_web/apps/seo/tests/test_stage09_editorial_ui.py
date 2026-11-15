@@ -100,7 +100,7 @@ class Stage09EditorialUiTests(TestCase):
         self.assertEqual(self.client.get(reverse('seo:editorial_list')).status_code, 403)
         self.assertEqual(self.client.get(reverse(
             'seo:editorial_detail', args=[page.pk],
-        )).status_code, 404)
+        )).status_code, 403)
 
         self.client.force_login(self.author)
         detail = self.client.get(reverse('seo:editorial_detail', args=[page.pk]))
@@ -130,3 +130,42 @@ class Stage09EditorialUiTests(TestCase):
         page.refresh_from_db()
         self.assertEqual(page.status, SeoContentPage.Status.REVIEW)
         self.assertFalse(page.quality_approved)
+
+    def test_django_admin_cannot_bypass_editorial_workflow(self):
+        page = SeoContentPage.objects.create(
+            author=self.author, **{
+                key: value for key, value in self.content_data().items()
+                if key not in {'section', 'category', 'service', 'city'}
+            }, category=self.category,
+        )
+        administrator = make_user(
+            'stage09-admin-bypass', is_staff=True, is_superuser=True,
+        )
+        administrator.set_password('Synthetic-admin-password-9362!')
+        administrator.save(update_fields=['password'])
+        self.client.force_login(administrator)
+        response = self.client.post(reverse(
+            'admin:seo_seocontentpage_change', args=[page.pk],
+        ), {'title': 'Admin bypass attempt'})
+        self.assertEqual(response.status_code, 403)
+        page.refresh_from_db()
+        self.assertEqual(page.version, 1)
+        self.assertFalse(page.revisions.exists())
+
+    def test_staff_without_seo_permissions_cannot_read_or_edit_foreign_draft(self):
+        page = SeoContentPage.objects.create(
+            author=self.author, **{
+                key: value for key, value in self.content_data().items()
+                if key not in {'section', 'category', 'service', 'city'}
+            }, category=self.category,
+        )
+        staff = make_user('stage09-unprivileged-staff', is_staff=True)
+        self.client.force_login(staff)
+        url = reverse('seo:editorial_detail', args=[page.pk])
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.post(url, {
+            **self.content_data(), 'expected_version': page.version,
+        }).status_code, 403)
+        page.refresh_from_db()
+        self.assertEqual(page.title, self.content_data()['title'])
+        self.assertEqual(page.version, 1)

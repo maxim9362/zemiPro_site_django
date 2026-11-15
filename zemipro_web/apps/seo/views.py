@@ -10,7 +10,7 @@ from django.http import Http404, HttpResponse, HttpResponseGone
 from django.http.response import HttpResponseRedirectBase
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.translation import override
+from django.utils.translation import gettext as _, override
 from django.views.decorators.http import require_GET, require_http_methods
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
@@ -18,6 +18,8 @@ from django.views.decorators.http import require_POST
 from apps.accounts.client_favorites import public_worker_queryset
 from apps.locations.services import get_public_cities
 from apps.marketplace.services import workers_serving_city
+from apps.marketplace.catalog_seo import complete_collection, complete_content, complete_names
+from apps.marketplace.models import Category, Subcategory
 
 from .legacy import redirect_target_is_safe
 from .forms import SeoContentEditForm, SeoContentPageForm
@@ -64,19 +66,49 @@ def _landing_path(page, language):
 def _has_real_value(page):
     workers = public_worker_queryset()
     if page.page_type == SeoContentPage.PageType.SECTION:
-        return workers.filter(skills__section=page.section).exists()
+        categories = Category.objects.filter(
+            section=page.section, is_active=True,
+        ).order_by('sort_order', 'pk')
+        return bool(
+            workers.filter(skills__section=page.section).exists()
+            and complete_content(page.section, description=True)
+            and categories.exists()
+            and complete_collection(categories, description=True)
+        )
     if page.page_type == SeoContentPage.PageType.CATEGORY:
-        return workers.filter(skills=page.category).exists()
+        services = Subcategory.objects.filter(
+            category=page.category, is_active=True,
+        ).order_by('sort_order', 'pk')
+        return bool(
+            workers.filter(skills=page.category).exists()
+            and complete_content(page.category, description=True)
+            and services.exists()
+            and complete_collection(services, description=True)
+        )
     if page.page_type in {
         SeoContentPage.PageType.SERVICE,
         SeoContentPage.PageType.SERVICE_CITY,
     }:
         city = page.city or get_public_cities().first()
-        return bool(city and workers_serving_city(
-            workers, city, category=page.service.category, service=page.service,
-        ).exists())
+        return bool(
+            city
+            and complete_content(page.service, description=True)
+            and complete_names(city)
+            and workers_serving_city(
+                workers, city, category=page.service.category, service=page.service,
+            ).exists()
+        )
     if page.page_type == SeoContentPage.PageType.CITY:
-        return workers.filter(city=page.city).exists()
+        categories = Category.objects.filter(is_active=True).filter(
+            section__isnull=True,
+        ) | Category.objects.filter(
+            is_active=True, section__is_active=True,
+        )
+        return bool(
+            complete_names(page.city)
+            and workers.filter(city=page.city).exists()
+            and complete_collection(categories)
+        )
     return False
 
 
@@ -219,7 +251,7 @@ def editorial_create(request):
         except ValidationError as exc:
             form.add_error(None, exc)
         else:
-            messages.success(request, 'SEO brief created.')
+            messages.success(request, _('SEO-бриф создан.'))
             return redirect('seo:editorial_detail', pk=page.pk)
     return render(request, 'seo/editorial_form.html', {
         'form': form, 'page': None, 'seo_noindex': True,
@@ -230,6 +262,12 @@ def editorial_create(request):
 @require_http_methods(['GET', 'POST'])
 @never_cache
 def editorial_detail(request, pk):
+    if not request.user.has_perm('seo.view_seocontentpage'):
+        raise PermissionDenied
+    if request.method == 'POST' and not request.user.has_perm(
+        'seo.change_seocontentpage'
+    ):
+        raise PermissionDenied
     page = get_object_or_404(_editorial_queryset(request.user), pk=pk)
     if request.method == 'POST':
         form = SeoContentEditForm(request.POST, instance=page)
@@ -247,7 +285,7 @@ def editorial_detail(request, pk):
             except (PermissionDenied, ValidationError) as exc:
                 form.add_error(None, exc)
             else:
-                messages.success(request, 'SEO draft saved as a new revision.')
+                messages.success(request, _('SEO-черновик сохранён в новой версии.'))
                 return redirect('seo:editorial_detail', pk=page.pk)
     else:
         form = SeoContentEditForm(instance=page, initial={
@@ -264,6 +302,8 @@ def editorial_detail(request, pk):
 @require_POST
 @never_cache
 def editorial_action(request, pk, action):
+    if not request.user.has_perm('seo.view_seocontentpage'):
+        raise PermissionDenied
     page = get_object_or_404(_editorial_queryset(request.user), pk=pk)
     try:
         expected_version = int(request.POST.get('expected_version', ''))
@@ -292,5 +332,11 @@ def editorial_action(request, pk, action):
     except (PermissionDenied, ValidationError) as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, f'Editorial action completed: {action}.')
+        action_messages = {
+            'submit': _('Материал передан на проверку.'),
+            'approve': _('Материал одобрен.'),
+            'publish': _('Материал опубликован.'),
+            'unpublish': _('Материал снят с публикации.'),
+        }
+        messages.success(request, action_messages[action])
     return redirect('seo:editorial_detail', pk=page.pk)

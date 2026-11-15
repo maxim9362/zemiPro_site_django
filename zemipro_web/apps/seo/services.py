@@ -10,6 +10,9 @@ EDITABLE_FIELDS = (
     'topic', 'title', 'meta_description', 'summary', 'body', 'source_facts',
     'quality_approved', 'status', 'reviewer_id', 'reviewed_at', 'published_at',
 )
+CONTENT_FIELDS = {
+    'topic', 'title', 'meta_description', 'summary', 'body', 'source_facts',
+}
 
 
 def _snapshot(page):
@@ -23,6 +26,8 @@ def _snapshot(page):
 @transaction.atomic
 def revise_content(*, page_id, actor, expected_version, changes):
     page = SeoContentPage.objects.select_for_update().get(pk=page_id)
+    if not actor.has_perm('seo.change_seocontentpage'):
+        raise PermissionDenied
     if not actor.is_staff and page.author_id != actor.pk:
         raise PermissionDenied
     if page.version != expected_version:
@@ -46,8 +51,27 @@ def revise_content(*, page_id, actor, expected_version, changes):
     SeoContentRevision.objects.create(
         page=page, version=page.version, snapshot=_snapshot(page), created_by=actor,
     )
+    original_status = page.status
     for field, value in changes.items():
         setattr(page, field, value)
+    substantive_change = bool(CONTENT_FIELDS.intersection(changes))
+    if substantive_change and 'status' not in changes and original_status in {
+        SeoContentPage.Status.REVIEW,
+        SeoContentPage.Status.APPROVED,
+        SeoContentPage.Status.PUBLISHED,
+    }:
+        # Changed copy is a new draft.  It must never inherit approval merely
+        # because the same row was approved or visible before the edit.
+        page.status = SeoContentPage.Status.DRAFT
+    if substantive_change or page.status in {
+        SeoContentPage.Status.BRIEF,
+        SeoContentPage.Status.DRAFT,
+        SeoContentPage.Status.REVIEW,
+    }:
+        page.quality_approved = False
+        page.reviewer = None
+        page.reviewed_at = None
+        page.published_at = None
     page.version += 1
     page.save()
     return page

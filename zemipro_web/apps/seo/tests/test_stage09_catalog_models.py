@@ -35,6 +35,7 @@ class Stage09SeoModelTests(TestCase):
             source_facts='Актуальный Django-каталог; редакционная проверка.',
             status=SeoContentPage.Status.DRAFT, author=self.author,
         )
+        self.grant(self.author, 'change_seocontentpage')
 
     def grant(self, user, *codenames):
         user.user_permissions.add(*Permission.objects.filter(codename__in=codenames))
@@ -82,7 +83,10 @@ class Stage09SeoModelTests(TestCase):
                 changes={'summary': 'stale'},
             )
 
-        self.grant(self.reviewer, 'review_seo_content', 'publish_seo_content')
+        self.grant(
+            self.reviewer, 'change_seocontentpage',
+            'review_seo_content', 'publish_seo_content',
+        )
         approved = approve_content(
             page_id=self.page.pk, actor=self.reviewer, expected_version=2,
         )
@@ -99,6 +103,57 @@ class Stage09SeoModelTests(TestCase):
         self.assertIsNone(withdrawn.published_at)
         self.assertEqual(withdrawn.revisions.count(), 4)
 
+    def test_substantive_edits_revoke_review_and_publication(self):
+        self.grant(
+            self.reviewer, 'change_seocontentpage',
+            'review_seo_content', 'publish_seo_content',
+        )
+        submitted = revise_content(
+            page_id=self.page.pk, actor=self.author, expected_version=1,
+            changes={'status': SeoContentPage.Status.REVIEW},
+        )
+        approved = approve_content(
+            page_id=self.page.pk, actor=self.reviewer,
+            expected_version=submitted.version,
+        )
+        changed = revise_content(
+            page_id=self.page.pk, actor=self.author,
+            expected_version=approved.version,
+            changes={'body': self.page.body + ' Новая редакция требует новой проверки.'},
+        )
+        self.assertEqual(changed.status, SeoContentPage.Status.DRAFT)
+        self.assertFalse(changed.quality_approved)
+        self.assertIsNone(changed.reviewer)
+        self.assertIsNone(changed.reviewed_at)
+        with self.assertRaises(ValidationError):
+            publish_content(
+                page_id=self.page.pk, actor=self.reviewer,
+                expected_version=changed.version,
+            )
+
+        resubmitted = revise_content(
+            page_id=self.page.pk, actor=self.author,
+            expected_version=changed.version,
+            changes={'status': SeoContentPage.Status.REVIEW},
+        )
+        reapproved = approve_content(
+            page_id=self.page.pk, actor=self.reviewer,
+            expected_version=resubmitted.version,
+        )
+        published = publish_content(
+            page_id=self.page.pk, actor=self.reviewer,
+            expected_version=reapproved.version,
+        )
+        changed_live = revise_content(
+            page_id=self.page.pk, actor=self.reviewer,
+            expected_version=published.version,
+            changes={'summary': self.page.summary + ' Изменённый публичный текст.'},
+        )
+        self.assertEqual(changed_live.status, SeoContentPage.Status.DRAFT)
+        self.assertFalse(changed_live.quality_approved)
+        self.assertIsNone(changed_live.reviewer)
+        self.assertIsNone(changed_live.published_at)
+
     def test_unprivileged_actor_cannot_edit_another_page(self):
         stranger = get_user_model().objects.create_user(username='seo-stranger')
         with self.assertRaises(PermissionDenied):
@@ -114,6 +169,26 @@ class Stage09SeoModelTests(TestCase):
         )
         with self.assertRaises(ValidationError):
             row.full_clean()
+
+    def test_active_legacy_decision_must_be_deactivated_before_edit(self):
+        self.grant(self.reviewer, 'approve_legacy_url')
+        row = SeoLegacyUrl.objects.create(
+            path='/master/stage09-active-lock/',
+            decision=SeoLegacyUrl.Decision.GONE,
+            evidence_source='Synthetic removal evidence.',
+        )
+        from apps.seo.legacy import activate_legacy_url, deactivate_legacy_url
+
+        activate_legacy_url(row_id=row.pk, actor=self.reviewer)
+        row.refresh_from_db()
+        row.decision = SeoLegacyUrl.Decision.NOT_FOUND
+        with self.assertRaises(ValidationError):
+            row.save()
+        deactivate_legacy_url(row_id=row.pk, actor=self.reviewer)
+        row.refresh_from_db()
+        row.decision = SeoLegacyUrl.Decision.NOT_FOUND
+        row.save()
+        self.assertEqual(row.decision, SeoLegacyUrl.Decision.NOT_FOUND)
         row.target_path = 'https://attacker.example/'
         with self.assertRaises(ValidationError):
             row.full_clean()
