@@ -109,6 +109,27 @@ class ArticleReportForm(LocalizedLabels, forms.Form):
         min_length=10, max_length=2000, widget=forms.Textarea(attrs={'rows': 4}),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        names = {
+            'en': {
+                'spam': 'Spam', 'private': 'Private information',
+                'dangerous': 'Unsafe advice', 'copyright': 'Copyright issue',
+                'other': 'Other',
+            },
+            'he': {
+                'spam': 'ספאם', 'private': 'מידע אישי',
+                'dangerous': 'עצה מסוכנת', 'copyright': 'זכויות יוצרים',
+                'other': 'אחר',
+            },
+        }
+        language = (get_language() or 'ru').split('-')[0]
+        if language in names:
+            self.fields['reason'].choices = [
+                (value, names[language][value])
+                for value in ExpertArticleReport.Reason.values
+            ]
+
 
 class ArticleReportDecisionForm(LocalizedLabels, forms.Form):
     action = forms.ChoiceField(choices=[

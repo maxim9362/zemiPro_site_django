@@ -539,6 +539,18 @@ class Stage14AuthoringTests(TestCase):
                     f'dir="{expected_dir}"', response.content.decode(),
                 )
 
+    def test_article_report_reason_choices_are_localized(self):
+        from django.utils import translation
+        from apps.knowledge.forms import ArticleReportForm
+        for language, expected in (
+            ('en', 'Private information'), ('he', 'מידע אישי'),
+            ('ru', 'Персональные данные'),
+        ):
+            with self.subTest(language=language), translation.override(language):
+                form = ArticleReportForm()
+                options = dict(form.fields['reason'].choices)
+                self.assertEqual(str(options['private']), expected)
+
     def test_no_public_article_endpoint_is_registered_yet(self):
         from django.urls import NoReverseMatch
         with self.assertRaises(NoReverseMatch):
