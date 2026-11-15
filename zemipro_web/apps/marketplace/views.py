@@ -25,6 +25,11 @@ from apps.accounts.services import get_client_profile, get_worker_profile
 from apps.locations.models import CityAlias, Neighborhood
 from apps.locations.services import city_is_public, get_public_cities, public_city_slug
 from apps.notifications.services import create_notification
+from apps.seo.catalog import (
+    public_pilot_city, published_landing, service_workers,
+)
+from apps.seo.models import SeoContentPage
+from apps.seo.metadata import page_metadata
 from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
 from .directory_search import (
     WorkerDirectoryForm, active_categories, search_worker_profiles,
@@ -308,6 +313,14 @@ def category_detail(request, slug):
         'page_obj': page,
         'cities': cities,
         'selected_city': selected_city,
+        'seo_content': published_landing(
+            page_type=SeoContentPage.PageType.CATEGORY, category=category,
+        ),
+        'breadcrumbs': [
+            {'label': _('Главная'), 'url': reverse('marketplace:home')},
+            {'label': _('Категории услуг'), 'url': reverse('catalog_i18n:categories_list')},
+            {'label': category.localized_name, 'url': ''},
+        ],
     }
     context.update(catalog_context(
         request, 'category_detail', kwargs={'slug': category.slug},
@@ -321,6 +334,16 @@ def category_detail(request, slug):
                 for worker in page.object_list
             )
         ),
+    ))
+    content = context['seo_content']
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{category.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else category.localized_description or category.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'],
     ))
     return render(request, 'pages/category_detail.html', context)
 
@@ -339,6 +362,11 @@ def cities_list(request):
                 for city in cities
             )
         ),
+    ))
+    context.update(page_metadata(
+        request,
+        title=_('Города') + ' — ZemiPro',
+        description=_('Города публичного пилота ZemiPro.'),
     ))
     return render(request, 'pages/cities.html', context)
 
@@ -388,6 +416,14 @@ def city_detail(request, slug):
         'categories': categories,
         'page_obj': page,
         'selected_category': selected_category,
+        'seo_content': published_landing(
+            page_type=SeoContentPage.PageType.CITY, city=city,
+        ),
+        'breadcrumbs': [
+            {'label': _('Главная'), 'url': reverse('marketplace:home')},
+            {'label': _('Города'), 'url': reverse('catalog_i18n:cities_list')},
+            {'label': city.localized_name, 'url': ''},
+        ],
     }
     context.update(catalog_context(
         request, 'city_detail', kwargs={'slug': city.slug},
@@ -401,6 +437,17 @@ def city_detail(request, slug):
             )
         ),
     ))
+    content = context['seo_content']
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{city.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else f'{city.localized_name}: ZemiPro'
+        ),
+        breadcrumbs=context['breadcrumbs'],
+        city=city,
+    ))
     return render(request, 'pages/city_detail.html', context)
 
 
@@ -412,7 +459,18 @@ def section_detail(request, slug):
     categories = Category.objects.filter(
         section=section, is_active=True,
     ).order_by('sort_order', 'pk')
-    context = {'section': section, 'categories': categories}
+    context = {
+        'section': section,
+        'categories': categories,
+        'seo_content': published_landing(
+            page_type=SeoContentPage.PageType.SECTION, section=section,
+        ),
+        'breadcrumbs': [
+            {'label': _('Главная'), 'url': reverse('marketplace:home')},
+            {'label': _('Категории услуг'), 'url': reverse('catalog_i18n:categories_list')},
+            {'label': section.localized_name, 'url': ''},
+        ],
+    }
     context.update(catalog_context(
         request, 'section_detail', kwargs={'slug': section.slug},
         indexable=lambda: (
@@ -420,6 +478,16 @@ def section_detail(request, slug):
             and categories.exists()
             and complete_collection(categories, description=True)
         ),
+    ))
+    content = context['seo_content']
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{section.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else section.localized_description or section.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'],
     ))
     return render(request, 'pages/section_detail.html', context)
 
@@ -434,16 +502,112 @@ def service_detail(request, category_slug, service_slug):
         category__slug=category_slug, slug=service_slug,
         is_active=True, category__is_active=True,
     )
-    # We don't have service-specific workers yet. Avoid implying supply
-    # based on category membership, and never index an empty/thin service page.
-    context = {'service': service, 'category': service.category}
+    supply_city = public_pilot_city()
+    workers = (
+        service_workers(service, supply_city)
+        if supply_city else public_worker_queryset().none()
+    )
+    related_services = Subcategory.objects.filter(
+        category=service.category, is_active=True,
+    ).exclude(pk=service.pk).order_by('sort_order', 'pk')[:6]
+    content = published_landing(
+        page_type=SeoContentPage.PageType.SERVICE, service=service,
+    )
+    context = {
+        'service': service, 'category': service.category, 'city': None,
+        'supply_city': supply_city,
+        'workers': workers[:12], 'worker_count': workers.count(),
+        'related_services': related_services, 'seo_content': content,
+        'breadcrumbs': [
+            {'label': _('Главная'), 'url': reverse('marketplace:home')},
+            {'label': service.category.localized_name, 'url': reverse(
+                'catalog_i18n:category_detail', kwargs={'slug': service.category.slug},
+            )},
+            {'label': service.localized_name, 'url': ''},
+        ],
+    }
     context.update(catalog_context(
         request, 'service_detail',
         kwargs={
             'category_slug': service.category.slug,
             'service_slug': service.slug,
         },
-        indexable=False,
+        indexable=lambda: bool(
+            content and supply_city and workers.exists()
+            and complete_content(service, description=True)
+            and complete_names(supply_city)
+        ),
+    ))
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{service.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else service.localized_description or service.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'], service=service,
+    ))
+    return render(request, 'pages/service_detail.html', context)
+
+
+def service_city_detail(request, category_slug, service_slug, city_slug):
+    city = get_object_or_404(get_public_cities(), slug=city_slug)
+    service = get_object_or_404(
+        Subcategory.objects.select_related('category', 'category__section').filter(
+            Q(category__section__isnull=True) | Q(category__section__is_active=True),
+        ),
+        category__slug=category_slug, slug=service_slug,
+        is_active=True, category__is_active=True,
+    )
+    workers = service_workers(service, city)
+    content = published_landing(
+        page_type=SeoContentPage.PageType.SERVICE_CITY,
+        service=service, city=city,
+    )
+    related_services = Subcategory.objects.filter(
+        category=service.category, is_active=True,
+    ).exclude(pk=service.pk).order_by('sort_order', 'pk')[:6]
+    context = {
+        'service': service, 'category': service.category, 'city': city,
+        'supply_city': city,
+        'workers': workers[:12], 'worker_count': workers.count(),
+        'related_services': related_services, 'seo_content': content,
+        'breadcrumbs': [
+            {'label': _('Главная'), 'url': reverse('marketplace:home')},
+            {'label': service.category.localized_name, 'url': reverse(
+                'catalog_i18n:category_detail', kwargs={'slug': service.category.slug},
+            )},
+            {'label': service.localized_name, 'url': reverse(
+                'catalog_i18n:service_detail', kwargs={
+                    'category_slug': service.category.slug,
+                    'service_slug': service.slug,
+                },
+            )},
+            {'label': city.localized_name, 'url': ''},
+        ],
+    }
+    context.update(catalog_context(
+        request, 'service_city_detail', kwargs={
+            'category_slug': service.category.slug,
+            'service_slug': service.slug,
+            'city_slug': city.slug,
+        },
+        indexable=lambda: bool(
+            content and workers.exists()
+            and complete_content(service, description=True)
+            and complete_names(city)
+        ),
+    ))
+    context.update(page_metadata(
+        request,
+        title=content.title if content else (
+            f'{service.localized_name} — {city.localized_name} — ZemiPro'
+        ),
+        description=(
+            content.meta_description if content
+            else service.localized_description or service.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'], service=service, city=city,
     ))
     return render(request, 'pages/service_detail.html', context)
 
@@ -497,6 +661,33 @@ def worker_public_profile_view(request, pk):
             public_recommendations(worker_id=profile.pk)[:5],
         )
 
+    is_localized = (
+        request.resolver_match is not None
+        and request.resolver_match.namespace == 'catalog_i18n'
+    )
+    seo = catalog_context(
+        request, 'worker_public_profile', kwargs={'pk': profile.pk},
+        indexable=lambda: bool(profile.public_description),
+    )
+    if not is_localized:
+        seo = {
+            'seo_noindex': True,
+            'seo_canonical': request.build_absolute_uri(
+                reverse('marketplace:worker_public_profile', args=[profile.pk])
+            ),
+        }
+    elif seo.get('seo_canonical'):
+        seo.update(page_metadata(
+            request,
+            title=f'{profile.public_display_name} — ZemiPro',
+            description=profile.public_description,
+            breadcrumbs=[
+                {'label': _('Главная'), 'url': reverse('marketplace:home')},
+                {'label': _('Мастера'), 'url': reverse('catalog_i18n:worker_directory')},
+                {'label': profile.public_display_name, 'url': ''},
+            ],
+            profile=profile,
+        ))
     response = render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
         'published_expert_articles': published_expert_articles,
@@ -507,10 +698,15 @@ def worker_public_profile_view(request, pk):
         'review_count': review_count,
         'invite_copy': invitation_copy(),
         'directory_copy': directory_copy(),
-        'seo_noindex': True,
-        'seo_canonical': request.build_absolute_uri(
-            reverse('marketplace:worker_public_profile', args=[profile.pk])
-        ),
+        'breadcrumbs': [
+            {'label': _('Главная'), 'url': reverse('marketplace:home')},
+            {'label': _('Мастера'), 'url': (
+                reverse('catalog_i18n:worker_directory')
+                if is_localized else reverse('marketplace:worker_directory')
+            )},
+            {'label': profile.public_display_name, 'url': ''},
+        ],
+        **seo,
         'is_favorite': (
             request.user.is_authenticated
             and FavoriteWorker.objects.filter(

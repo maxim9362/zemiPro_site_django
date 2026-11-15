@@ -25,6 +25,10 @@ def catalog_context(request, route_name, *, kwargs=None, indexable=False):
             'language': language,
             'url': request.build_absolute_uri(pathname),
         })
+    urls.append({
+        'language': 'x-default',
+        'url': next(entry['url'] for entry in urls if entry['language'] == 'ru'),
+    })
     current = getattr(request, 'LANGUAGE_CODE', settings.LANGUAGE_CODE)
     canonical = next(
         (entry['url'] for entry in urls if entry['language'] == current),

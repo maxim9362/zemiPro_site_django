@@ -1532,3 +1532,120 @@ msgstr "Appeal granted"
 
 msgid "Апелляция отклонена"
 msgstr "Appeal denied"
+
+msgid "Связанные услуги"
+msgstr "Related services"
+
+msgid "Страница услуги в городе"
+msgstr "Service page in the city"
+
+msgid "SEO-материалы"
+msgstr "SEO content"
+
+msgid "Создать бриф"
+msgstr "Create brief"
+
+msgid "Заголовок"
+msgstr "Title"
+
+msgid "Язык"
+msgstr "Language"
+
+msgid "Статус"
+msgstr "Status"
+
+msgid "Версия"
+msgstr "Version"
+
+msgid "Материалов пока нет."
+msgstr "There is no content yet."
+
+msgid "Новый SEO-бриф"
+msgstr "New SEO brief"
+
+msgid "Сохранить"
+msgstr "Save"
+
+msgid "Редакционный процесс"
+msgstr "Editorial workflow"
+
+msgid "Передать на проверку"
+msgstr "Submit for review"
+
+msgid "Одобрить"
+msgstr "Approve"
+
+msgid "Опубликовать"
+msgstr "Publish"
+
+msgid "История версий"
+msgstr "Version history"
+
+msgid "История пока пуста."
+msgstr "The version history is empty."
+
+msgid "Тип страницы"
+msgstr "Page type"
+
+msgid "Раздел"
+msgstr "Section"
+
+msgid "Услуга"
+msgstr "Service"
+
+msgid "Тема"
+msgstr "Topic"
+
+msgid "Мета-описание"
+msgstr "Meta description"
+
+msgid "Краткое описание"
+msgstr "Summary"
+
+msgid "Основной текст"
+msgstr "Main text"
+
+msgid "Источники фактов"
+msgstr "Fact sources"
+
+msgid "SEO-бриф создан."
+msgstr "SEO brief created."
+
+msgid "SEO-черновик сохранён в новой версии."
+msgstr "SEO draft saved as a new revision."
+
+msgid "Материал передан на проверку."
+msgstr "The content was submitted for review."
+
+msgid "Материал одобрен."
+msgstr "The content was approved."
+
+msgid "Материал опубликован."
+msgstr "The content was published."
+
+msgid "Материал снят с публикации."
+msgstr "The content was unpublished."
+
+msgid "Раздел услуг"
+msgstr "Service section"
+
+msgid "Услуга в городе"
+msgstr "Service in the city"
+
+msgid "Бриф"
+msgstr "Brief"
+
+msgid "Черновик"
+msgstr "Draft"
+
+msgid "На проверке"
+msgstr "In review"
+
+msgid "Одобрено"
+msgstr "Approved"
+
+msgid "Опубликовано"
+msgstr "Published"
+
+msgid "Укажите проверяемые источники фактов; не добавляйте секреты или персональные данные."
+msgstr "Provide verifiable fact sources; do not add secrets or personal data."

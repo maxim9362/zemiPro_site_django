@@ -1,6 +1,6 @@
 # ZemiPro — дорожная карта разработки и запуска
 
-> **Версия:** 1.4.5
+> **Версия:** 1.5.1
 > **Базовая дата:** 2026-11-05  
 > **Статус:** рабочая дорожная карта, не свидетельство завершения этапов  
 > **Горизонт:** бессрочно; без фиксированных дедлайнов  
@@ -71,12 +71,12 @@
 | `06` | Отклики, предложения и выбор исполнителя | 6 | 05 | `MERGED / CI_VERIFIED / DEPLOYMENT_PENDING` | [#13 — merged](https://github.com/maxim9362/zemiPro_site_django/pull/13) |
 | `07` | Чат, уведомления, репутация и модерация | 7 | 06 | `MERGED / CODEX_REVIEW_PASS / CI_VERIFIED / NOT_DEPLOYED` | [#16 — merged](https://github.com/maxim9362/zemiPro_site_django/pull/16) |
 | `08` | Фронтенд и пользовательский интерфейс | 7 | 07 | `MERGED / CODEX_REVIEW_PASS / CI_VERIFIED / NOT_DEPLOYED` | [#17 — merged](https://github.com/maxim9362/zemiPro_site_django/pull/17); [#15 — merged эталоны](https://github.com/maxim9362/zemiPro_site_django/pull/15) |
-| `09` | Новые Django SEO-страницы и решения по legacy URL | 7 | 08 + техническая приёмка 14 + инвентарь 00; отдельная команда владельца | `NOT_STARTED / UNVERIFIED` | — |
+| `09` | Новые Django SEO-страницы и решения по legacy URL | 7 | 08 + инвентарь 00; Stage14 integration | `REVIEW / LOCAL_CODE_PASS / STAGE09_CI_GREEN_PRE_INTEGRATION / CUTOVER_PENDING` | PR в подготовке |
 | `10` | Аналитика и автоматизированный маркетинг | 7 | 09 | `NOT_STARTED / UNVERIFIED` | — |
 | `11` | Версионированный API для приложений | 6 | 10 (контракты можно раньше) | `NOT_STARTED / UNVERIFIED` | — |
 | `12` | Мобильное приложение Android и iOS | 7 | 11 | `NOT_STARTED / UNVERIFIED` | — |
 | `13` | Монетизация и долгосрочное развитие | 7 | 10 для гипотез; 12 для контура | `NOT_STARTED / UNVERIFIED` | — |
-| `14` | Статьи, Q&A, рекомендации и приглашения (обязательный) | 11 | 08; до 09 техническая разработка; real pilot/GO отдельно | `REVIEW / 14.1–14.11_CODE_COMPLETE / INDEPENDENT_REVIEW_PASS / CI_VERIFIED_CODE_SHA / REAL_PILOT_AND_GO_PENDING / NOT_MERGED` | [#18 — Draft](https://github.com/maxim9362/zemiPro_site_django/pull/18) |
+| `14` | Статьи, Q&A, рекомендации и приглашения (обязательный) | 11 | 08; внешние пилот/GO отдельно | `MERGED / CODE_VERIFIED / REAL_PILOT_14.4_AND_PUBLIC_GO_PENDING / NOT_DEPLOYED` | [#18 — MERGED](https://github.com/maxim9362/zemiPro_site_django/pull/18) |
 | **Итого** | **15 этапов** | **103** | | **0 этапов полностью закрыто по публичным гейтам** | |
 
 ## 4. Порядок и контрольные точки
@@ -351,17 +351,21 @@ flowchart TD
 - **Результат этапа:** Старые SEO-страницы сохранены либо перенаправлены; Django обслуживает публичный сайт.
 - **Гейт закрытия:** Проверены значимые старые URL, 301/canonical/hreflang, готов откат, разрешено переключение домена.
 - **Особое условие:** Запрещены массовые 404, случайные редиректы на главную и переключение домена без согласования.
-- **Статус:** `NOT_STARTED / UNVERIFIED` · **Ветка:** `stage-09-<slug>` · **Итоговый PR:** —
+- **Статус:** `LOCAL_CODE_VERIFIED / EXTERNAL_GATES_PENDING / PR_API_BLOCKED` · **Ветка:** `stage-09-django-seo` · **Итоговый PR:** будет один Draft PR в `main`; создание из этого сеанса заблокировано отсутствием GitHub API auth
 
-- [ ] **09.1 — Подтверждение полного списка опубликованных URL.** Готово когда: нет неизвестных массовых шаблонов URL; решение по каждой важной странице документировано.
-- [ ] **09.2 — Новый SEO-каталог и проверка соответствия URL.** Готово когда: страницы основаны на реальных Django-категориях/городах/профилях, старые URL рассмотрены для KEEP/301/404/410, никакого импорта PSEO-кода/контента/SQLite.
-- [ ] **09.3 — SEO-страницы в Django.** Готово когда: страницы не зависят от Flask или SQLite как рабочей базы и не вводят пользователя в заблуждение.
-- [ ] **09.4 — Техническое SEO и три языка.** Готово когда: для репрезентативной выборки URL нет конфликтов canonical/hreflang и некорректных schema.org утверждений.
-- [ ] **09.5 — Страница-по-странице миграция и редиректы.** Готово когда: тесты на все существенные URL, нулевые критические редирект-циклы и понятный rollback.
-- [ ] **09.6 — Переход на Django и контроль индексации.** Готово когда: основной домен открывает Django-продукт; legacy SEO-доступность подтверждена, ошибки мониторятся.
-- [ ] **09.7 — Редакционный конвейер нового SEO-контента.** Готово когда: у публикаций есть источник данных, версия, статус ревью и контроль низкоценного контента.
+- [ ] **09.1 — Подтверждение полного списка опубликованных URL.** `SAFE_PREPARATION_COMPLETE / EXTERNAL_EVIDENCE_PENDING` — 21 URL классифицирован, повторная HTTP-проверка заблокирована CONNECT proxy `403`, GSC недоступна; [доказательства и требуемый экспорт](STAGE_09_URL_AUDIT.md). Готово когда: нет неизвестных массовых шаблонов URL; решение по каждой важной странице документировано.
+- [x] **09.2 — Новый SEO-каталог и проверка соответствия URL.** `CODE_VERIFIED` — каталог использует только реальные Django-сущности, privacy-safe мастеров и серверный Ashdod-only; редакционный/legacy реестр fail-closed, история защищена PostgreSQL trigger. [Архитектура и тесты](STAGE_09_SEO_CATALOG.md). Окончательные решения legacy URL всё ещё зависят от внешнего гейта 09.1.
+- [x] **09.3 — SEO-страницы в Django.** `CODE_VERIFIED` — локализованные раздел/категория/услуга/город/услуга-в-Ashdod/профиль используют реальные Django-данные, breadcrumbs и Stage 08 UI; thin pages noindex, старые маршруты сохранены. [Детали](STAGE_09_PUBLIC_PAGES.md).
+- [x] **09.4 — Техническое SEO и три языка.** `CODE_VERIFIED / DEFAULT_OFF` — sitemap/robots, canonical, RU/EN/HE/x-default, Open Graph и правдивые JSON-LD реализованы; sitemap fail-closed и не включает thin/Stage14 страницы. [Контракты и проверки](STAGE_09_TECHNICAL_SEO.md).
+- [ ] **09.5 — Страница-по-странице миграция и редиректы.** `MECHANISM_VERIFIED / REAL_DECISIONS_PENDING_09.1` — 21 URL seeded как inactive review; exact resolver, staff approval, target ORM validation, 301/308/404/410, chain rejection и rollback протестированы. [Детали](STAGE_09_LEGACY_MIGRATION.md). Не закрыто до HTTP/GSC и утверждения каждой реальной судьбы.
+- [ ] **09.6 — Переход на Django и контроль индексации.** `09.6_PREPARED / PRODUCTION_CUTOVER_PENDING` — staging/migration/backup/restore/proxy/monitoring/rollback и Stage14 compatibility runbook подготовлен; staging flags default false. [План](STAGE_09_CUTOVER_PLAN.md). Не `DONE`: домен/production не переключались без owner GO.
+- [x] **09.7 — Редакционный конвейер нового SEO-контента.** `CODE_VERIFIED / NO_REAL_CONTENT_PUBLISHED` — permissioned brief→review→separate approval→publish/unpublish, CAS, immutable history, sources, duplicate/thin-content gates и CSRF UI. [Контракт](STAGE_09_EDITORIAL_WORKFLOW.md).
 
 **Решение по этапу 09:** закрывать только после выполненных подэтапов (или документированного `DEFERRED` с подтверждением), адресных проверок, необходимых интеграционных тестов и принятия единственного этапного PR.
+
+**Локальная приёмка 15.11.2026:** [полный отчёт](STAGE_09_FINAL_ACCEPTANCE.md) — Django 660/660, Stage09 29/29, PostgreSQL 17, Chromium 17/17 и независимый review PASS. Пять MEDIUM и один LOW исправлены; открытых code findings нет. 09.1, фактические решения 09.5, production cutover 09.6, GitHub Actions и создание Draft PR остаются внешними гейтами и не объявляются завершёнными.
+
+**Новое решение владельца (15.11.2026):** техническая реализация Stage 09 прямо разрешена от актуального `main`, хотя отдельный Draft PR #18 Stage 14 ещё не объединён, реальный пилот 14.4 и публичные GO остаются `PENDING`. Это не переписывает историю прежнего приоритета Stage 14 и не разрешает production cutover, DNS/Cloudflare/VPS, рабочую PostgreSQL, merge или активацию закрытых функций Stage 14.
 
 ### Этап 10. Аналитика и автоматизированный маркетинг
 
@@ -440,7 +444,7 @@ flowchart TD
 - **Результат:** модерируемые статьи и Q&A, отдельные личные рекомендации, добровольный Facebook-шеринг профилей, приглашения внешних мастеров и публичное «Посоветуйте мастера» только после проверки спроса.
 - **Гейт закрытия:** все 14.1–14.11 реализованы и проверены; RU/EN/HE, RTL, SEO, права и ссылки безопасны. Публикация Q&A и публичных рекомендаций допускается только после соответствующих `GO`.
 - **Особое условие:** не блокирует ранний MVP и работу над 11–13, но обязателен для полного завершения программы; не смешивать вопросы с заказами и платными откликами.
-- **Статус:** `14.1–14.11_CODE_COMPLETE / INDEPENDENT_LOCAL_REVIEW_PASS / FINAL_CI_VERIFIED / REAL_PILOT_AND_PUBLIC_GO_PENDING / NOT_MERGED / NOT_DEPLOYED`. 14.1–14.4 сохраняют подтверждённые CI ниже; для 14.5–14.11 [GitHub Actions #43710658294](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43710658294) — **SUCCESS, 47/47 шагов** на кодовом SHA `5448bd0fc8fe6d428e430512d173e2c90bab17eb`: PostgreSQL 17, security/concurrency, 761/761 Django, Stage14 Chromium 90/90 и strict production settings PASS. **Ветка:** `stage-14-knowledge` · **Итоговый PR:** [#18 — Draft](https://github.com/maxim9362/zemiPro_site_django/pull/18) в `main`, создан 15.11.2026; merge без отдельного разрешения запрещён. GitHub CI на последнем документальном SHA — отдельная текущая проверка.
+- **Статус:** `14.1–14.11_CODE_COMPLETE / INDEPENDENT_LOCAL_REVIEW_PASS / FINAL_CI_VERIFIED / REAL_PILOT_AND_PUBLIC_GO_PENDING / NOT_MERGED / NOT_DEPLOYED`. 14.1–14.4 сохраняют подтверждённые CI ниже; для 14.5–14.11 [GitHub Actions #43710658294](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43710658294) — **SUCCESS, 47/47 шагов** на кодовом SHA `5448bd0fc8fe6d428e430512d173e2c90bab17eb`: PostgreSQL 17, security/concurrency, 761/761 Django, Stage14 Chromium 90/90 и strict production settings PASS. **Ветка:** `stage-14-knowledge` · **Итоговый PR:** [#18 — MERGED](https://github.com/maxim9362/zemiPro_site_django/pull/18) 15.11.2026; публичные feature flags и пилот остались выключены. GitHub CI на последнем документальном SHA — отдельная текущая проверка.
 
 - [x] **14.1 — Аудит существующего контента и доменная модель.** `CODE_CI_VERIFIED` на `a5a9f711`: REUSE/ADAPT/REJECT, сущности, авторство, ревизии, права, fail-closed snapshots и обратимая миграция документированы и проверены. Независимый Codex review только по итогам всего Stage14; публичный rollout закрыт.
 - [x] **14.2 — Черновики статей и модерация.** `CODE_CI_VERIFIED`: авторская изоляция, приватные черновики и изображения, блокировка контактов/HTML, ручная модерация, журналы ревизий и решений, защита от спама, жалобы — 27/27 адресных и 664/664 Django PASS на `21daf56d83c34fe108b09de20cc6afac95473a6b`. **Публичный feature flag выключен**, ограниченный реальный пилот, журналистская/редакционная проверка и GO — PENDING.
@@ -596,13 +600,16 @@ flowchart TD
 | 2026-11-15 | 1.4.3 | Согласовано с обновлённым main после MERGED PR #17 (Stage08), сохранены 4 неизменяемых HTML-макета и актуальный реестр 103 подэтапов. Этап09 не запущен; внешние гейты открыты. | Синхронизация PR #15, проверка SHA дерева GitHub и актуального состояния PR #17 |
 | 2026-11-15 | 1.4.4 | Решением владельца техническая разработка 14.1–14.11 переставлена после 08, до 09; убрана техническая зависимость от 10. Пилот 14.4, проверки реального спроса и отдельные публичные GO остаются PENDING. Начата схема 14.1 в отдельной ветке; версии и 103 ID сохранены. | Подтверждённый main `3d640f66a3acc61bec623bd9e31786ae63b7196b`; PR #15/#16/#17 MERGED; новый доменный контракт |
 | 2026-11-15 | 1.4.5 | Итоговая синхронизация Stage14 после реализации 14.1–14.11: локальное независимое ревью PASS, точные CI-коды 761/761 Django и 90/90 Chrome, публичные флаги OFF; 14.4 остаётся незакрытым из-за реального пилота/GO. Уточнён порядок 08 → 14 (техническая приёмка) → 09; Stage09 не начат. | `stage-14-knowledge`, CI #43710658294, финальный review, документация без изменений runtime |
+| 2026-11-15 | 1.5.0 | По новой прямой команде владельца начата и технически реализована Stage09 в отдельной ветке. 09.2–09.4 и 09.7 code verified; 09.1/09.5 ждут внешних HTTP/GSC решений, 09.6 подготовлен и ждёт отдельный production GO. История приоритета Stage14 сохранена. | Решение владельца Stage09; ветка `stage-09-django-seo`, без deployment/merge |
 
 
 ## 12. Ближайшее подтверждённое действие
 
-**Актуальный срез 2026-11-15:** этапы 00–08 объединены в `main` (PR #15/#16/#17 MERGED), но deployment публичного Django не подтверждён. **Stage14: 14.1–14.11 CODE_COMPLETE / INDEPENDENT_LOCAL_REVIEW_PASS / EXACT_SHA_CI_SUCCESS** в `stage-14-knowledge`, GitHub Django 761/761 + Chromium Stage14 90/90; пока `NOT_MERGED / NOT_DEPLOYED`. Для 14.4 подготовлены код и пилотный процесс, но **реальные авторы/материалы, фактический пилот и owner GO/NO-GO PENDING**; поэтому 14.4 не закрыт. Все публичные feature flags OFF, отдельные разрешения GO для Q&A и рекомендаций не получены. Следующий шаг — [Draft PR #18](https://github.com/maxim9362/zemiPro_site_django/pull/18), exact-HEAD CI и решение владельца о merge; не менять `main` без разрешения. **Этап 09 НЕ НАЧИНАТЬ** без отдельной команды, а публичный запуск требует Ashdod-only, 00.2 secrets, 00.4 URL inventory, HE/real devices и инфраструктурных гейтов. Production/VPS/DNS/рабочая БД не менялись.
+**Актуальный срез 15.11.2026:** Stage 14 (PR #18) **MERGED** в `main` (`086fb8905c5d6ab4150117332c4fca800e7d10fa`), но реальный пилот 14.4 и публичные `GO` остаются `PENDING`; все публичные флаги Stage14 выключены. Stage09 технически реализован и проверен отдельно (`608cb22cf987e1377784cc2905e15878db8ffbc6`), его код интегрируется в существующую `stage-09-django-seo` поверх нового `main`; совместный CI и итоговый PR/merge требуют отдельной проверки. 09.1 HTTP/GSC и 09.5 реальные URL-решения не закрыты, 09.6 production cutover не разрешён. Сайт, DNS, Cloudflare, VPS и рабочая PostgreSQL не изменялись.
 
 **Историческая запись на 2026-11-12:** первый пилот — **только Ашдод**; остальные 24 города сохраняются в техническом справочнике, но недоступны клиентам для новых заявок и поиска. Ashdod-only фильтрация реализована в views/forms/services на Django, без миграций и удаления данных. [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111) подтвердил **12/12 адресных Ashdod tests, 163/163 Django, Chrome 45/45**; [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632) SUCCESS. Требуется отдельное независимое **Codex review нового кода**, иврит и контент (Ашдод, 11 категорий, 4 анкеты), реальные Android/iPhone, UX одобрение, release security/infra gates; CBS обязателен до национального rollout. PR [#8](https://github.com/maxim9362/zemiPro_site_django/pull/8) остаётся Draft / NOT_MERGED, Stage 02 не DONE, production/VPS/DNS/Cloudflare не затронуты. Дополнительная чистка UX-формы: убран пример адреса в Тель-Авиве (`f21444d7`), добавлен 12-й адресный тест. Текущий подтверждённый кодовый SHA — `f21444d72ab804bffca1dccc067d124ac97a5014`.
 
 
 **Исторический технический срез 14.11.2026 (до итогового merge Stage06):** ZP-06-001–005 ранее проверены; ZP-06-006 воспроизведён как deadlock и исправлен, 524/524 локальных Django PASS. На момент того отчёта ещё ожидались final GitHub CI, approvals и merge. **Актуальный статус — PR #13 MERGED 14.11.2026**, что отражено в разделе этапа 06 выше; deployment и release-гейты остаются открытыми. См. `docs/STAGE_06_OFFER_ASSIGNMENT.md`.
+
+**Объединение Stage14 и интеграция Stage09 (15.11.2026):** Stage14 PR #18 MERGED по разрешению владельца, работающий код 14.1–14.11 в main, 14.4 живой пилот и публичные GO остаются PENDING. Stage09 проходит совместную интеграционную проверку; реальный cutover запрещён до отдельного GO. Эта запись заменяет устаревшие будущие блокеры в исторических срезах выше.

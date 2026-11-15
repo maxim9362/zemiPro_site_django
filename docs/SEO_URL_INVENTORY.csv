@@ -1,5 +1,5 @@
 old_url,page_type,discovery_method,observation_date,web_observation,http_status,google_index_status,gsc_clicks,gsc_impressions,canonical,target_new_url,proposed_action,review_status,evidence_ref
-"https://zemipro.co.il/","home","PAGE_OPENED","2026-11-10","CONTENT_SEEN","UNVERIFIED","UNVERIFIED","UNKNOWN","UNKNOWN","UNKNOWN","","REVIEW","PENDING_GSC_HTTP","public homepage"
+"https://zemipro.co.il/","home","PAGE_OPENED","2026-11-15","CONTENT_SEEN_PREVIOUSLY; CURRENT_CONNECT_PROXY_403","UNKNOWN","UNKNOWN","UNKNOWN","UNKNOWN","UNKNOWN","https://zemipro.co.il/","KEEP","PENDING_EXTERNAL_HTTP_GSC","docs/STAGE_09_URL_AUDIT.md"
 "https://zemipro.co.il/master/lachish/","region_hub","PAGE_OPENED","2026-11-10","CONTENT_SEEN","UNVERIFIED","UNVERIFIED","UNKNOWN","UNKNOWN","UNKNOWN","","REVIEW","PENDING_GSC_HTTP","home navigation"
 "https://zemipro.co.il/master/center/","region_hub","PAGE_OPENED","2026-11-10","CONTENT_SEEN","UNVERIFIED","UNVERIFIED","UNKNOWN","UNKNOWN","UNKNOWN","","REVIEW","PENDING_GSC_HTTP","home navigation"
 "https://zemipro.co.il/master/remont-strojka/","category_hub","PAGE_OPENED","2026-11-10","CONTENT_SEEN","UNVERIFIED","UNVERIFIED","UNKNOWN","UNKNOWN","UNKNOWN","","REVIEW","PENDING_GSC_HTTP","home navigation"

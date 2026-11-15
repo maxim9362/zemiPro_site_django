@@ -14,6 +14,14 @@ urlpatterns = [
         'services/<slug:category_slug>/<slug:service_slug>/',
         views.service_detail, name='service_detail',
     ),
+    path(
+        'services/<slug:category_slug>/<slug:service_slug>/<slug:city_slug>/',
+        views.service_city_detail, name='service_city_detail',
+    ),
+    path(
+        'professionals/<int:pk>/', views.worker_public_profile_view,
+        name='worker_public_profile',
+    ),
     path('cities/', views.cities_list, name='cities_list'),
     path('cities/<slug:slug>/', views.city_detail, name='city_detail'),
 ]

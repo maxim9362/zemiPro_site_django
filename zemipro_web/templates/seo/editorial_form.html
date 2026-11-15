@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% if page %}{{ page.title }}{% else %}{% trans 'Новый SEO-бриф' %}{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="public-content"><div class="container public-stack">
+    <header><h1>{% if page %}{{ page.title }}{% else %}{% trans 'Новый SEO-бриф' %}{% endif %}</h1>{% if page %}<p>{% if page.status == 'brief' %}{% trans 'Бриф' %}{% elif page.status == 'draft' %}{% trans 'Черновик' %}{% elif page.status == 'review' %}{% trans 'На проверке' %}{% elif page.status == 'approved' %}{% trans 'Одобрено' %}{% elif page.status == 'published' %}{% trans 'Опубликовано' %}{% endif %} · v{{ page.version }}</p>{% endif %}</header>
+    <form method="post" class="form public-panel" novalidate>
+        {% csrf_token %}{{ form.non_field_errors }}
+        {% for field in form %}{% if not field.is_hidden %}<div class="form-group">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form__hint">{{ field.help_text }}</div>{% endif %}</div>{% else %}{{ field }}{% endif %}{% endfor %}
+        <button class="btn btn--primary" type="submit">{% trans 'Сохранить' %}</button>
+    </form>
+    {% if page %}
+    <section class="public-panel" aria-labelledby="workflow-actions"><h2 id="workflow-actions">{% trans 'Редакционный процесс' %}</h2>
+        <div class="public-actions">
+        {% if page.status == 'brief' or page.status == 'draft' %}<form method="post" action="{% url 'seo:editorial_action' pk=page.pk action='submit' %}">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ page.version }}"><button class="btn btn--secondary" type="submit">{% trans 'Передать на проверку' %}</button></form>{% endif %}
+        {% if page.status == 'review' and perms.seo.review_seo_content %}<form method="post" action="{% url 'seo:editorial_action' pk=page.pk action='approve' %}">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ page.version }}"><button class="btn btn--secondary" type="submit">{% trans 'Одобрить' %}</button></form>{% endif %}
+        {% if page.status == 'approved' and perms.seo.publish_seo_content %}<form method="post" action="{% url 'seo:editorial_action' pk=page.pk action='publish' %}">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ page.version }}"><button class="btn btn--primary" type="submit">{% trans 'Опубликовать' %}</button></form>{% endif %}
+        {% if page.status == 'published' and perms.seo.publish_seo_content %}<form method="post" action="{% url 'seo:editorial_action' pk=page.pk action='unpublish' %}">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ page.version }}"><button class="btn btn--secondary" type="submit">{% trans 'Снять с публикации' %}</button></form>{% endif %}
+        </div>
+    </section>
+    <section class="public-panel"><h2>{% trans 'История версий' %}</h2><ol>{% for revision in revisions %}<li>v{{ revision.version }} · {{ revision.created_at }} · {{ revision.created_by.username }}</li>{% empty %}<li>{% trans 'История пока пуста.' %}</li>{% endfor %}</ol></section>
+    {% endif %}
+</div></section>
+{% endblock %}

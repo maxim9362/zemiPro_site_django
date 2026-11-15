@@ -157,6 +157,76 @@
 - **Проверки:** уникальность/домен/статусы CSV — `PASS`; Django tests, миграции, production, DNS/Cloudflare, GSC и редиректы — `NOT_RUN / NOT_TOUCHED`.
 - **Следующий подэтап:** 00.5 — архитектурная карта Django-only и стратегия URL-перехода без миграции Telegram/PSEO. Codex Cloud использовать только после завершения этапа 00.
 
+## 2026-11-15 — Stage 09 разрешён; 09.1 повторная проверка URL
+
+- **Решение владельца:** разрешена техническая реализация Stage 09 сейчас в единственной ветке `stage-09-django-seo` от актуального `main`. Отдельный Draft PR #18 Stage 14, реальный пилот 14.4 и публичные feature GO остаются независимыми `PENDING`; production cutover Stage 09 не разрешён.
+- **Статус 09.1:** `SAFE_PREPARATION_COMPLETE / EXTERNAL_EVIDENCE_PENDING`, не `DONE`. Исходный реестр по-прежнему содержит 21 уникальный URL; главная получила кандидат `KEEP`, остальные 20 остаются `REVIEW` до HTTP/GSC и смыслового сопоставления.
+- **Фактическая проверка:** два щадящих HTTPS GET (обычная и разрешённая внешняя сеть) остановлены CONNECT proxy `403` до соединения с `zemipro.co.il`; `http_status=000` не выдан сайтом. Sitemap, robots, canonical, redirects и неизвестные массовые шаблоны не объявляются проверенными.
+- **GSC:** недоступна; clicks/impressions/indexing остаются `UNKNOWN`. В `docs/STAGE_09_URL_AUDIT.md` указан точный безопасный экспорт владельца.
+- **Production/VPS/DNS/Cloudflare/рабочая PostgreSQL:** `NOT_TOUCHED`; редиректы не включены, старый сайт не отключён.
+- **Следующий:** 09.2 — безопасный Django SEO-каталог из актуальных моделей и только Ashdod, без импорта PSEO и без выдуманных данных.
+
+## 2026-11-15 — 09.2: Django SEO-каталог
+
+- **Статус:** `CODE_VERIFIED`; production activation не выполнялась.
+- **Сделано:** `SeoLegacyUrl`, `SeoContentPage`, append-only `SeoContentRevision`, CAS/editorial services и read-only SEO-проекция реального каталога. Только фактически опубликованный privacy-safe мастер с явно заявленной услугой и обслуживанием Ashdod попадает в service supply.
+- **Защита:** exact local paths, запрет open redirect/self-loop на уровне модели, неактивность legacy по умолчанию, staff approval/evidence для активации, PostgreSQL constraints и trigger неизменяемости истории.
+- **Проверки:** PostgreSQL 17 migrations PASS; `apps.seo.tests` 8/8 PASS; Django check, migration drift, Ruff и `git diff --check` PASS.
+- **Данные:** PSEO/Flask/SQLite не импортировались; фиктивные мастера/цены/отзывы/контент не создавались вне test DB.
+- **Следующий:** 09.3 — публичные SEO-представления и шаблоны на существующей Stage 08 дизайн-системе.
+
+## 2026-11-15 — 09.3: Django SEO-страницы
+
+- **Статус:** `CODE_VERIFIED`; публикация/индексация production не выполнялась.
+- **Сделано:** страницы услуги-в-Ashdod и локализованного профиля, редакционные блоки, breadcrumbs, реальные service workers, связанные услуги и CTA. Существующие Stage 08 templates/layouts переиспользованы; четыре originals не изменялись.
+- **Безопасность:** другие города 404; пустые/непроверенные страницы noindex; legacy profile route сохранён; XSS autoescape и отсутствие private contact проверены.
+- **Проверки:** Stage09 + Stage02 i18n + Stage08 public UI 28/28 PASS; RU/EN/HE, RTL, canonical и backward compatibility PASS.
+- **Следующий:** 09.4 — sitemap, robots, Open Graph, x-default и правдивые JSON-LD.
+
+## 2026-11-15 — 09.4: техническое SEO
+
+- **Статус:** `CODE_VERIFIED / INDEXING_DISABLED_BY_DEFAULT`.
+- **Сделано:** root sitemap/robots, x-default, Open Graph и safe JSON-LD; sitemap включает только трёхъязычные проверенные landing pages с реальным supply и безопасные опубликованные профили.
+- **Fail-closed:** общий indexing flag по умолчанию false; robots запрещает crawl, sitemap пуст. Закрытые Stage14 функции не активированы.
+- **Проверки:** technical SEO+i18n 23/23 PASS; schema XSS, PII, ложные rating/price, другая география, canonical/hreflang и robots PASS; Django check/Ruff/diff check PASS.
+- **Следующий:** 09.5 — точный legacy resolver, URL matrix и rollback без wildcard.
+
+## 2026-11-15 — 09.5: exact legacy URL migration
+
+- **Статус:** `MECHANISM_VERIFIED / REAL_DECISIONS_PENDING_09.1`; реальный redirect не активирован.
+- **Сделано:** 21 inventory row seeded inactive/review-only; exact DB resolver, staff/evidence approval, public target ORM validation, 301/308/404/410, feature flag и rollback service.
+- **Защита:** нет wildcard destination, query forwarding, home fallback, open/self redirect, chain/cycle или не-Ashdod target. Неизвестные/неодобренные пути 404.
+- **Проверки:** synthetic activation/deactivation, feature-off, permission denial, chain rejection, 410, POST 405 и все 21 review-only URL PASS; PostgreSQL constraints PASS.
+- **Осталось:** HTTP/GSC и утверждение фактического решения каждой строки. До этого ни одна запись не активна.
+- **Следующий:** 09.6 — технический cutover/rollback/monitoring plan без production действий.
+
+## 2026-11-15 — 09.6: cutover preparation
+
+- **Статус:** `09.6_PREPARED / PRODUCTION_CUTOVER_PENDING_OWNER_APPROVAL`, не `DONE`.
+- **Сделано:** параметризованный staging→backup/restore→migration→proxy switch→smoke/monitoring→rollback runbook; оба Stage09 flags явно false в staging Compose/example.
+- **Stage14:** remote PR branch проверена без merge. URL/migrations не пересекаются; ожидаемые shared-file rebase conflicts и sitemap/public-GO integration описаны. Полный combined test остаётся PENDING будущего rebase PR #18.
+- **Проверки:** Compose config validation и isolated staging/static checks выполняются в финальном цикле Stage09. Production-команды из runbook НЕ ВЫПОЛНЯЛИСЬ.
+- **Не затронуто:** domain, old site, DNS, Cloudflare, VPS, TLS, production proxy/DB/media и Stage14 flags.
+- **Следующий:** 09.7 — редакционный workflow, object permissions и publication controls.
+
+## 2026-11-15 — 09.7: редакционный SEO workflow
+
+- **Статус:** `CODE_VERIFIED / NO_REAL_CONTENT_PUBLISHED`.
+- **Сделано:** permissioned brief/create/edit/submit/separate-review/publish/unpublish UI; CAS version, row locks, append-only revisions, author/reviewer separation, source/duplicate/thin-content gates.
+- **Безопасность:** login/object permissions/CSRF/noindex/method guards; прямые SQL update/delete history блокируются PostgreSQL trigger; публичного delete нет; AI/Gemini не вызывается.
+- **Проверки:** `apps.seo.tests` 21/21 PASS на PostgreSQL 17; полный synthetic workflow, stale CAS, CSRF/IDOR, quality gates и immutable history PASS; Ruff/check/migration drift PASS.
+- **Реальные публикации/метрики/согласия:** `NONE`; только synthetic test DB.
+- **Следующий:** единый финальный цикл Stage09, browser/RTL, migration rehearsal, independent review, CI и один Draft PR.
+
+## 2026-11-15 — Stage 09: локальная финальная техническая приёмка
+
+- **Статус:** `LOCAL_CODE_VERIFIED / CUTOVER_PENDING / PR_API_BLOCKED / NOT_MERGED`.
+- **Проверки:** полный Django suite 660/660 PASS; Stage09 29/29 PASS; PostgreSQL 17 clean/upgrade/rollback PASS; Ruff/compileall/pip/check/migration drift/Compose/diff PASS; Chromium 17/17 на RU/EN/HE и четырёх viewport, no-JS 3/3.
+- **Independent review:** на исходном diff найдены пять MEDIUM и один LOW; все исправлены. Повторный read-only review exact `d706ba9a0cab6688ea7408f84442d0161cb0d219` — PASS, открытых CRITICAL/HIGH/MEDIUM/LOW нет.
+- **Дефекты:** approval reset/unpublish, admin workflow bypass, staff permission bypass, active legacy decision mutation, sitemap/noindex mismatch и неполная локализация закрыты регрессиями.
+- **GitHub:** code commits pushed; `gh` не авторизован, API/REST заблокирован proxy 403. Draft PR и Actions status нельзя объявить созданными/успешными; подготовлена compare-ссылка. `main` не изменялся.
+- **Внешние гейты:** 09.1 HTTP/GSC, реальные решения 09.5, combined rebase с Stage14, физические устройства и production cutover остаются PENDING. Полный отчёт: `docs/STAGE_09_FINAL_ACCEPTANCE.md`.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.
@@ -1424,3 +1494,9 @@ Runtime после review не менялся. Последний SHA долже
 - **Доказательства:** кодовый SHA `5448bd0fc8fe6d428e430512d173e2c90bab17eb`, [GitHub CI run #43710658294](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43710658294) `completed/success` (47/47 шагов, 761/761 Django, 90/90 Chromium Stage14, PostgreSQL 17, strict config), локальное независимое review/re-review PASS. Последующий документальный SHA `dd78f6db57795fce30a1f9c4b6f14746a4e5dd3d` получил GitHub check `django-postgresql: SUCCESS` (без изменения runtime с предыдущего проверенного кодового SHA).
 - **Документы:** `docs/ROADMAP.md` v1.4.5, `docs/DEVELOPMENT_PLAN.md` v1.4.5. Исправлена противоречивая зависимость 14 от 10 в таблице разработки; перед 09 требуется отдельная команда и техническое принятие 14, но реальные результаты пилота не подменяются синтетическими CI.
 - **Ограничения:** публичные feature flags OFF, нет production, VPS, DNS, Cloudflare, реальной PostgreSQL, публикаций, API-отправки Meta, этапа 09 или merge. Следующее действие — один Draft PR Stage14 и отдельное решение владельца на его объединение.
+
+## 2026-11-15 — Stage14 PR #18 merged; Stage09 integration after independent verification
+
+- Stage14 merged into `main` on `086fb8905c5d6ab4150117332c4fca800e7d10fa`; pilot 14.4 and public feature flags remain PENDING/OFF, no deployment.
+- Stage09 source SHA `608cb22cf987e1377784cc2905e15878db8ffbc6` received successful GitHub CI. Separate Stage09 code is now combined with Stage14 in the existing Stage09 branch for an exact combined-HEAD CI check before merging.
+- Stage09 09.1 HTTP/GSC, 09.5 actual URL decisions, and 09.6 production cutover remain separate external gates. No DNS, Cloudflare, VPS, live database, or public site changes.

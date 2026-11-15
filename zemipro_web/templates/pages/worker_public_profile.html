@@ -8,6 +8,7 @@
 {% block content %}
 <header class="page-header public-page-header">
     <div class="container">
+        {% include 'components/breadcrumbs.html' %}
         <p class="public-kicker">{% if current_language == 'he' %}בעל מקצוע באשדוד{% elif current_language == 'en' %}Specialist in Ashdod{% else %}Специалист в Ашдоде{% endif %}</p>
         <h1><bdi dir="auto">{{ profile.public_display_name }}</bdi></h1>
         <p>
