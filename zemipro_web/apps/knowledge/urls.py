@@ -1,7 +1,7 @@
 """Private 14.2 URLs only; Stage 14.3 will add public reads separately."""
 from django.urls import path
 
-from . import views, pilot_views
+from . import pilot_views, qa_views, views
 
 app_name = 'knowledge'
 
@@ -25,4 +25,11 @@ urlpatterns = [
          name='moderation_article'),
     path('moderation/reports/<int:pk>/decision/', views.report_decision,
          name='report_decision'),
+    path('qa/moderation/', qa_views.moderation_queue, name='qa_moderation'),
+    path('qa/moderation/questions/<int:question_id>/',
+         qa_views.moderate_question, name='qa_moderate_question'),
+    path('qa/moderation/answers/<int:answer_id>/',
+         qa_views.moderate_answer, name='qa_moderate_answer'),
+    path('qa/moderation/reports/<int:report_id>/',
+         qa_views.moderate_report, name='qa_moderate_report'),
 ]

@@ -1,0 +1,35 @@
+{% extends 'pages/public_base.html' %}
+{% load static i18n %}
+{% get_current_language as current_language %}
+{% block page_styles %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/knowledge-qa.css' %}">{% endblock %}
+{% block title %}{{ question.public_title }} — ZemiPro{% endblock %}
+{% block content %}
+<section class="public-content knowledge-qa"><div class="container public-stack">
+  {% include 'components/flash_messages.html' %}
+  <p><a href="{% url 'knowledge_qa:list' %}">← {% if current_language == 'he' %}כל השאלות{% elif current_language == 'en' %}All questions{% else %}Все вопросы{% endif %}</a></p>
+  <article class="public-panel">
+    <p class="public-kicker">{{ question.category.localized_name }} · {% if current_language == 'he' %}ייעוץ כללי{% elif current_language == 'en' %}General advice{% else %}Общий совет{% endif %}</p>
+    <h1 dir="auto">{{ question.public_title }}</h1><div class="knowledge-qa__text" dir="auto">{{ question.public_body|linebreaks }}</div>
+  </article>
+  <section aria-labelledby="answers-title"><h2 id="answers-title">{% if current_language == 'he' %}תשובות בעלי מקצוע{% elif current_language == 'en' %}Specialist answers{% else %}Ответы специалистов{% endif %}</h2>
+    <div class="knowledge-qa__answers">
+    {% for answer in answers %}<article class="public-panel {% if answer.is_accepted %}knowledge-qa__accepted{% endif %}">
+      {% if answer.is_accepted %}<p class="public-kicker">✓ {% if current_language == 'he' %}התקבלה על ידי מחבר השאלה{% elif current_language == 'en' %}Accepted by the question author{% else %}Принят автором вопроса{% endif %}</p>{% endif %}
+      <h3><a href="{% url 'marketplace:worker_public_profile' answer.author_id %}"><bdi dir="auto">{{ answer.author.public_display_name_snapshot }}</bdi></a></h3>
+      <div class="knowledge-qa__text" dir="auto">{{ answer.public_body|linebreaks }}</div>
+      <p>{% if current_language == 'he' %}מועיל{% elif current_language == 'en' %}Helpful{% else %}Полезно{% endif %}: {{ answer.helpful_count }}</p>
+      {% if request.user.is_authenticated %}
+        {% if request.user.pk == question.author_id and not answer.is_accepted %}<form method="post" action="{% url 'knowledge_qa:accept' slug=question.slug answer_id=answer.pk %}">{% csrf_token %}<button class="btn btn--secondary" type="submit">{% if current_language == 'he' %}קבלת התשובה{% elif current_language == 'en' %}Accept answer{% else %}Принять ответ{% endif %}</button></form>{% endif %}
+        {% if request.user.pk != answer.author.user_id %}<form method="post" action="{% url 'knowledge_qa:vote' slug=question.slug answer_id=answer.pk %}">{% csrf_token %}<button class="btn btn--secondary" name="helpful" value="1" type="submit">{% if current_language == 'he' %}מועיל{% elif current_language == 'en' %}Helpful{% else %}Полезно{% endif %}</button><button class="btn btn--secondary" name="helpful" value="0" type="submit">{% if current_language == 'he' %}ביטול{% elif current_language == 'en' %}Undo{% else %}Отменить{% endif %}</button></form>{% endif %}
+        {% if request.user.pk != answer.author.user_id %}<details><summary>{% if current_language == 'he' %}דיווח על התשובה{% elif current_language == 'en' %}Report answer{% else %}Пожаловаться на ответ{% endif %}</summary><form method="post" action="{% url 'knowledge_qa:report_answer' slug=question.slug answer_id=answer.pk %}" class="form">{% csrf_token %}{{ report_form.as_p }}<button class="btn btn--secondary" type="submit">{% if current_language == 'he' %}שליחה{% elif current_language == 'en' %}Submit{% else %}Отправить{% endif %}</button></form></details>{% endif %}
+      {% endif %}
+    </article>{% empty %}<div class="public-panel" role="status">{% if current_language == 'he' %}אין עדיין תשובות שפורסמו.{% elif current_language == 'en' %}No published answers yet.{% else %}Опубликованных ответов пока нет.{% endif %}</div>{% endfor %}
+    </div>
+  </section>
+  {% if request.user.is_authenticated %}<section class="public-panel"><h2>{% if current_language == 'he' %}תשובת בעל מקצוע{% elif current_language == 'en' %}Answer as a specialist{% else %}Ответить как специалист{% endif %}</h2>
+    <form method="post" action="{% url 'knowledge_qa:answer' slug=question.slug %}" class="form">{% csrf_token %}{{ answer_form.as_p }}<button class="btn btn--primary" type="submit">{% if current_language == 'he' %}שליחה לבדיקה{% elif current_language == 'en' %}Submit for review{% else %}Отправить на модерацию{% endif %}</button></form>
+  </section>{% endif %}
+  {% if request.user.is_authenticated and request.user.pk != question.author_id %}<details class="public-panel"><summary>{% if current_language == 'he' %}דיווח על השאלה{% elif current_language == 'en' %}Report question{% else %}Пожаловаться на вопрос{% endif %}</summary><form method="post" action="{% url 'knowledge_qa:report_question' slug=question.slug %}" class="form">{% csrf_token %}{{ report_form.as_p }}<button class="btn btn--secondary" type="submit">{% if current_language == 'he' %}שליחת דיווח{% elif current_language == 'en' %}Submit report{% else %}Отправить жалобу{% endif %}</button></form></details>{% endif %}
+  <aside class="public-panel"><h2>{% if current_language == 'he' %}צריכים בעל מקצוע?{% elif current_language == 'en' %}Need a specialist?{% else %}Нужен мастер?{% endif %}</h2><p>{% if current_language == 'he' %}צרו בקשה רגילה בנפרד מהשאלה.{% elif current_language == 'en' %}Create a standard service request separately from this question.{% else %}Создайте обычную заявку отдельно от вопроса.{% endif %}</p><a class="btn btn--primary" href="{% url 'marketplace:order_wizard_start' %}">{% if current_language == 'he' %}יצירת בקשה{% elif current_language == 'en' %}Create request{% else %}Создать заявку{% endif %}</a></aside>
+</div></section>
+{% endblock %}

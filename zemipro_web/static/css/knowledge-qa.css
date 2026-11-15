@@ -1,0 +1,12 @@
+.knowledge-qa { padding-block: var(--space-6, 2rem); }
+.knowledge-qa__search, .knowledge-qa .public-panel { max-width: 100%; }
+.knowledge-qa__filters { display: grid; grid-template-columns: minmax(0, 2fr) minmax(10rem, 1fr) auto; gap: 1rem; align-items: end; }
+.knowledge-qa__filters label { display: grid; gap: .4rem; }
+.knowledge-qa__grid, .knowledge-qa__answers { display: grid; gap: 1rem; }
+.knowledge-qa__text { overflow-wrap: anywhere; }
+.knowledge-qa__accepted { border-inline-start: .3rem solid var(--color-success, #287a4b); }
+.knowledge-qa form + form { margin-block-start: .5rem; }
+@media (max-width: 48rem) {
+  .knowledge-qa__filters { grid-template-columns: 1fr; }
+  .knowledge-qa input, .knowledge-qa select, .knowledge-qa textarea, .knowledge-qa button { max-width: 100%; }
+}
