@@ -116,6 +116,10 @@ jobs:
         run: |
           python manage.py test apps.knowledge.tests.test_stage14_qa_domain apps.knowledge.tests.test_stage14_qa_ui apps.knowledge.tests.test_stage14_rollout
 
+      - name: Stage 14.8 personal recommendations privacy and moderation
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_recommendations
+
       - name: Stage 02.1 catalog seed round-trip on isolated CI PostgreSQL
         run: |
           python manage.py seed_service_catalog --plan

@@ -36,6 +36,7 @@ urlpatterns += i18n_patterns(
     # New additive article-only URLs. No legacy SEO, redirects or sitemap changes.
     path('advice/', include('apps.knowledge.public_urls')),
     path('questions/', include('apps.knowledge.qa_urls')),
+    path('recommendations/', include('apps.knowledge.recommendation_urls')),
     prefix_default_language=True,
 )
 

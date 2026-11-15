@@ -778,3 +778,134 @@ class KnowledgeDailyMetric(models.Model):
                 condition=models.Q(total__gte=0), name='knowledge_metric_total_ck',
             ),
         ]
+
+
+class PersonalRecommendation(models.Model):
+    """Moderated personal experience outside ZemiPro; never a verified Rating."""
+
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'Черновик'
+        PENDING = 'pending', 'На модерации'
+        PUBLISHED = 'published', 'Опубликована'
+        REJECTED = 'rejected', 'Отклонена'
+        ARCHIVED = 'archived', 'Архив'
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='personal_recommendations',
+    )
+    worker = models.ForeignKey(
+        'accounts.WorkerProfile', on_delete=models.PROTECT,
+        related_name='personal_recommendations',
+    )
+    language = models.CharField(max_length=2, choices=ExpertArticle.Language.choices)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.DRAFT, db_index=True,
+    )
+    body = models.TextField()
+    experience_confirmed_at = models.DateTimeField(null=True, blank=True)
+    content_version = models.PositiveIntegerField(default=0, editable=False)
+    public_body = models.TextField(blank=True, default='', editable=False)
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    approved_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='moderated_personal_recommendations',
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'knowledge_personal_recommendation'
+        ordering = ['-published_at', '-pk']
+        permissions = [(
+            'moderate_personal_recommendations',
+            'Can moderate personal recommendations',
+        )]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'worker'], name='knowledge_recommendation_author_worker_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(language__in=['ru', 'en', 'he']),
+                name='knowledge_recommendation_language_ck',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=[
+                    'draft', 'pending', 'published', 'rejected', 'archived',
+                ]), name='knowledge_recommendation_status_ck',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status='published') |
+                    (
+                        models.Q(public_content_safe=True) &
+                        ~models.Q(public_body='') &
+                        models.Q(approved_version__isnull=False) &
+                        models.Q(published_at__isnull=False) &
+                        models.Q(experience_confirmed_at__isnull=False)
+                    )
+                ), name='knowledge_recommendation_publish_ck',
+            ),
+        ]
+
+
+class PersonalRecommendationRevision(models.Model):
+    recommendation = models.ForeignKey(
+        PersonalRecommendation, on_delete=models.PROTECT, related_name='revisions',
+    )
+    version = models.PositiveIntegerField()
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='personal_recommendation_revisions',
+    )
+    action = models.CharField(max_length=16)
+    status_snapshot = models.CharField(max_length=16)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_personal_recommendation_revision'
+        default_permissions = ('view',)
+        ordering = ['recommendation_id', 'version']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recommendation', 'version'],
+                name='knowledge_recommendation_revision_uq',
+            ),
+        ]
+
+
+class PersonalRecommendationReport(models.Model):
+    recommendation = models.ForeignKey(
+        PersonalRecommendation, on_delete=models.PROTECT, related_name='reports',
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='personal_recommendation_reports',
+    )
+    reason = models.CharField(max_length=12, choices=KnowledgeQAReport.Reason.choices)
+    message = models.TextField()
+    status = models.CharField(
+        max_length=10, choices=KnowledgeQAReport.Status.choices,
+        default=KnowledgeQAReport.Status.PENDING,
+    )
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='handled_personal_recommendation_reports',
+    )
+    handled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_personal_recommendation_report'
+        default_permissions = ('view',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recommendation', 'reporter'],
+                name='knowledge_recommendation_report_once_uq',
+            ),
+        ]
