@@ -455,3 +455,287 @@ class ArticlePilotOrderAttribution(models.Model):
 
     def __str__(self):
         return f'Article pilot attributed order #{self.pk}'
+
+
+class ExpertQuestion(models.Model):
+    """A moderated, free expert question. It is never a marketplace order."""
+
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'Черновик'
+        PENDING = 'pending', 'На модерации'
+        PUBLISHED = 'published', 'Опубликован'
+        REJECTED = 'rejected', 'Отклонён'
+        ARCHIVED = 'archived', 'Архив'
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='expert_questions',
+    )
+    category = models.ForeignKey(
+        'marketplace.Category', on_delete=models.PROTECT,
+        related_name='expert_questions',
+    )
+    slug = models.SlugField(max_length=160, allow_unicode=True)
+    language = models.CharField(max_length=2, choices=ExpertArticle.Language.choices)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.DRAFT, db_index=True,
+    )
+    title = models.CharField(max_length=180)
+    body = models.TextField()
+    content_version = models.PositiveIntegerField(default=0, editable=False)
+    public_title = models.CharField(max_length=180, blank=True, default='', editable=False)
+    public_body = models.TextField(blank=True, default='', editable=False)
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    approved_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='moderated_expert_questions',
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'knowledge_expert_question'
+        ordering = ['-created_at', '-pk']
+        permissions = [('moderate_expert_questions', 'Can moderate expert questions')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['slug', 'language'], name='knowledge_question_slug_lang_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=[
+                    'draft', 'pending', 'published', 'rejected', 'archived',
+                ]), name='knowledge_question_status_ck',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(language__in=['ru', 'en', 'he']),
+                name='knowledge_question_language_ck',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status='published') |
+                    (
+                        models.Q(public_content_safe=True) &
+                        ~models.Q(public_title='') & ~models.Q(public_body='') &
+                        models.Q(approved_version__isnull=False) &
+                        models.Q(published_at__isnull=False)
+                    )
+                ), name='knowledge_question_publish_ck',
+            ),
+        ]
+
+    def __str__(self):
+        return f'ExpertQuestion #{self.pk or "new"} ({self.status})'
+
+
+class ExpertQuestionRevision(models.Model):
+    question = models.ForeignKey(
+        ExpertQuestion, on_delete=models.PROTECT, related_name='revisions',
+    )
+    version = models.PositiveIntegerField()
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='expert_question_revisions',
+    )
+    action = models.CharField(max_length=16)
+    status_snapshot = models.CharField(max_length=16)
+    title = models.CharField(max_length=180)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_expert_question_revision'
+        ordering = ['question_id', 'version']
+        default_permissions = ('view',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['question', 'version'], name='knowledge_question_revision_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name='knowledge_question_revision_positive_ck',
+            ),
+        ]
+
+
+class ExpertAnswer(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'Черновик'
+        PENDING = 'pending', 'На модерации'
+        PUBLISHED = 'published', 'Опубликован'
+        REJECTED = 'rejected', 'Отклонён'
+        ARCHIVED = 'archived', 'Архив'
+
+    question = models.ForeignKey(
+        ExpertQuestion, on_delete=models.PROTECT, related_name='answers',
+    )
+    author = models.ForeignKey(
+        'accounts.WorkerProfile', on_delete=models.PROTECT,
+        related_name='expert_answers',
+    )
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.DRAFT, db_index=True,
+    )
+    body = models.TextField()
+    content_version = models.PositiveIntegerField(default=0, editable=False)
+    public_body = models.TextField(blank=True, default='', editable=False)
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    approved_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    is_accepted = models.BooleanField(default=False, editable=False)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='moderated_expert_answers',
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'knowledge_expert_answer'
+        ordering = ['-is_accepted', '-created_at', '-pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['question', 'author'], name='knowledge_answer_worker_uq',
+            ),
+            models.UniqueConstraint(
+                fields=['question'], condition=models.Q(is_accepted=True),
+                name='knowledge_answer_one_accepted_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=[
+                    'draft', 'pending', 'published', 'rejected', 'archived',
+                ]), name='knowledge_answer_status_ck',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status='published') |
+                    (
+                        models.Q(public_content_safe=True) &
+                        ~models.Q(public_body='') &
+                        models.Q(approved_version__isnull=False) &
+                        models.Q(published_at__isnull=False)
+                    )
+                ), name='knowledge_answer_publish_ck',
+            ),
+            models.CheckConstraint(
+                condition=(~models.Q(is_accepted=True) | models.Q(status='published')),
+                name='knowledge_answer_accept_published_ck',
+            ),
+        ]
+
+    def __str__(self):
+        return f'ExpertAnswer #{self.pk or "new"} ({self.status})'
+
+
+class ExpertAnswerRevision(models.Model):
+    answer = models.ForeignKey(
+        ExpertAnswer, on_delete=models.PROTECT, related_name='revisions',
+    )
+    version = models.PositiveIntegerField()
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='expert_answer_revisions',
+    )
+    action = models.CharField(max_length=16)
+    status_snapshot = models.CharField(max_length=16)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_expert_answer_revision'
+        ordering = ['answer_id', 'version']
+        default_permissions = ('view',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['answer', 'version'], name='knowledge_answer_revision_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name='knowledge_answer_revision_positive_ck',
+            ),
+        ]
+
+
+class HelpfulVote(models.Model):
+    answer = models.ForeignKey(
+        ExpertAnswer, on_delete=models.PROTECT, related_name='helpful_votes',
+    )
+    voter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='knowledge_helpful_votes',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_helpful_vote'
+        default_permissions = ('view',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['answer', 'voter'], name='knowledge_helpful_vote_uq',
+            ),
+        ]
+
+
+class KnowledgeQAReport(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает проверки'
+        DISMISSED = 'dismissed', 'Отклонена'
+        REMOVED = 'removed', 'Материал скрыт'
+
+    class Reason(models.TextChoices):
+        SPAM = 'spam', 'Спам'
+        PRIVATE = 'private', 'Персональные данные'
+        DANGEROUS = 'dangerous', 'Небезопасный совет'
+        ABUSE = 'abuse', 'Оскорбление'
+        OTHER = 'other', 'Другое'
+
+    question = models.ForeignKey(
+        ExpertQuestion, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='reports',
+    )
+    answer = models.ForeignKey(
+        ExpertAnswer, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='reports',
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='knowledge_qa_reports',
+    )
+    reason = models.CharField(max_length=12, choices=Reason.choices)
+    message = models.TextField()
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True,
+    )
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='handled_knowledge_qa_reports',
+    )
+    handled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_qa_report'
+        ordering = ['created_at', 'pk']
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(question__isnull=False) & models.Q(answer__isnull=True)) |
+                    (models.Q(question__isnull=True) & models.Q(answer__isnull=False))
+                ), name='knowledge_qa_report_one_target_ck',
+            ),
+            models.UniqueConstraint(
+                fields=['question', 'reporter'],
+                condition=models.Q(question__isnull=False),
+                name='knowledge_question_report_once_uq',
+            ),
+            models.UniqueConstraint(
+                fields=['answer', 'reporter'],
+                condition=models.Q(answer__isnull=False),
+                name='knowledge_answer_report_once_uq',
+            ),
+        ]
