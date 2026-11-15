@@ -1,0 +1,70 @@
+{% extends 'pages/public_base.html' %}
+{% load static i18n %}
+{% get_current_language as current_language %}
+{% block page_styles %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/knowledge-public.css' %}">{% endblock %}
+{% block title %}{{ article.public_title }} — ZemiPro{% endblock %}
+{% block meta_description %}{{ article.public_excerpt|default:article.public_title|truncatechars:160 }}{% endblock %}
+{% block content %}
+<header class="page-header public-page-header">
+  <div class="container">
+    <p class="public-kicker">{% if current_language == 'he' %}עצות מבעלי מקצוע{% elif current_language == 'en' %}Specialist advice{% else %}Советы мастеров{% endif %} · {{ article.category.localized_name }}</p>
+    <h1 lang="{{ article.language }}" dir="auto"><bdi dir="auto">{{ article.public_title }}</bdi></h1>
+    <p class="knowledge-article__meta">
+      {% if current_language == 'he' %}שפת המקור או התרגום{% elif current_language == 'en' %}Article language{% else %}Язык материала{% endif %}: <bdi lang="{{ article.language }}" dir="auto">{{ article.get_language_display }}</bdi>
+      · <time datetime="{{ article.published_at|date:'Y-m-d' }}">{{ article.published_at|date:'d.m.Y' }}</time>
+    </p>
+  </div>
+</header>
+<section class="public-content knowledge-page">
+  <div class="container public-stack">
+    <p><a href="{% url 'knowledge_public:article_list' %}">{% if current_language == 'he' %}כל המאמרים{% elif current_language == 'en' %}All articles{% else %}Все статьи{% endif %}</a></p>
+    <div class="knowledge-layout">
+      <article class="public-panel knowledge-article" aria-label="{% if current_language == 'he' %}תוכן המאמר{% elif current_language == 'en' %}Article content{% else %}Текст статьи{% endif %}">
+        {% if article.translation_kind == 'machine' %}
+        <div class="ui-alert knowledge-article__notice" role="note">
+          <strong>{% if current_language == 'he' %}תרגום מכונה{% elif current_language == 'en' %}Machine translation{% else %}Машинный перевод{% endif %}</strong>
+          <p>{% if current_language == 'he' %}ייתכנו טעויות; הטקסט אינו ציטוט מדויק של המחבר.{% elif current_language == 'en' %}This translation may contain inaccuracies; it is not the author's original wording.{% else %}В переводе возможны ошибки; он не является точной цитатой автора.{% endif %}</p>
+          {% if original_url %}
+          <a href="{{ original_url }}">{% if current_language == 'he' %}קריאת המקור{% elif current_language == 'en' %}Read the original{% else %}Читать оригинал{% endif %}</a>
+          {% endif %}
+        </div>
+        {% elif article.translation_kind == 'human' %}
+        <p class="knowledge-article__notice">{% if current_language == 'he' %}תרגום שנבדק בידי עורך{% elif current_language == 'en' %}Human-reviewed translation{% else %}Проверенный редактором перевод{% endif %}{% if original_url %} · <a href="{{ original_url }}">{% if current_language == 'he' %}המקור{% elif current_language == 'en' %}Original{% else %}Оригинал{% endif %}</a>{% endif %}</p>
+        {% endif %}
+        {% if article.public_excerpt %}<p class="knowledge-article__intro" lang="{{ article.language }}" dir="auto">{{ article.public_excerpt }}</p>{% endif %}
+        <div class="knowledge-article__body" lang="{{ article.language }}" dir="{% if article.language == 'he' %}rtl{% else %}ltr{% endif %}">{{ article.public_body }}</div>
+        {% if images %}
+        <div class="knowledge-article__images">
+          {% for photo in images %}
+          <figure class="knowledge-article__figure">
+            <img src="{% url 'knowledge_public:article_image' image_id=photo.pk %}" alt="{% if photo.public_caption %}{{ photo.public_caption }}{% elif current_language == 'he' %}איור למאמר{% elif current_language == 'en' %}Article illustration{% else %}Иллюстрация статьи{% endif %}" loading="lazy" decoding="async">
+            {% if photo.public_caption %}<figcaption dir="auto">{{ photo.public_caption }}</figcaption>{% endif %}
+          </figure>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <p class="knowledge-article__notice">{% if current_language == 'he' %}העצות הן מידע כללי בלבד. בעבודות מסוכנות או מוסדרות יש לפנות לאיש מקצוע מתאים. ZemiPro אינה מאמתת רישיונות או מבטיחה איכות שירות.{% elif current_language == 'en' %}Advice is general information, not a substitute for qualified help in hazardous or regulated work. ZemiPro does not verify licenses or guarantee service quality.{% else %}Советы носят информационный характер. Для опасных и регулируемых работ обращайтесь к соответствующим специалистам. ZemiPro не подтверждает лицензии и не гарантирует качество услуг.{% endif %}</p>
+      </article>
+      <aside class="knowledge-sidebar" aria-label="{% if current_language == 'he' %}המחבר והמשך הפעולה{% elif current_language == 'en' %}Author and next steps{% else %}Автор и дальнейшие действия{% endif %}">
+        <div class="public-panel">
+          <h2 class="public-panel__title">{% if current_language == 'he' %}על המחבר{% elif current_language == 'en' %}About the author{% else %}Об авторе{% endif %}</h2>
+          <p dir="auto"><strong>{{ article.author.public_display_name_snapshot }}</strong></p>
+          <p>{% if current_language == 'he' %}אשדוד{% elif current_language == 'en' %}Ashdod{% else %}Ашдод{% endif %} · {{ article.category.localized_name }}</p>
+          <a class="btn btn--secondary" href="{% url 'knowledge_public:article_outbound' slug=article.slug destination='profile' %}">{% if current_language == 'he' %}פרופיל בעל המקצוע{% elif current_language == 'en' %}View specialist profile{% else %}Профиль специалиста{% endif %}</a>
+          <p class="knowledge-article__notice">{% if current_language == 'he' %}פרסום מאמר אינו משפיע על דירוג ביקורות מאומתות.{% elif current_language == 'en' %}Writing an article does not change verified job-review ratings.{% else %}Публикация статьи не повышает рейтинг по реальным заказам.{% endif %}</p>
+        </div>
+        <div class="public-panel">
+          <h2 class="public-panel__title">{% if current_language == 'he' %}נדרשת עזרה בפועל?{% elif current_language == 'en' %}Need actual work done?{% else %}Нужна услуга?{% endif %}</h2>
+          <p>{% if current_language == 'he' %}צרו בקשת עבודה נפרדת; מאמר אינו הזמנה.{% elif current_language == 'en' %}Create a separate service request. This article is not an order.{% else %}Создайте отдельную заявку — статья не является заказом.{% endif %}</p>
+          <a class="btn btn--primary" href="{% url 'knowledge_public:article_outbound' slug=article.slug destination='order' %}">{% if current_language == 'he' %}יצירת בקשה{% elif current_language == 'en' %}Create a request{% else %}Создать заявку{% endif %}</a>
+        </div>
+        <div class="public-panel">
+          <a href="{% url 'catalog_i18n:category_detail' slug=article.category.slug %}">{% if current_language == 'he' %}בעלי מקצוע נוספים בתחום{% elif current_language == 'en' %}More specialists in this category{% else %}Другие мастера в категории{% endif %}</a>
+          <p><a href="{% url 'knowledge:article_report' pk=article.pk %}">{% if current_language == 'he' %}דיווח על בעיה במאמר{% elif current_language == 'en' %}Report a problem with this article{% else %}Пожаловаться на статью{% endif %}</a></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block schema_ld_json %}{% if schema_json %}<script type="application/ld+json">{{ schema_json|safe }}</script>{% endif %}{% endblock %}

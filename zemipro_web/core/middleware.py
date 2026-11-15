@@ -100,6 +100,10 @@ class SensitivePostThrottleMiddleware(MiddlewareMixin):
         if request.method != 'POST':
             return None
         rule = self.RULES.get(request.path_info)
+        # Dynamic knowledge POST paths share a durable IP quota; successful
+        # mutations have a second per-account quota in knowledge.services.
+        if rule is None and request.path_info.startswith('/knowledge/'):
+            rule = (90, 900)
         if rule is None:
             return None
         address = throttle_client_ip(request)

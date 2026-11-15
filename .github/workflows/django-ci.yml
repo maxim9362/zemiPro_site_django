@@ -92,6 +92,46 @@ jobs:
           python manage.py migrate --noinput
           python manage.py migrate --check
 
+      # Only isolated ephemeral PostgreSQL 17 CI data: no live content exists here.
+      - name: Stage 14.1 reversible article migration and targeted schema tests
+        run: |
+          python manage.py migrate knowledge zero --noinput
+          python manage.py migrate knowledge --noinput
+          python manage.py migrate --check
+          python manage.py test apps.knowledge.tests.test_stage14_models
+
+      - name: Stage 14.2 article authoring, moderation and media security
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_authoring
+
+      - name: Stage 14.3 public advice, SEO projections, privacy and locales
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_public_articles
+
+      - name: Stage 14.4 opt-in pilot, metrics, audit and order attribution
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_pilot
+
+      - name: Stage 14.5-14.7 Q&A domain, localized UX and controlled rollout
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_qa_domain apps.knowledge.tests.test_stage14_qa_ui apps.knowledge.tests.test_stage14_rollout
+
+      - name: Stage 14.8 personal recommendations privacy and moderation
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_recommendations
+
+      - name: Stage 14.9 explicit public-profile sharing
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_profile_sharing
+
+      - name: Stage 14.10 recommendation requests and suggestions
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_recommendation_requests
+
+      - name: Stage 14.11 external worker registration invitations
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_external_invites
+
       - name: Stage 02.1 catalog seed round-trip on isolated CI PostgreSQL
         run: |
           python manage.py seed_service_catalog --plan
@@ -260,6 +300,26 @@ jobs:
         with:
           name: stage08-ux-e2e-screenshots
           path: zemipro_web/artifacts/stage08-ux-e2e/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stage 14 knowledge RU EN HE RTL and no-JS browser acceptance
+        env:
+          DJANGO_SETTINGS_MODULE: core.config.stage14_browser
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8770 > /tmp/stage14-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage14_browser_smoke.py
+
+      - name: Upload Stage 14 knowledge screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage14-knowledge-mobile-rtl-screenshots
+          path: zemipro_web/artifacts/stage14-knowledge/
           if-no-files-found: ignore
           retention-days: 7
 

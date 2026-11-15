@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -36,19 +38,32 @@ from .services import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def register_view(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
+            # Stage14.11: count only a genuine completed registration.  The
+            # invite stores no new-user FK and creates no worker profile.
+            from apps.knowledge.invite_services import claim_invite_from_session
+            try:
+                claim_invite_from_session(request)
+            except Exception:
+                # Optional attribution must never break account registration.
+                logger.exception('External worker invite attribution failed safely.')
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.info(request, _('Подтвердите email, чтобы завершить регистрацию.'))
             return redirect('accounts:contact_verification')
     else:
         form = RegistrationForm()
+    from apps.knowledge.invite_services import invite_from_session
     return render(request, 'accounts/register.html', {
         'form': form,
         'google_login_enabled': settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED,
+        'external_worker_invite': invite_from_session(request),
     })
 
 

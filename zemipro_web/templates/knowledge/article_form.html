@@ -1,0 +1,89 @@
+{% extends 'pages/app_base.html' %}
+{% load i18n knowledge_i18n %}
+{% get_current_language as lang %}
+{% block title %}{% if lang == 'he' %}עריכת מאמר{% elif lang == 'en' %}Article editor{% else %}Редактор статьи{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<header class="page-header app-page-header"><div class="container">
+    <h1>{% if lang == 'he' %}עצות מומחים — עריכה פרטית{% elif lang == 'en' %}Expert advice — private editor{% else %}Советы мастеров — закрытый редактор{% endif %}</h1>
+    <p>{% if lang == 'he' %}טקסט ותמונות נבדקים לפני הפרסום. אין להזין פרטי קשר או קישורים.{% elif lang == 'en' %}Text and images require moderation. Do not include contacts, private details or external links.{% else %}Текст и изображения проходят модерацию. Запрещены контакты, чужие данные и внешние ссылки.{% endif %}</p>
+</div></header>
+<section class="app-page"><div class="container app-medium app-stack">
+    {% include 'components/flash_messages.html' %}
+    <p><a href="{% url 'knowledge:my_articles' %}">{% if lang == 'he' %}חזרה למאמרים{% elif lang == 'en' %}Back to my articles{% else %}К моим статьям{% endif %}</a></p>
+    {% if article %}
+        <p role="status">{% if lang == 'he' %}מצב{% elif lang == 'en' %}Status{% else %}Статус{% endif %}: {{ article.status|article_status }} · v{{ article.content_version }}</p>
+        {% if article.status == 'published' %}<p>{% if lang == 'he' %}עריכה חדשה תסיר את המאמר מהתצוגה עד לאישור חוזר.{% elif lang == 'en' %}New edits unpublish the article until it is reviewed again.{% else %}Новое редактирование снимет статью с публикации до повторного одобрения.{% endif %}</p>{% endif %}
+        {% if article.status == 'rejected' %}
+            {% with decision=article.decisions.last %}
+                {% if decision and decision.reason %}<p class="form__error" dir="auto">{{ decision.reason }}</p>{% endif %}
+            {% endwith %}
+        {% endif %}
+    {% endif %}
+    <section class="app-panel">
+        <h2 class="app-panel__heading">{% if lang == 'he' %}תוכן המאמר{% elif lang == 'en' %}Article content{% else %}Текст статьи{% endif %}</h2>
+        <form method="post" action="{% if article %}{% url 'knowledge:article_edit' pk=article.pk %}{% else %}{% url 'knowledge:article_create' %}{% endif %}" class="form">
+            {% csrf_token %}
+            {% if article %}<input type="hidden" name="expected_version" value="{{ article.content_version }}">{% endif %}
+            {{ form.non_field_errors }}
+            {% for field in form %}
+            <div class="form__group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}{{ field.errors }}
+            </div>
+            {% endfor %}
+            <p>{% if lang == 'he' %}תוכן בעל סיכון או מקצוע מוסדר מחייב בדיקה אנושית; אישור אינו מאמת הסמכה.{% elif lang == 'en' %}Safety-sensitive or regulated advice requires human review; publication does not verify qualifications.{% else %}Опасные и регулируемые темы требуют ручной проверки; публикация не подтверждает квалификацию.{% endif %}</p>
+            <button type="submit" class="btn btn--primary">{% if lang == 'he' %}שמירת טיוטה{% elif lang == 'en' %}Save draft{% else %}Сохранить черновик{% endif %}</button>
+        </form>
+    </section>
+    {% if article %}
+    <section class="app-panel">
+        <h2 class="app-panel__heading">{% if lang == 'he' %}תמונות המאמר{% elif lang == 'en' %}Article images{% else %}Иллюстрации статьи{% endif %}</h2>
+        <p>{% if lang == 'he' %}עד 3 תמונות, JPEG/PNG/WebP, עד 5 מגה-בייט לכל תמונה.{% elif lang == 'en' %}Up to three JPEG/PNG/WebP images, 5 MB each. Only sanitized JPEGs are stored privately.{% else %}До трёх JPEG/PNG/WebP, по 5 МБ. Оригиналы и метаданные не сохраняются.{% endif %}</p>
+        {% for photo in images %}
+        <div class="app-portfolio-item">
+            <img src="{% url 'knowledge:article_image_private' image_id=photo.pk %}" alt="{% if lang == 'he' %}תמונה לבדיקה{% elif lang == 'en' %}Private preview{% else %}Предпросмотр для проверки{% endif %}" loading="lazy" style="max-width:100%;max-height:220px;object-fit:contain;">
+            <p dir="auto">{{ photo.caption }}</p>
+            {% if article.status == 'draft' or article.status == 'rejected' %}
+            <form method="post" action="{% url 'knowledge:article_image_remove' pk=article.pk image_id=photo.pk %}">
+                {% csrf_token %}<input type="hidden" name="expected_version" value="{{ article.content_version }}">
+                <button type="submit" class="btn btn--secondary">{% if lang == 'he' %}הסרה{% elif lang == 'en' %}Remove{% else %}Удалить{% endif %}</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% if article.status == 'draft' or article.status == 'rejected' %}
+        <form method="post" enctype="multipart/form-data" action="{% url 'knowledge:article_image_add' pk=article.pk %}" class="form">
+            {% csrf_token %}
+            <input type="hidden" name="expected_version" value="{{ article.content_version }}">
+            {{ upload_form.non_field_errors }}
+            {% for field in upload_form.visible_fields %}
+                {% if field.name != 'expected_version' %}
+                <div class="form__group"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+                {% endif %}
+            {% endfor %}
+            <button type="submit" class="btn btn--secondary">{% if lang == 'he' %}העלאת תמונה{% elif lang == 'en' %}Upload image{% else %}Загрузить изображение{% endif %}</button>
+        </form>
+        {% endif %}
+    </section>
+    {% if article.status == 'draft' or article.status == 'rejected' %}
+    <section class="app-panel">
+        <h2 class="app-panel__heading">{% if lang == 'he' %}שליחה לבדיקה{% elif lang == 'en' %}Submit for review{% else %}Отправить на модерацию{% endif %}</h2>
+        <form method="post" action="{% url 'knowledge:article_submit' pk=article.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="expected_version" value="{{ article.content_version }}">
+            <label><input type="checkbox" name="rights_confirmed" required>
+                {% if lang == 'he' %}אני מאשר/ת את הזכויות בטקסט ובתמונות{% elif lang == 'en' %}I confirm rights to this text and all images{% else %}Подтверждаю права на текст и все изображения{% endif %}
+            </label>
+            <p><button class="btn btn--primary" type="submit">{% if lang == 'he' %}שליחה לבדיקה{% elif lang == 'en' %}Submit for moderation{% else %}Отправить на проверку{% endif %}</button></p>
+        </form>
+    </section>
+    {% endif %}
+    {% if article.status != 'archived' %}
+    <form method="post" action="{% url 'knowledge:article_archive' pk=article.pk %}">
+        {% csrf_token %}<input type="hidden" name="expected_version" value="{{ article.content_version }}">
+        <button type="submit" class="btn btn--secondary">{% if lang == 'he' %}העברה לארכיון{% elif lang == 'en' %}Archive article{% else %}Архивировать статью{% endif %}</button>
+    </form>
+    {% endif %}
+    {% endif %}
+</div></section>
+{% endblock %}

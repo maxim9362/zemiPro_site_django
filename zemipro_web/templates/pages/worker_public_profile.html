@@ -1,5 +1,5 @@
 {% extends 'pages/public_base.html' %}
-{% load i18n %}
+{% load i18n static %}
 {% get_current_language as current_language %}
 
 {% block title %}{{ profile.public_display_name }} — ZemiPro{% endblock %}
@@ -162,6 +162,47 @@
             {% endif %}
         </section>
 
+        {% if published_expert_articles %}
+        <section class="public-panel" aria-labelledby="profile-advice">
+            <h2 class="public-panel__title" id="profile-advice">{% if current_language == 'he' %}עצות בעל המקצוע{% elif current_language == 'en' %}Specialist articles{% else %}Статьи специалиста{% endif %}</h2>
+            <ul class="public-link-list">
+                {% for article in published_expert_articles %}
+                <li>
+                    <a href="{{ article.public_path }}" lang="{{ article.language }}" dir="auto">{{ article.public_title }}</a>
+                    <span class="form__hint">({{ article.get_language_display }})</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="form__hint">{% if current_language == 'he' %}מאמר אינו ביקורת עבודה מאומתת ואינו משפיע על דירוג בעל המקצוע.{% elif current_language == 'en' %}Articles are not verified service reviews and do not affect the specialist's rating.{% else %}Статьи не являются подтверждёнными отзывами и не влияют на рейтинг мастера.{% endif %}</p>
+        </section>
+        {% endif %}
+
+        {% if published_personal_recommendations %}
+        <section class="public-panel" aria-labelledby="profile-personal-recommendations">
+            <h2 class="public-panel__title" id="profile-personal-recommendations">{% if current_language == 'he' %}המלצות אישיות{% elif current_language == 'en' %}Personal recommendations{% else %}Личные рекомендации{% endif %}</h2>
+            <p class="form__hint">{% if current_language == 'he' %}חוויה אישית מחוץ ל-ZemiPro. זו אינה ביקורת על הזמנה מאומתת ואינה משנה את הדירוג.{% elif current_language == 'en' %}Personal experience outside ZemiPro. These are not verified-order reviews and do not affect the rating.{% else %}Личный опыт вне ZemiPro. Это не отзывы по подтверждённым заказам и они не влияют на рейтинг.{% endif %}</p>
+            {% for recommendation in published_personal_recommendations %}<article class="public-profile__review"><p dir="auto">{{ recommendation.public_body }}</p></article>{% endfor %}
+        </section>
+        {% endif %}
+
+        {% if profile_sharing_enabled or personal_recommendations_enabled %}
+        <section class="public-panel" aria-labelledby="profile-community-actions">
+            <h2 class="public-panel__title" id="profile-community-actions">{% if current_language == 'he' %}שיתוף והמלצה{% elif current_language == 'en' %}Share and recommend{% else %}Поделиться и рекомендовать{% endif %}</h2>
+            {% if profile_sharing_enabled %}
+            <p>{% if current_language == 'he' %}השיתוף הוא פעולה ידנית שלך ומכיל רק קישור לפרופיל ציבורי זה.{% elif current_language == 'en' %}Sharing is your manual action and includes only a link to this public profile.{% else %}Публикация выполняется только по вашему нажатию и содержит ссылку на эту публичную карточку.{% endif %}</p>
+            <div class="public-actions" data-profile-share>
+                <a class="btn btn--secondary" href="{% url 'knowledge_share:facebook' worker_id=profile.pk %}" rel="noopener noreferrer nofollow">Facebook</a>
+                <button class="btn btn--secondary" type="button" data-copy-profile-link>{% if current_language == 'he' %}העתקת קישור{% elif current_language == 'en' %}Copy link{% else %}Копировать ссылку{% endif %}</button>
+                <noscript><label>{% if current_language == 'he' %}קישור ציבורי{% elif current_language == 'en' %}Public link{% else %}Публичная ссылка{% endif %}<input readonly value="{{ seo_canonical }}"></label></noscript>
+                <span role="status" aria-live="polite" data-copy-status></span>
+            </div>
+            {% endif %}
+            {% if personal_recommendations_enabled and request.user.is_authenticated and request.user.pk != profile.user_id %}
+            <p><a class="btn btn--secondary" href="{% url 'knowledge_recommendations:create' worker_id=profile.pk %}">{% if current_language == 'he' %}כתיבת המלצה אישית{% elif current_language == 'en' %}Write a personal recommendation{% else %}Оставить личную рекомендацию{% endif %}</a></p>
+            {% endif %}
+        </section>
+        {% endif %}
+
         <section class="public-panel" aria-labelledby="profile-reviews">
             <h2 class="public-panel__title" id="profile-reviews">{% trans 'Отзывы' %}</h2>
             {% if reviews %}
@@ -194,4 +235,5 @@
         </div>
     </div>
 </section>
+{% if profile_sharing_enabled %}<script src="{% static 'js/profile-share.js' %}" defer></script>{% endif %}
 {% endblock %}

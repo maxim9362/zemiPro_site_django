@@ -1,0 +1,41 @@
+{% extends 'pages/app_base.html' %}
+{% load i18n %}
+{% get_current_language as lang %}
+{% block title %}{% if lang == 'he' %}השתתפות בפיילוט{% elif lang == 'en' %}Article pilot participation{% else %}Участие в пилоте статей{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<header class="page-header app-page-header"><div class="container">
+    <h1>{% if lang == 'he' %}השתתפות בפיילוט המאמרים{% elif lang == 'en' %}Article pilot participation{% else %}Пилот статей: участие мастера{% endif %}</h1>
+    <p>{% if lang == 'he' %}ההשתתפות מבחירה בלבד. פרסום מאמר דורש גם אישור עורך והרשאה נפרדת להפעלת הפיילוט.{% elif lang == 'en' %}Participation is voluntary. Individual article approval and a separate pilot launch authorization are also required.{% else %}Участие добровольное. Для публичного показа необходимы отдельные решения модератора и владельца о запуске.{% endif %}</p>
+</div></header>
+<section class="app-page"><div class="container app-medium app-stack">
+    {% include 'components/flash_messages.html' %}
+    <p><a href="{% url 'knowledge:my_articles' %}">{% if lang == 'he' %}המאמרים שלי{% elif lang == 'en' %}My articles{% else %}Мои статьи{% endif %}</a></p>
+    <section class="app-panel">
+        <h2 class="app-panel__heading">{% if lang == 'he' %}המצב שלי{% elif lang == 'en' %}My participation{% else %}Мой статус{% endif %}</h2>
+        {% if enrollment and not enrollment.revoked_at %}
+        <p role="status">{% if lang == 'he' %}הסכמה ניתנה — עדיין דרוש אישור המאמר והפעלה.{% elif lang == 'en' %}Consent recorded — article selection and launch still required.{% else %}Согласие зафиксировано; допуск статей и запуск ещё требуются.{% endif %}</p>
+        <form method="post">
+            {% csrf_token %}<input type="hidden" name="action" value="withdraw">
+            <button class="btn btn--secondary" type="submit">{% if lang == 'he' %}משיכת הסכמה והסרת המאמרים{% elif lang == 'en' %}Withdraw consent and remove selected articles{% else %}Отозвать согласие и скрыть статьи{% endif %}</button>
+        </form>
+        {% else %}
+        <p>{% if lang == 'he' %}אין הסכמה פעילה.{% elif lang == 'en' %}No active participation consent.{% else %}Активного согласия нет.{% endif %}</p>
+        {% if knowledge_authoring_enabled %}
+        <p>{% if lang == 'he' %}אני מסכים/ה להצגת מאמרים שנבדקו בפיילוט אשדוד, לקישור לפרופיל ולספירת צפיות ולחיצות מצטברת ללא כתובת IP או פרטי קשר. אני יכול/ה לבטל את ההסכמה בכל עת. מספרים מצטברים שכבר נרשמו אינם כוללים זהות מבקרים.{% elif lang == 'en' %}I consent to displaying individually approved articles in the Ashdod pilot, linking to my public profile, and aggregate counts of page loads and link clicks without visitor IP or contact details. I can withdraw at any time. Previously collected anonymous totals may remain.{% else %}Я добровольно разрешаю показывать отдельно одобренные статьи в пилоте Ашдода со ссылкой на мой публичный профиль и собирать суммарное число открытий и переходов без IP и контактов посетителей. Согласие можно отозвать в любой момент. Уже собранные обезличенные счётчики могут сохраняться.{% endif %}</p>
+        <form method="post">
+            {% csrf_token %}<input type="hidden" name="action" value="consent">
+            <label><input type="checkbox" name="confirmed" required>
+                {% if lang == 'he' %}קראתי והבנתי, ואני בוחר/ת להשתתף{% elif lang == 'en' %}I have read this and explicitly choose to participate{% else %}Я ознакомился с условиями и добровольно согласен участвовать{% endif %}
+            </label>
+            <p><button class="btn btn--primary" type="submit">{% if lang == 'he' %}אישור ההשתתפות{% elif lang == 'en' %}Confirm participation{% else %}Подтвердить участие{% endif %}</button></p>
+        </form>
+        {% endif %}
+        {% endif %}
+        {{ form.non_field_errors }}
+    </section>
+    <section class="app-panel">
+        <h2 class="app-panel__heading">{% if lang == 'he' %}מה לא ישתנה{% elif lang == 'en' %}What does not change{% else %}Что не меняется{% endif %}</h2>
+        <p>{% if lang == 'he' %}מאמר אינו הזמנת עבודה ואינו יוצר דירוג או אימות רישיון. השבתת הפיילוט מונעת הצגה לכלל המבקרים.{% elif lang == 'en' %}An article is not a service order, a verified rating or a license check. Turning off the public pilot immediately hides all advice pages.{% else %}Статья не является заказом, подтверждённым отзывом или проверкой лицензии. Выключение публичного пилота сразу закрывает страницы материалов.{% endif %}</p>
+    </section>
+</div></section>
+{% endblock %}

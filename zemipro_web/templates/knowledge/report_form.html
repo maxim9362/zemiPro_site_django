@@ -1,0 +1,19 @@
+{% extends 'pages/app_base.html' %}
+{% load i18n %}
+{% get_current_language as lang %}
+{% block title %}{% if lang == 'he' %}דיווח על מאמר{% elif lang == 'en' %}Report article{% else %}Жалоба на статью{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<header class="page-header app-page-header"><div class="container">
+    <h1>{% if lang == 'he' %}דיווח על מאמר{% elif lang == 'en' %}Report an article{% else %}Пожаловаться на статью{% endif %}</h1>
+    <p dir="auto">{{ article.public_title }}</p>
+</div></header>
+<section class="app-page"><div class="container app-medium app-stack">
+    <form method="post" class="form">
+        {% csrf_token %}{{ form.non_field_errors }}
+        {% for field in form %}
+        <div class="form__group"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+        {% endfor %}
+        <button type="submit" class="btn btn--primary">{% if lang == 'he' %}שליחת דיווח{% elif lang == 'en' %}Send report{% else %}Отправить жалобу{% endif %}</button>
+    </form>
+</div></section>
+{% endblock %}

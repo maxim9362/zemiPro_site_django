@@ -25,6 +25,9 @@ urlpatterns = [
     path('notifications/', include('apps.notifications.urls')),
     path('moderation/', include('apps.moderation.urls')),
     path('analytics/', include('apps.analytics.urls')),
+    # Private Stage14.2 editor/moderation, disabled by default.
+    path('knowledge/', include('apps.knowledge.urls')),
+    path('join/', include('apps.knowledge.invite_urls')),
 ]
 
 if settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED:
@@ -35,6 +38,12 @@ if settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED:
 # in i18n_patterns: existing URLs, SEO/PSEO links and external clients stay valid.
 urlpatterns += i18n_patterns(
     path('', include('apps.marketplace.localized_urls')),
+    # New additive article-only URLs. No legacy SEO, redirects or sitemap changes.
+    path('advice/', include('apps.knowledge.public_urls')),
+    path('questions/', include('apps.knowledge.qa_urls')),
+    path('recommendations/', include('apps.knowledge.recommendation_urls')),
+    path('share/', include('apps.knowledge.share_urls')),
+    path('recommend-master/', include('apps.knowledge.request_urls')),
     prefix_default_language=True,
 )
 

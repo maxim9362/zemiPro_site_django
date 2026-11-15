@@ -1,0 +1,10 @@
+{% extends 'pages/public_base.html' %}
+{% load static i18n %}
+{% get_current_language as current_language %}
+{% block page_styles %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/knowledge-qa.css' %}">{% endblock %}
+{% block title %}{% if current_language == 'he' %}שליחת שאלה{% elif current_language == 'en' %}Ask a question{% else %}Задать вопрос{% endif %} — ZemiPro{% endblock %}
+{% block content %}<section class="public-content knowledge-qa"><div class="container app-medium public-stack">
+  <h1>{% if current_language == 'he' %}שליחת שאלה לבעלי מקצוע{% elif current_language == 'en' %}Ask Ashdod specialists{% else %}Вопрос специалистам Ашдода{% endif %}</h1>
+  <p>{% if current_language == 'he' %}אין להזין כתובת, טלפון, אימייל או קישורים. השאלה תיבדק לפני פרסום.{% elif current_language == 'en' %}Do not include an address, phone, email or links. The question is reviewed before publication.{% else %}Не указывайте адрес, телефон, email или ссылки. Вопрос публикуется только после модерации.{% endif %}</p>
+  <form method="post" class="form">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div class="form__group"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button class="btn btn--primary" type="submit">{% if current_language == 'he' %}שליחה לבדיקה{% elif current_language == 'en' %}Submit for review{% else %}Отправить на модерацию{% endif %}</button></form>
+</div></section>{% endblock %}

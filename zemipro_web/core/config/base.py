@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'apps.accounts',
     'apps.marketplace',
+    'apps.knowledge',
     'apps.locations',
     'apps.seo',
     'apps.notifications',
@@ -61,6 +62,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.notifications.context_processors.notifications_counter',
+                'apps.knowledge.context_processors.public_knowledge_navigation',
             ],
         },
     },
@@ -95,6 +97,20 @@ ZEMIPRO_LEGACY_REDIRECTS_ENABLED = env_bool(
 # Owner-approved first public pilot: only Ashdod. Expansion requires a code review.
 # Not environment-overridable, so a production .env cannot silently open all cities.
 ZEMIPRO_PILOT_CITY_SLUG = 'ashdod'
+# Stage 14.1: owner-gated features. These are deliberately NOT env-overridable:
+# defining a production environment variable must not activate unpublished code.
+# Stage 14.7 will supply permissioned, auditable rollout controls.
+# Private article editor/moderator UI is separately locked until owner-controlled pilot.
+ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED = False
+ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED = False
+# Observation is distinct from releasing articles and cannot be enabled by .env.
+ZEMIPRO_KNOWLEDGE_PILOT_METRICS_ENABLED = False
+ZEMIPRO_KNOWLEDGE_QA_ENABLED = False
+ZEMIPRO_KNOWLEDGE_ROLLOUT_METRICS_ENABLED = False
+ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED = False
+ZEMIPRO_PROFILE_SHARING_ENABLED = False
+ZEMIPRO_RECOMMENDATION_REQUESTS_ENABLED = False
+ZEMIPRO_EXTERNAL_WORKER_INVITES_ENABLED = False
 # Stage 07.6: external AI translation is strictly opt-in and disabled by default.
 # The API key is never stored in code, test fixtures or logs.
 ZEMIPRO_GEMINI_TRANSLATION_ENABLED = env_bool(
