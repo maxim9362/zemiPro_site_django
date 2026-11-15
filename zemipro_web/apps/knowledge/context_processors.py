@@ -16,4 +16,11 @@ def public_knowledge_navigation(request):
         'profile_sharing_enabled': bool(
             settings.ZEMIPRO_PROFILE_SHARING_ENABLED,
         ),
+        'knowledge_qa_enabled': bool(settings.ZEMIPRO_KNOWLEDGE_QA_ENABLED),
+        'recommendation_requests_enabled': bool(
+            settings.ZEMIPRO_RECOMMENDATION_REQUESTS_ENABLED,
+        ),
+        'external_worker_invites_enabled': bool(
+            settings.ZEMIPRO_EXTERNAL_WORKER_INVITES_ENABLED,
+        ),
     }

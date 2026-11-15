@@ -1140,3 +1140,35 @@ class RecommendationRequestReport(models.Model):
                 name='knowledge_response_report_once_uq',
             ),
         ]
+
+
+class ExternalWorkerInvite(models.Model):
+    """Hashed, manually shared registration intent; never an account/profile."""
+
+    inviter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='external_worker_invites',
+    )
+    token_digest = models.CharField(max_length=64, unique=True, editable=False)
+    expires_at = models.DateTimeField()
+    opened_count = models.PositiveIntegerField(default=0, editable=False)
+    # Aggregate only: never associate the newly registered account with inviter.
+    claimed_count = models.PositiveSmallIntegerField(default=0, editable=False)
+    claimed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_external_worker_invite'
+        default_permissions = ('view',)
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(opened_count__gte=0),
+                name='knowledge_invite_open_count_ck',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(claimed_count=0) & models.Q(claimed_at__isnull=True)) |
+                    (models.Q(claimed_count=1) & models.Q(claimed_at__isnull=False))
+                ), name='knowledge_invite_claim_pair_ck',
+            ),
+        ]
