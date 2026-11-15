@@ -1,28 +1,27 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n public_text %}
 
 {% block title %}{% trans 'Кабинет клиента — ZemiPro' %}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header app-page-header">
     <div class="container">
         <h1>{% trans 'Кабинет клиента' %}</h1>
-        <p>{{ profile.city.localized_name }} · {{ profile.contact }}</p>
+        <p>{{ profile.city.localized_name }}</p>
     </div>
-</section>
+</header>
 
-<section class="dashboard">
-    <div class="container">
+<section class="dashboard app-page app-dashboard">
+    <div class="container app-wide">
 
-        {% if messages %}
-        <div class="form__errors" style="background: #d1fae5; border-color: #6ee7b7; margin-bottom: 24px;">
-            {% for message in messages %}
-            <p class="form__error" style="color: #065f46;">{{ message }}</p>
-            {% endfor %}
-        </div>
-        {% endif %}
+        {% include 'components/flash_messages.html' %}
 
-        <div class="dashboard__profile">
+        <nav class="app-section-tabs" aria-label="{% trans 'Кабинет клиента' %}">
+            <a href="#client-profile">{% trans 'Ваш профиль' %}</a>
+            <a href="#client-invitations">{{ invite_copy.invitations_client }}</a>
+            <a href="#client-history">{{ directory_copy.history_heading }}</a>
+        </nav>
+        <div id="client-profile" class="dashboard__profile">
             <h2>{% trans 'Ваш профиль' %}</h2>
             <p><strong>{% trans 'Город:' %}</strong> {{ profile.city.localized_name }}</p>
             <p><strong>{% trans 'Контакт:' %}</strong> {{ profile.contact }}</p>
@@ -31,7 +30,7 @@
             <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary" style="margin-inline-start: 8px;">{% trans 'Создать заявку' %}</a>
         </div>
 
-        <section class="dashboard__section">
+        <section id="client-invitations" class="dashboard__section">
             <h2>{{ invite_copy.invitations_client }}</h2>
             {% for invitation in client_invitations %}
             <p><a href="{% url 'marketplace:invitation_detail' pk=invitation.pk %}">
@@ -58,7 +57,7 @@
         {% else %}<p class="empty-state">{{ directory_copy.favorites_empty }}</p>
         {% endif %}
 
-        <section class="dashboard__section">
+        <section id="client-history" class="dashboard__section">
             <h2>{{ directory_copy.history_heading }}</h2>
             {% if track_worker_views %}
             {% for visit in viewed_workers %}
@@ -100,7 +99,7 @@
         {% endif %}
 
         {% if active_orders %}
-        <div class="dashboard__section">
+        <div class="dashboard__section" id="client-active-orders">
             <h2>{% trans 'Активные заявки' %}</h2>
             <div class="orders-list">
                 {% for item in orders_with_responses %}
@@ -135,7 +134,7 @@
         {% endif %}
 
         {% if in_progress_orders %}
-        <div class="dashboard__section">
+        <div class="dashboard__section" id="client-progress-orders">
             <h2>{% trans 'В процессе' %}</h2>
             <div class="orders-list">
                 {% for order in in_progress_orders %}
@@ -172,7 +171,7 @@
         {% endif %}
 
         {% if completed_orders %}
-        <div class="dashboard__section">
+        <div class="dashboard__section" id="client-completed-orders">
             <h2>{% trans 'Завершённые' %}</h2>
             <div class="orders-list">
                 {% for order in completed_orders %}

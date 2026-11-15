@@ -1,22 +1,35 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
 {% load i18n %}
-{% block title %}{% trans 'Машинный перевод' %} — ZemiPro{% endblock %}
+{% get_current_language as current_language %}
+{% block title %}{% if current_language == 'he' %}תרגום מכונה{% elif current_language == 'en' %}Machine translation{% else %}Машинный перевод{% endif %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="container" style="max-width:760px;padding:24px">
-  <p><a href="{% url 'marketplace:chat_thread' conversation_id=message.conversation_id %}">
-    {% trans 'Назад к переписке' %}</a></p>
-  <h1>{% trans 'Машинный перевод' %}</h1>
-  {% if translation %}
-    <p role="note">{% trans 'Машинный перевод Gemini, не текст автора. Возможны ошибки.' %}</p>
-    <article lang="{{ translation.target_language }}" dir="{% if translation.target_language == 'he' %}rtl{% else %}ltr{% endif %}">
-      <p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ translation.translated_body }}</p>
-    </article>
-  {% else %}
-    <p role="status">{% trans 'Перевод недоступен. Оригинальное сообщение сохранено.' %}</p>
-  {% endif %}
-  <details>
-    <summary>{% trans 'Показать оригинал' %}</summary>
-    <p dir="auto" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ message.body }}</p>
-  </details>
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <h1>{% if current_language == 'he' %}תרגום מכונה{% elif current_language == 'en' %}Machine translation{% else %}Машинный перевод{% endif %}</h1>
+    </div>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow comm-stack">
+        <nav class="comm-toolbar">
+            <a class="btn btn--secondary" href="{% url 'marketplace:chat_thread' conversation_id=message.conversation_id %}">{% if current_language == 'he' %}חזרה לשיחה{% elif current_language == 'en' %}Back to conversation{% else %}Назад к переписке{% endif %}</a>
+        </nav>
+        <div class="comm-panel">
+            {% if translation %}
+                <p class="comm-help comm-help--warning" role="note">{% if current_language == 'he' %}תרגום מכונה של Gemini, לא הנוסח המקורי של הכותב. ייתכנו שגיאות.{% elif current_language == 'en' %}Gemini machine translation, not the author's words. Errors are possible.{% else %}Машинный перевод Gemini, не текст автора. Возможны ошибки.{% endif %}</p>
+                <article class="comm-translation" lang="{{ translation.target_language }}"
+                         dir="{% if translation.target_language == 'he' %}rtl{% else %}ltr{% endif %}">
+                    <p dir="auto">{{ translation.translated_body }}</p>
+                </article>
+            {% else %}
+                <div class="ui-alert ui-alert--warning" role="status">
+                    <p>{% if current_language == 'he' %}התרגום אינו זמין. ההודעה המקורית נשמרה.{% elif current_language == 'en' %}Translation unavailable. The original message is preserved.{% else %}Перевод недоступен. Оригинальное сообщение сохранено.{% endif %}</p>
+                </div>
+            {% endif %}
+            <details class="comm-disclosure">
+                <summary>{% if current_language == 'he' %}הצגת ההודעה המקורית{% elif current_language == 'en' %}Show original{% else %}Показать оригинал{% endif %}</summary>
+                <p dir="auto">{{ message.body }}</p>
+            </details>
+        </div>
+    </div>
 </section>
 {% endblock %}

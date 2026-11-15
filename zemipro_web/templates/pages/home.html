@@ -1,56 +1,86 @@
-{% extends 'base.html' %}
+{% extends 'pages/public_base.html' %}
 {% load i18n %}
+{% get_current_language as current_language %}
 
-{% block title %}{% trans 'ZemiPro — Найдите мастера по ремонту в Израиле' %}{% endblock %}
+{% block title %}ZemiPro — {% if current_language == 'he' %}בעלי מקצוע באשדוד{% elif current_language == 'en' %}Find a professional in Ashdod{% else %}Поиск специалистов в Ашдоде{% endif %}{% endblock %}
+{% block meta_description %}{% if current_language == 'he' %}חיפוש בעלי מקצוע באשדוד, חינם וללא תיווך. השוו פרופילים או פרסמו בקשת שירות.{% elif current_language == 'en' %}Find professionals in Ashdod for free, without a middleman. Browse profiles or publish a service request.{% else %}Находите специалистов в Ашдоде бесплатно и без посредников. Смотрите анкеты или публикуйте заявку.{% endif %}{% endblock %}
 
 {% block content %}
-<section class="hero">
-    <div class="container">
-        <h1>{% trans 'Найдите мастера по ремонту в Израиле' %}</h1>
-        <p class="hero__subtitle">
-            {% trans 'Сантехника, электрика, кондиционеры, ремонт квартир, сборка мебели' %}
-            {% trans '— бесплатно и без посредников' %}
-        </p>
-        <a href="{% url 'marketplace:order_wizard_start' %}" class="btn btn--primary btn--lg">
-            {% trans 'Создать заявку' %}
-        </a>
-    </div>
-</section>
-
-<section class="categories-preview">
-    <div class="container">
-        <h2>{% trans 'Категории услуг' %}</h2>
-        <div class="categories-grid">
-            {% for cat in categories %}
-            <a href="{% url 'marketplace:category_detail' slug=cat.slug %}" class="category-card">
-                <span class="category-card__emoji">{{ cat.emoji }}</span>
-                <h3 class="category-card__title">{{ cat.localized_name }}</h3>
-                <p class="category-card__desc">{{ cat.localized_description }}</p>
-            </a>
-            {% endfor %}
+<section class="hero public-hero">
+    <div class="container public-hero__layout">
+        <div class="public-hero__content">
+            <p class="public-eyebrow">
+                <span aria-hidden="true" class="public-eyebrow__dot"></span>
+                {% if current_language == 'he' %}הפיילוט פועל באשדוד בלבד{% elif current_language == 'en' %}Currently serving Ashdod only{% else %}Пока работаем только в Ашдоде{% endif %}
+            </p>
+            <h1>
+                <span>{% trans 'Найдите мастера по ремонту в Израиле' %}</span>
+                <span class="public-hero__city">{% if current_language == 'he' %}באשדוד{% elif current_language == 'en' %}in Ashdod{% else %}в Ашдоде{% endif %}</span>
+            </h1>
+            <p class="hero__subtitle public-hero__subtitle">
+                {% if current_language == 'he' %}בחרו בעל מקצוע לפי שירות ובדקו פרופילים וביקורות אמיתיות. או פרסמו בקשה וקבלו הצעות — בחינם וללא תיווך.{% elif current_language == 'en' %}Explore specialists by service and compare real profiles and reviews, or post a request to receive offers — free and without a middleman.{% else %}Выбирайте мастера по услуге, сравнивайте реальные анкеты и отзывы. Или создайте заявку, чтобы получить предложения — бесплатно и без посредников.{% endif %}
+            </p>
+            <div class="public-hero__actions">
+                <a class="btn btn--lg public-button--light" href="{% url 'marketplace:worker_directory' %}">{% if current_language == 'he' %}חיפוש בעלי מקצוע{% elif current_language == 'en' %}Find a specialist{% else %}Найти специалиста{% endif %}</a>
+                <a class="btn btn--lg public-button--outline" href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
+            </div>
+            <p class="public-hero__fineprint">{% if current_language == 'he' %}הפלטפורמה אינה מתווכת בעסקה ואינה מקבלת תשלומים.{% elif current_language == 'en' %}ZemiPro does not broker jobs or accept payments.{% else %}ZemiPro не выступает посредником и не принимает платежи.{% endif %}</p>
+        </div>
+        <div class="public-hero__panel" aria-label="{% if current_language == 'he' %}דרכי שימוש{% elif current_language == 'en' %}How to use ZemiPro{% else %}Как пользоваться ZemiPro{% endif %}">
+            <span class="public-hero__panel-symbol" aria-hidden="true">⌕</span>
+            <h2>{% if current_language == 'he' %}הדרך הקצרה לבעל מקצוע{% elif current_language == 'en' %}An easier way to find help{% else %}Проще найти помощь{% endif %}</h2>
+            <p>{% if current_language == 'he' %}בחרו שירות, קראו פרטים ופנו לבעל מקצוע דרך הבקשה שלכם.{% elif current_language == 'en' %}Choose a service, review public details, then invite a specialist to your request.{% else %}Выберите услугу, посмотрите профиль и пригласите мастера к своей заявке.{% endif %}</p>
+            <a href="{% url 'marketplace:categories_list' %}">{% trans 'Категории услуг' %} <span aria-hidden="true">›</span></a>
         </div>
     </div>
 </section>
 
-<section class="how-it-works">
+<section class="categories-preview public-section" aria-labelledby="home-categories-title">
     <div class="container">
-        <h2>{% trans 'Как это работает' %}</h2>
-        <div class="steps">
-            <div class="step">
-                <span class="step__number">1</span>
+        <div class="public-section__heading">
+            <div>
+                <p class="public-kicker">{% if current_language == 'he' %}שירותים באשדוד{% elif current_language == 'en' %}Services in Ashdod{% else %}Услуги в Ашдоде{% endif %}</p>
+                <h2 id="home-categories-title">{% trans 'Категории услуг' %}</h2>
+            </div>
+            <a class="public-text-link" href="{% url 'marketplace:categories_list' %}">{% if current_language == 'he' %}כל הקטגוריות{% elif current_language == 'en' %}All categories{% else %}Все категории{% endif %}</a>
+        </div>
+        {% if categories %}
+        <div class="categories-grid public-category-grid">
+            {% for cat in categories %}
+            {% include 'components/service_card.html' with category=cat %}
+            {% endfor %}
+        </div>
+        {% else %}
+        {% trans 'Категории пока не добавлены.' as empty_title %}
+        {% include 'components/empty_state.html' with empty_title=empty_title %}
+        {% endif %}
+    </div>
+</section>
+
+<section class="how-it-works public-section public-steps-section" aria-labelledby="home-steps-title">
+    <div class="container">
+        <div class="public-section__heading">
+            <div>
+                <p class="public-kicker">{% if current_language == 'he' %}שלושה צעדים פשוטים{% elif current_language == 'en' %}Three simple steps{% else %}Три простых шага{% endif %}</p>
+                <h2 id="home-steps-title">{% trans 'Как это работает' %}</h2>
+            </div>
+        </div>
+        <div class="steps public-steps">
+            <article class="step">
+                <span class="step__number" aria-hidden="true">1</span>
+                <h3>{% if current_language == 'he' %}בחרו שירות{% elif current_language == 'en' %}Find a service{% else %}Выберите услугу{% endif %}</h3>
+                <p>{% if current_language == 'he' %}חפשו בעלי מקצוע לפי קטגוריה או שירות באשדוד.{% elif current_language == 'en' %}Search Ashdod specialists by category or service.{% else %}Найдите специалистов по категории или конкретной услуге в Ашдоде.{% endif %}</p>
+            </article>
+            <article class="step">
+                <span class="step__number" aria-hidden="true">2</span>
                 <h3>{% trans 'Создайте заявку' %}</h3>
-                <p>{% trans 'Опишите задачу, выберите категорию и укажите адрес' %}</p>
-            </div>
-            <div class="step">
-                <span class="step__number">2</span>
-                <h3>{% trans 'Получите отклики' %}</h3>
-                <p>{% trans 'Мастера из вашей категории увидят заявку и откликнутся' %}</p>
-            </div>
-            <div class="step">
-                <span class="step__number">3</span>
+                <p>{% if current_language == 'he' %}תארו את המשימה וציינו אזור משוער, ללא כתובת מדויקת או מספר טלפון פומבי.{% elif current_language == 'en' %}Describe the job and approximate area without publicly sharing your exact address or phone.{% else %}Опишите задачу и примерный район без публикации точного адреса или телефона.{% endif %}</p>
+            </article>
+            <article class="step">
+                <span class="step__number" aria-hidden="true">3</span>
                 <h3>{% trans 'Выберите мастера' %}</h3>
-                <p>{% trans 'Сравните профили, рейтинги и отзывы, выберите лучшего' %}</p>
-            </div>
+                <p>{% if current_language == 'he' %}השוו הצעות וביקורות אמיתיות, וסכמו את התנאים בצ׳אט פרטי.{% elif current_language == 'en' %}Compare offers and real reviews, then agree on terms in private chat.{% else %}Сравните предложения и реальные отзывы, согласуйте условия в личном чате.{% endif %}</p>
+            </article>
         </div>
     </div>
 </section>

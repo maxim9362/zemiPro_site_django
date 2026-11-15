@@ -1,18 +1,35 @@
-{% extends 'base.html' %}
+{% extends 'pages/communication_base.html' %}
+{% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{{ copy.chats }} — ZemiPro{% endblock %}
 {% block content %}
-<section class="container" style="padding-block:24px;max-width:820px">
-  <h1>{{ copy.chats }}</h1>
-  <ol style="list-style:none;padding:0;display:grid;gap:12px">
-    {% for item in conversations %}
-      <li style="border:1px solid #cbd5e1;border-radius:12px;padding:16px">
-        <a href="{% url 'marketplace:chat_thread' conversation_id=item.pk %}">
-          {{ copy.thread }} <bdi dir="ltr">#{{ item.response.order_id }}</bdi>
-        </a>
-      </li>
-    {% empty %}
-      <li>{{ copy.empty }}</li>
-    {% endfor %}
-  </ol>
+<header class="page-header app-page-header comm-page-header">
+    <div class="container comm-container comm-container--narrow">
+        <p class="comm-eyebrow">ZemiPro · {% if current_language == 'he' %}החשבון שלי{% elif current_language == 'en' %}My account{% else %}Личный кабинет{% endif %}</p>
+        <h1>{{ copy.chats }}</h1>
+        <p>{% if current_language == 'he' %}כל שיחה מחוברת להצעה במסגרת בקשה. רק משתתפי השיחה יכולים לקרוא אותה.{% elif current_language == 'en' %}Each conversation belongs to an offer on a service request. Only participants can read it.{% else %}Каждый диалог относится к предложению по заявке. Читать его могут только участники.{% endif %}</p>
+    </div>
+</header>
+<section class="comm-page">
+    <div class="container comm-container comm-container--narrow">
+        <nav class="comm-toolbar" aria-label="{{ copy.chats }}">
+            <a class="btn btn--secondary" href="{% url 'marketplace:client_dashboard' %}">{% if current_language == 'he' %}הבקשות שלי{% elif current_language == 'en' %}My requests{% else %}Мои заявки{% endif %}</a>
+            <a class="btn btn--secondary" href="{% url 'marketplace:worker_dashboard' %}">{% if current_language == 'he' %}אזור בעלי מקצוע{% elif current_language == 'en' %}Specialist workspace{% else %}Кабинет мастера{% endif %}</a>
+        </nav>
+        <ol class="comm-list" aria-label="{{ copy.chats }}">
+            {% for item in conversations %}
+            <li>
+                <a class="comm-link-card" href="{% url 'marketplace:chat_thread' conversation_id=item.pk %}">
+                    <span><strong>{{ copy.thread }} <bdi dir="ltr">#{{ item.response.order_id }}</bdi></strong>
+                        <span class="comm-link-card__hint">{% if current_language == 'he' %}פתיחת השיחה הפרטית{% elif current_language == 'en' %}Open private conversation{% else %}Открыть личный диалог{% endif %}</span>
+                    </span>
+                    <span aria-hidden="true">›</span>
+                </a>
+            </li>
+            {% empty %}
+            <li><div class="comm-empty" role="status">{{ copy.empty }}</div></li>
+            {% endfor %}
+        </ol>
+    </div>
 </section>
 {% endblock %}

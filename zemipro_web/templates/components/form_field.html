@@ -1,0 +1,19 @@
+{% load a11y_widgets %}
+{% with help_id=field.auto_id|add:'-help' errors_id=field.auto_id|add:'-errors' %}
+<div class="form__group ui-field{% if field.errors %} ui-field--invalid{% endif %}">
+    {% if not field.is_hidden %}
+    <label for="{{ field.id_for_label }}" class="form__label ui-field__label">{{ field.label }}</label>
+    {% endif %}
+    {% ui_widget field help_id errors_id %}
+    {% if field.help_text %}
+    <p id="{{ help_id }}" class="form__hint ui-field__help">{{ field.help_text }}</p>
+    {% endif %}
+    {% if field.errors %}
+    <div id="{{ errors_id }}" class="ui-field__errors" role="alert">
+        {% for error in field.errors %}
+        <p class="form__error ui-field__error">{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endwith %}

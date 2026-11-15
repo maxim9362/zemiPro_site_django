@@ -1,27 +1,22 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
 
 {% block title %}{% trans 'Профиль клиента — ZemiPro' %}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header app-page-header">
     <div class="container">
         <h1>{% trans 'Профиль клиента' %}</h1>
         <p>{% trans 'Укажите город и контакт для связи с мастерами' %}</p>
         <a href="{% url 'accounts:client_settings' %}">{% trans 'Личные данные и приватность' %}</a>
     </div>
-</section>
+</header>
 
-<section class="order-form">
-    <div class="container">
-        {% if messages %}
-        <div class="form__errors" style="background: #d1fae5; border-color: #6ee7b7;">
-            {% for message in messages %}
-            <p class="form__error" style="color: #065f46;">{{ message }}</p>
-            {% endfor %}
-        </div>
-        {% endif %}
+<section class="order-form app-page">
+    <div class="container app-medium app-stack">
+        {% include 'components/flash_messages.html' %}
 
+        <div class="app-panel">
         <form method="post" class="form">
             {% csrf_token %}
 
@@ -34,27 +29,17 @@
             {% endif %}
 
             <div class="form__row">
-                <div class="form__group">
-                    <label for="id_city" class="form__label">{% trans 'Город *' %}</label>
-                    {{ form.city }}
-                    {% if form.city.errors %}
-                    <span class="form__error">{{ form.city.errors.0 }}</span>
-                    {% endif %}
-                </div>
+                {% include 'components/form_field.html' with field=form.city %}
 
-                <div class="form__group">
-                    <label for="id_contact" class="form__label">{% trans 'Контакт для связи *' %}</label>
-                    {{ form.contact }}
-                    {% if form.contact.errors %}
-                    <span class="form__error">{{ form.contact.errors.0 }}</span>
-                    {% endif %}
-                </div>
+                {% include 'components/form_field.html' with field=form.contact %}
             </div>
 
-            <button type="submit" class="btn btn--primary btn--lg">
-                {% trans 'Сохранить профиль' %}
-            </button>
+            <div class="app-form-actions">
+              <button type="submit" class="btn btn--primary btn--lg">{% trans 'Сохранить профиль' %}</button>
+              <a class="btn btn--secondary" href="{% url 'marketplace:client_dashboard' %}">{% trans 'Кабинет клиента' %}</a>
+            </div>
         </form>
+        </div>
     </div>
 </section>
 {% endblock %}

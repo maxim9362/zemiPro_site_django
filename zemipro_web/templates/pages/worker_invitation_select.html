@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% block title %}{{ invite_copy.heading }} — ZemiPro{% endblock %}
 {% block content %}
-<section class="dashboard"><div class="container" style="max-width:760px">
+<section class="dashboard app-page"><div class="container app-invite-shell"><div class="app-panel">
     <h1>{{ invite_copy.heading }}</h1>
     <p>{{ invite_copy.chosen }}: <strong>{{ worker.public_display_name }}</strong></p>
     <p>{{ invite_copy.hint }}</p>
@@ -16,11 +16,11 @@
         </select>
         <button type="submit" class="btn btn--primary">{{ invite_copy.send }}</button>
         {% else %}
-        <p class="empty-state">{{ invite_copy.no_orders }}</p>
+        <p class="empty-state" role="status">{{ invite_copy.no_orders }}</p>
         {% endif %}
     </form>
     <p>{{ invite_copy.only_public }}</p>
     <a class="btn btn--secondary" href="{% url 'marketplace:order_wizard_start' %}?worker={{ worker.pk }}">{{ invite_copy.create }}</a>
-    <a href="{% url 'marketplace:worker_public_profile' pk=worker.pk %}">{{ invite_copy.back }}</a>
-</div></section>
+    <a class="btn btn--secondary" href="{% url 'marketplace:worker_public_profile' pk=worker.pk %}">{{ invite_copy.back }}</a>
+</div></div></section>
 {% endblock %}

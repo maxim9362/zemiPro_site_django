@@ -1,25 +1,39 @@
-{% extends 'base.html' %}
+{% extends 'pages/public_base.html' %}
 {% load i18n %}
-
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Города — ZemiPro' %}{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<header class="page-header public-page-header">
     <div class="container">
+        <p class="public-kicker">{% if current_language == 'he' %}הפיילוט באשדוד{% elif current_language == 'en' %}Ashdod pilot{% else %}Пилот в Ашдоде{% endif %}</p>
         <h1>{% trans 'Города' %}</h1>
-        <p>{% trans 'Выберите город для поиска мастеров' %}</p>
+        <p>{% if current_language == 'he' %}כרגע השירות זמין באשדוד בלבד.{% elif current_language == 'en' %}ZemiPro currently serves Ashdod only.{% else %}Сейчас ZemiPro работает только в Ашдоде.{% endif %}</p>
     </div>
-</section>
-
-<section class="cities-list">
+</header>
+<section class="cities-list public-content">
     <div class="container">
-        <div class="cities-grid">
+        {% if cities %}
+        <div class="cities-grid public-result-grid">
             {% for city in cities %}
-            <a href="{% if catalog_localized %}{% url 'catalog_i18n:city_detail' slug=city.slug %}{% else %}{% url 'marketplace:city_detail' slug=city.slug %}{% endif %}" class="city-card">
-                <h3 class="city-card__title">{{ city.localized_name }}</h3>
+            <a href="{% if catalog_localized %}{% url 'catalog_i18n:city_detail' slug=city.slug %}{% else %}{% url 'marketplace:city_detail' slug=city.slug %}{% endif %}" class="city-card public-city-card">
+                <h2>{{ city.localized_name }}</h2>
                 {% if city.district %}<p>{{ city.district.localized_name }}</p>{% endif %}
+                <span class="public-text-link">{% if current_language == 'he' %}בעלי מקצוע בעיר{% elif current_language == 'en' %}Browse specialists{% else %}Смотреть специалистов{% endif %}</span>
             </a>
             {% endfor %}
+        </div>
+        {% else %}
+        {% if current_language == 'he' %}{% include 'components/empty_state.html' with empty_title='אין כרגע ערים זמינות.' %}
+        {% elif current_language == 'en' %}{% include 'components/empty_state.html' with empty_title='No cities available yet.' %}
+        {% else %}{% include 'components/empty_state.html' with empty_title='Города пока недоступны.' %}
+        {% endif %}
+        {% endif %}
+        <div class="cta-block public-cta">
+            <h2>{% if current_language == 'he' %}מחפשים בעל מקצוע באשדוד?{% elif current_language == 'en' %}Looking for a specialist in Ashdod?{% else %}Ищете мастера в Ашдоде?{% endif %}</h2>
+            <div class="public-actions">
+                <a class="btn btn--primary" href="{% if catalog_localized %}{% url 'catalog_i18n:worker_directory' %}{% else %}{% url 'marketplace:worker_directory' %}{% endif %}">{% if current_language == 'he' %}חיפוש בעלי מקצוע{% elif current_language == 'en' %}Search specialists{% else %}Найти специалиста{% endif %}</a>
+            </div>
         </div>
     </div>
 </section>

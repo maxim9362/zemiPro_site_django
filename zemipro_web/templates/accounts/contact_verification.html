@@ -1,23 +1,31 @@
-{% extends 'base.html' %}
+{% extends 'pages/app_base.html' %}
 {% load i18n %}
+{% get_current_language as current_language %}
 {% block title %}{% trans 'Подтверждение контактов' %} — ZemiPro{% endblock %}
 {% block content %}
-<section class="order-form">
-    <div class="container">
-        <h1>{% trans 'Подтверждение контактов' %}</h1>
-        {% for message in messages %}
-        <p role="status" class="form__hint">{{ message }}</p>
-        {% endfor %}
-        <form method="post" action="{% url 'accounts:request_verification' %}" class="form">
+<header class="page-header app-page-header"><div class="container app-narrow">
+    <h1>{% trans 'Подтверждение контактов' %}</h1>
+    <p>{% if current_language == 'he' %}אימות כתובת הדוא״ל נדרש כדי להמשיך לפעולות המוגנות.{% elif current_language == 'en' %}Verify your email address to continue with protected account actions.{% else %}Подтвердите email, чтобы продолжить пользоваться защищёнными функциями аккаунта.{% endif %}</p>
+</div></header>
+<section class="order-form app-page"><div class="container app-narrow app-stack">
+    {% include 'components/flash_messages.html' %}
+    <section class="app-panel" aria-labelledby="verification-send-heading">
+        <h2 class="app-panel__heading" id="verification-send-heading">{% trans 'Отправить код' %}</h2>
+        <form method="post" action="{% url 'accounts:request_verification' %}" class="form app-stack">
             {% csrf_token %}
-            {{ request_form.as_p }}
+            {% if request_form.non_field_errors %}<div class="form__errors ui-alert ui-alert--error" role="alert">{{ request_form.non_field_errors }}</div>{% endif %}
+            {% for field in request_form %}{% include 'components/form_field.html' with field=field %}{% endfor %}
             <button type="submit" class="btn btn--primary">{% trans 'Отправить код' %}</button>
         </form>
-        <form method="post" action="{% url 'accounts:confirm_verification' %}" class="form">
+    </section>
+    <section class="app-panel" aria-labelledby="verification-confirm-heading">
+        <h2 class="app-panel__heading" id="verification-confirm-heading">{% trans 'Подтвердить контакт' %}</h2>
+        <form method="post" action="{% url 'accounts:confirm_verification' %}" class="form app-stack">
             {% csrf_token %}
-            {{ confirm_form.as_p }}
+            {% if confirm_form.non_field_errors %}<div class="form__errors ui-alert ui-alert--error" role="alert">{{ confirm_form.non_field_errors }}</div>{% endif %}
+            {% for field in confirm_form %}{% include 'components/form_field.html' with field=field %}{% endfor %}
             <button type="submit" class="btn btn--primary">{% trans 'Подтвердить контакт' %}</button>
         </form>
-    </div>
-</section>
+    </section>
+</div></section>
 {% endblock %}
