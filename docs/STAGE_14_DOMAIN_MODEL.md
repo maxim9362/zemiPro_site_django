@@ -1,7 +1,7 @@
 # Stage 14.1 — ADR: экспертный контент и границы домена
 
 > Дата решения владельца: 2026-11-15. Применимый baseline: main `3d640f66a3acc61bec623bd9e31786ae63b7196b`.
-> Статус: SCHEMA_PREPARED / CI_PENDING. Реальная публикация, пилот и GO — PENDING.
+> Статус: 14.1 CODE_CI_VERIFIED на `a5a9f711bfe17dc6c8f05de711fd411254f34cd3` ([CI #43686166201](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43686166201)). Полный Django 637/637, адресные 6/6, PostgreSQL 17 reversible migration, Ruff, Django check — PASS. Реальная публикация, пилот, публичный GO — PENDING; независимый Codex review после всех 11 подэтапов.
 > Релевантные требования: REQ-KNOW-001–023, REQ-SEC-003–006, REQ-I18N-001–006.
 
 ## Решение: техническая последовательность и фактические гейты
