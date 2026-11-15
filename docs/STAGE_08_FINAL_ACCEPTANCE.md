@@ -76,3 +76,13 @@ PR #17 зависит от не объединённого PR #16; смена б
 PR #16/#17, main и production не изменялись этой задачей вне push в Stage08.
 Merge/deployment не разрешены. Финальные Actions должны быть SUCCESS именно
 на последнем SHA, включая документацию; ссылки — в финальном отчёте.
+
+## Обновление интеграционной базы — 2026-11-15
+
+**Уточнение к историческим статусам выше:** прежние упоминания PR #16 Draft / NOT_MERGED и временной базы PR #17 относятся к состоянию на момент аудита 14.11.2026.
+
+- По новому явному разрешению владельца Stage07 PR #16 **MERGED** обычным merge commit `2be8fad09aed7257236813055eaf942275a1ef19` в `main`.
+- PR #17: **OPEN / DRAFT / NOT_MERGED**, base `main`, исходный проверенный Stage08 code HEAD `7469c4a55ec377156cc8cbfcd12006156797651f`, GitHub `mergeable_state=clean`.
+- Сопоставление деревьев: `main` после merge Stage07 и Stage07 head имеют один SHA дерева `c70c8829626a3074c31e2bf1f7c88082a1c404c4`; поэтому нет неучтённого изменения файлов baseline. После смены базы Stage08 diff не включает повторный Stage07.
+- Stage08 последняя полная проверка исходного code SHA: [GitHub Actions #43637047100](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43637047100), **SUCCESS**; независимое review **PASS** по сохранённому отчёту Codex. Изолированные QA-гейты до публичного релиза (реальные Android/iOS, Safari, VoiceOver/TalkBack) сохраняются.
+- Итоговая повторная проверка CI на SHA документационного обновления должна быть подтверждена отдельно в GitHub Actions. **PR #17 не объединён, deployment и production не затронуты.**

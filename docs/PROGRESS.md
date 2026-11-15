@@ -1240,3 +1240,11 @@ PR #17 остаётся Draft к Stage07; merge/deploy/production не выпо�
 coverage89.6%. Отдельный reviewer после fixes: **INDEPENDENT_REVIEW_PASS**.
 Runtime после review не менялся. Последний SHA должен пройти remote CI,
 проверяемый в handoff; merge и deployment по-прежнему запрещены.
+
+## 2026-11-15 — Stage 07 merged; Stage 08 integration baseline updated
+
+- **Разрешение владельца:** одобрено объединение только Stage07 PR #16; merge PR #17 и deployment не разрешены.
+- Stage07 PR #16: **MERGED**, обычный merge commit `2be8fad09aed7257236813055eaf942275a1ef19`; проверенный Stage07 HEAD `8ab5839f4c633dd58f13bb84e6417b8ef11abc72`. Main до merge: `576ef639e1b5944e333ac2829d47e16f51aa82a0`.
+- В GitHub Stage08 PR #17 переориентирован с Stage07 на **main**; остаётся `OPEN / DRAFT / NOT_MERGED`, GitHub показывает `mergeable_state=clean`. Code HEAD до этой документационной записи `7469c4a55ec377156cc8cbfcd12006156797651f` прошёл [CI #43637047100](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43637047100): 631/631 Django и 47 Stage08.7 E2E, 213 Stage08.6, prior browser 90/18/39.
+- Git tree идентичность: дерево Stage07 head и Stage07 merge commit в main — `c70c8829626a3074c31e2bf1f7c88082a1c404c4`. Следовательно, для Stage08 не возникли новые runtime-кодовые изменения от слияния Stage07. PR17 diff против main содержит только Stage08, конфликтов нет.
+- Отдельный интеграционный гейт: GitHub Actions на новом HEAD после обновления документации, проверка PR17 base/main и сохранение независимого review PASS. Без production, БД, OAuth/SMTP/Gemini и без merge PR17.
