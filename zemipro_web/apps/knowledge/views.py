@@ -15,11 +15,21 @@ from .forms import (
     ArticleActionForm, ArticleDecisionForm, ArticleForm, ArticleImageForm,
     ArticleReportDecisionForm, ArticleReportForm,
 )
-from .models import ExpertArticle, ExpertArticleImage
+from .models import ExpertArticleImage
+from .public_content import public_articles
+from .public_seo import public_path
 
 
 def _feature():
     if not settings.ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED:
+        raise Http404
+
+
+def _review_feature():
+    if not (
+        settings.ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED
+        or settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED
+    ):
         raise Http404
 
 
@@ -256,15 +266,9 @@ def article_image_private(request, image_id):
 @require_http_methods(['GET', 'POST'])
 @never_cache
 def article_report(request, pk):
-    _feature()
     if not settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED:
         raise Http404
-    article = ExpertArticle.objects.filter(
-        pk=pk, status=ExpertArticle.Status.PUBLISHED, public_content_safe=True,
-        category__is_active=True, author__is_published=True,
-        author__city__slug='ashdod', author__city__is_active=True,
-        author__user__is_active=True, author__user__is_blocked=False,
-    ).first()
+    article = public_articles().filter(pk=pk).first()
     if article is None:
         raise Http404
     if request.method == 'GET':
@@ -282,7 +286,7 @@ def article_report(request, pk):
                 form.add_error(None, str(exc))
             else:
                 messages.success(request, _('Жалоба отправлена на проверку.'))
-                return redirect('knowledge:my_articles')
+                return redirect(public_path(article))
     return render(request, 'knowledge/report_form.html', {
         'article': article, 'form': form, 'seo_noindex': True,
     }, status=400 if request.method == 'POST' else 200)
@@ -292,7 +296,7 @@ def article_report(request, pk):
 @require_GET
 @never_cache
 def moderation_queue(request):
-    _feature()
+    _review_feature()
     return render(request, 'knowledge/moderation_queue.html', {
         'articles': services.moderation_queue(request.user),
         'reports': services.report_queue(request.user),
@@ -304,7 +308,7 @@ def moderation_queue(request):
 @require_http_methods(['GET', 'POST'])
 @never_cache
 def moderation_article(request, pk):
-    _feature()
+    _review_feature()
     try:
         article = services.moderation_article(request.user, pk)
     except PermissionDenied:
@@ -339,7 +343,7 @@ def moderation_article(request, pk):
 @require_POST
 @never_cache
 def report_decision(request, pk):
-    _feature()
+    _review_feature()
     form = ArticleReportDecisionForm(request.POST)
     if not form.is_valid():
         return HttpResponseBadRequest(_('Некорректное решение.'))

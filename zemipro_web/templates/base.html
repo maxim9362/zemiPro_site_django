@@ -10,6 +10,7 @@
     {% if seo_noindex %}<meta name="robots" content="noindex,follow">{% endif %}
     {% if seo_canonical %}<link rel="canonical" href="{{ seo_canonical }}">{% endif %}
     {% for alternate in seo_alternates %}<link rel="alternate" hreflang="{{ alternate.language }}" href="{{ alternate.url }}">{% endfor %}
+    {% block schema_ld_json %}{% endblock %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
     {% block page_styles %}{% endblock %}

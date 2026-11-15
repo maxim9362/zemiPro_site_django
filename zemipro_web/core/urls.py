@@ -33,6 +33,8 @@ if settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED:
 # in i18n_patterns: existing URLs, SEO/PSEO links and external clients stay valid.
 urlpatterns += i18n_patterns(
     path('', include('apps.marketplace.localized_urls')),
+    # New additive article-only URLs. No legacy SEO, redirects or sitemap changes.
+    path('advice/', include('apps.knowledge.public_urls')),
     prefix_default_language=True,
 )
 

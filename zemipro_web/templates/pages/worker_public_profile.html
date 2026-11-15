@@ -161,6 +161,21 @@
             {% endif %}
         </section>
 
+        {% if published_expert_articles %}
+        <section class="public-panel" aria-labelledby="profile-advice">
+            <h2 class="public-panel__title" id="profile-advice">{% if current_language == 'he' %}עצות בעל המקצוע{% elif current_language == 'en' %}Specialist articles{% else %}Статьи специалиста{% endif %}</h2>
+            <ul class="public-link-list">
+                {% for article in published_expert_articles %}
+                <li>
+                    <a href="{{ article.public_path }}" lang="{{ article.language }}" dir="auto">{{ article.public_title }}</a>
+                    <span class="form__hint">({{ article.get_language_display }})</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="form__hint">{% if current_language == 'he' %}מאמר אינו ביקורת עבודה מאומתת ואינו משפיע על דירוג בעל המקצוע.{% elif current_language == 'en' %}Articles are not verified service reviews and do not affect the specialist's rating.{% else %}Статьи не являются подтверждёнными отзывами и не влияют на рейтинг мастера.{% endif %}</p>
+        </section>
+        {% endif %}
+
         <section class="public-panel" aria-labelledby="profile-reviews">
             <h2 class="public-panel__title" id="profile-reviews">{% trans 'Отзывы' %}</h2>
             {% if reviews %}

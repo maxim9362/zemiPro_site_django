@@ -7,6 +7,12 @@
        {% if request.resolver_match.url_name == 'worker_directory' %}aria-current="page"{% endif %}>{% trans 'Специалисты' %}</a>
     <a href="{% if catalog_localized %}{% url 'catalog_i18n:cities_list' %}{% else %}{% url 'marketplace:cities_list' %}{% endif %}"
        {% if request.resolver_match.url_name == 'cities_list' %}aria-current="page"{% endif %}>{% trans 'Города' %}</a>
+    {% if knowledge_articles_enabled %}
+    <a href="{% url 'knowledge_public:article_list' %}"
+       {% if request.resolver_match.namespace == 'knowledge_public' %}aria-current="page"{% endif %}>
+       {% if current_language == 'he' %}עצות מבעלי מקצוע{% elif current_language == 'en' %}Specialist advice{% else %}Советы мастеров{% endif %}
+    </a>
+    {% endif %}
     <a class="site-nav__primary" href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
     {% if user.is_authenticated %}
         {% if user.active_role == 'worker' %}

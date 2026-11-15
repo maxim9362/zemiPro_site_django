@@ -1,6 +1,7 @@
 import logging
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -475,8 +476,23 @@ def worker_public_profile_view(request, pk):
     avg_rating = review_stats['avg'] or 0
     review_count = review_stats['count']
 
+    # Additive Stage14.3 sidebar: empty/zero queries when public rollout is off.
+    published_expert_articles = []
+    if settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED:
+        from apps.knowledge.public_content import public_articles
+        from apps.knowledge.public_seo import public_path
+
+        published_expert_articles = list(
+            public_articles().filter(author_id=profile.pk).order_by(
+                '-published_at', '-pk',
+            )[:3]
+        )
+        for article in published_expert_articles:
+            article.public_path = public_path(article)
+
     response = render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
+        'published_expert_articles': published_expert_articles,
         'public_photos': profile.portfolio_photos.filter(is_public=True),
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),

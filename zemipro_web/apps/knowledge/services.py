@@ -47,9 +47,18 @@ _HTML_TAG = re.compile(r'<\s*/?\s*[a-z][^>]*>', re.IGNORECASE)
 
 
 def _enabled():
-    # Not configurable via environment; owner GO is still a separate gate.
+    # Only for owner-authoring writes; never let public publication unlock editing.
     if not getattr(settings, 'ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED', False):
         raise PermissionDenied('Article editor is not enabled.')
+
+
+def _review_enabled():
+    # Publicly visible reports must remain manageable even if authoring is paused.
+    if not (
+        settings.ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED
+        or settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED
+    ):
+        raise PermissionDenied('Article moderation is disabled.')
 
 
 def _active_user(actor, *, lock=True):
@@ -339,7 +348,7 @@ def archive_article(*, actor, article_id, expected_version):
 
 
 def moderation_queue(actor):
-    _enabled()
+    _review_enabled()
     _moderator_read(actor)
     return ExpertArticle.objects.filter(
         status=ExpertArticle.Status.PENDING_REVIEW,
@@ -347,7 +356,7 @@ def moderation_queue(actor):
 
 
 def report_queue(actor):
-    _enabled()
+    _review_enabled()
     _moderator_read(actor)
     return ExpertArticleReport.objects.filter(
         status=ExpertArticleReport.Status.PENDING,
@@ -362,7 +371,7 @@ def _moderator_read(actor):
 
 
 def moderation_article(actor, article_id):
-    _enabled()
+    _review_enabled()
     _moderator_read(actor)
     article = ExpertArticle.objects.filter(pk=article_id).first()
     if article is None:
@@ -388,7 +397,7 @@ def _public_snapshots(article):
 @transaction.atomic
 def decide_article(*, actor, article_id, expected_version, approve,
                    content_reviewed=False, media_reviewed=False, note=''):
-    _enabled()
+    _review_enabled()
     moderator = _moderator(actor)
     article = ExpertArticle.objects.select_for_update().filter(pk=article_id).first()
     if article is None:
@@ -465,17 +474,12 @@ def decide_article(*, actor, article_id, expected_version, approve,
 
 @transaction.atomic
 def report_article(*, actor, article_id, reason, message):
-    _enabled()
-    if not getattr(settings, 'ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED', False):
+    if not settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED:
         raise PermissionDenied('Public articles are disabled.')
     user = _active_user(actor)
-    article = ExpertArticle.objects.select_related('author').filter(
-        pk=article_id, status=ExpertArticle.Status.PUBLISHED,
-        public_content_safe=True, category__is_active=True,
-        author__is_published=True, author__city__slug='ashdod',
-        author__city__is_active=True, author__user__is_active=True,
-        author__user__is_blocked=False,
-    ).first()
+    from .public_content import public_articles
+
+    article = public_articles().filter(pk=article_id).first()
     if article is None:
         raise PermissionDenied('Article is unavailable.')
     if not isinstance(message, str) or not 10 <= len(message.strip()) <= 2000:
@@ -500,7 +504,7 @@ def report_article(*, actor, article_id, reason, message):
 
 @transaction.atomic
 def decide_report(*, actor, report_id, remove, note=''):
-    _enabled()
+    _review_enabled()
     moderator = _moderator(actor)
     # Lock the parent article first, then the report, consistently with articles.
     article_id = ExpertArticleReport.objects.filter(
