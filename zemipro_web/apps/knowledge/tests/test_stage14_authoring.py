@@ -438,7 +438,12 @@ class Stage14AuthoringTests(TestCase):
         self.assertEqual(self.client.get(
             reverse('knowledge:moderation_queue'),
         ).status_code, 200)
-        self.assertEqual(self.client.get(edit).status_code, 404)
+        # Staff without a worker profile is blocked before object lookup.
+        # Existing and nonexistent article IDs both give 403: no existence oracle.
+        self.assertEqual(self.client.get(edit).status_code, 403)
+        self.assertEqual(self.client.get(
+            reverse('knowledge:article_edit', args=[article.pk + 12345]),
+        ).status_code, 403)
 
     def test_http_create_submit_and_moderate(self):
         self.client.force_login(self.writer)
