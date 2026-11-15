@@ -410,6 +410,22 @@ def decide_article(*, actor, article_id, expected_version, approve,
             raise ArticleConflict('Manual content and image review are required.')
         if article.rights_confirmed_at is None:
             raise ArticleConflict('Author rights confirmation is missing.')
+        # An author may lose eligibility between submission and moderation.
+        # Approval must fail closed, independently of later public-view filters.
+        if not WorkerProfile.objects.filter(
+            pk=article.author_id, is_published=True, city__slug='ashdod',
+            city__is_active=True, user__is_active=True, user__is_blocked=False,
+            user__email_verification_required=False,
+            skills__pk=article.category_id,
+            public_content_safe=True,
+        ).exists() or not Category.objects.filter(
+            pk=article.category_id, is_active=True,
+        ).exists():
+            raise ArticleConflict('Author or category no longer eligible.')
+        if article.subcategory_id and not Subcategory.objects.filter(
+            pk=article.subcategory_id, category_id=article.category_id, is_active=True,
+        ).exists():
+            raise ArticleConflict('Service is no longer available.')
         title, excerpt, body = _public_snapshots(article)
         captions = []
         for image in images:

@@ -215,6 +215,37 @@ class Stage14AuthoringTests(TestCase):
         self.assertEqual(revised.status, 'draft')
         self.assertEqual(revised.revisions.count(), 4)
 
+    def test_moderation_rechecks_author_and_category_current_eligibility(self):
+        article = self.submitted()
+        self.writer.is_blocked = True
+        self.writer.save(update_fields=['is_blocked'])
+        with self.assertRaises(services.ArticleConflict):
+            services.decide_article(
+                actor=self.staff, article_id=article.pk,
+                expected_version=2, approve=True, content_reviewed=True,
+            )
+        self.writer.is_blocked = False
+        self.writer.save(update_fields=['is_blocked'])
+        self.worker.is_published = False
+        self.worker.save(update_fields=['is_published'])
+        with self.assertRaises(services.ArticleConflict):
+            services.decide_article(
+                actor=self.staff, article_id=article.pk,
+                expected_version=2, approve=True, content_reviewed=True,
+            )
+        self.worker.is_published = True
+        self.worker.save(update_fields=['is_published'])
+        self.category.is_active = False
+        self.category.save(update_fields=['is_active'])
+        with self.assertRaises(services.ArticleConflict):
+            services.decide_article(
+                actor=self.staff, article_id=article.pk,
+                expected_version=2, approve=True, content_reviewed=True,
+            )
+        article.refresh_from_db()
+        self.assertEqual(article.status, 'pending_review')
+        self.assertEqual(article.decisions.count(), 0)
+
     def test_published_edit_unpublishes_and_stale_review_conflicts(self):
         article = self.approved()
         edited = services.edit_article(
