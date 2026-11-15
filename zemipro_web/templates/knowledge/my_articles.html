@@ -1,0 +1,25 @@
+{% extends 'pages/app_base.html' %}
+{% load i18n knowledge_i18n %}
+{% get_current_language as lang %}
+{% block title %}{% if lang == 'he' %}המאמרים שלי{% elif lang == 'en' %}My articles{% else %}Мои статьи{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<header class="page-header app-page-header"><div class="container">
+    <h1>{% if lang == 'he' %}המאמרים שלי{% elif lang == 'en' %}My articles{% else %}Мои статьи{% endif %}</h1>
+    <p>{% if lang == 'he' %}הטיוטות וההחלטות שלך פרטיות. שום מאמר לא יוצג לציבור ללא אישור.{% elif lang == 'en' %}Drafts and decisions are private. Articles are not publicly listed without approval and a separate launch decision.{% else %}Черновики и решения модерации закрыты. Публичный раздел не запускается без отдельного разрешения.{% endif %}</p>
+</div></header>
+<section class="app-page"><div class="container app-medium app-stack">
+    {% include 'components/flash_messages.html' %}
+    <p><a class="btn btn--primary" href="{% url 'knowledge:article_create' %}">{% if lang == 'he' %}כתיבת מאמר{% elif lang == 'en' %}Write an article{% else %}Написать статью{% endif %}</a></p>
+    <ul class="app-stack">
+        {% for article in articles %}
+        <li class="app-panel">
+            <h2 class="app-panel__heading"><a href="{% url 'knowledge:article_edit' pk=article.pk %}"><bdi dir="auto">{{ article.title }}</bdi></a></h2>
+            <p>{% if lang == 'he' %}מצב{% elif lang == 'en' %}Status{% else %}Статус{% endif %}: {{ article.status|article_status }} ·
+                <time datetime="{{ article.updated_at|date:'c' }}">{{ article.updated_at|date:'d.m.Y H:i' }}</time></p>
+        </li>
+        {% empty %}
+        <li class="app-panel">{% if lang == 'he' %}אין עדיין מאמרים.{% elif lang == 'en' %}No articles yet.{% else %}Статей пока нет.{% endif %}</li>
+        {% endfor %}
+    </ul>
+</div></section>
+{% endblock %}

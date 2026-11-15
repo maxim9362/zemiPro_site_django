@@ -21,6 +21,8 @@ urlpatterns = [
     path('notifications/', include('apps.notifications.urls')),
     path('moderation/', include('apps.moderation.urls')),
     path('analytics/', include('apps.analytics.urls')),
+    # Private Stage14.2 editor/moderation, disabled by default.
+    path('knowledge/', include('apps.knowledge.urls')),
 ]
 
 if settings.ZEMIPRO_GOOGLE_LOGIN_ENABLED:

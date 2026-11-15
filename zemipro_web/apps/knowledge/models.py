@@ -65,6 +65,7 @@ class ExpertArticle(models.Model):
         null=True, blank=True, editable=False,
     )
 
+    rights_confirmed_at = models.DateTimeField(null=True, blank=True)
     moderated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
         related_name='moderated_expert_articles',
@@ -182,3 +183,135 @@ class ExpertArticleRevision(models.Model):
 
     def __str__(self):
         return f'ExpertArticle #{self.article_id} revision {self.version}'
+
+
+class ExpertArticleImage(models.Model):
+    """Private, normalized JPEG. Media is never exposed through MEDIA_URL."""
+
+    article = models.ForeignKey(
+        ExpertArticle, on_delete=models.PROTECT, related_name='images',
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='expert_article_images',
+    )
+    jpeg_data = models.BinaryField()
+    byte_size = models.PositiveIntegerField()
+    caption = models.CharField(max_length=200, blank=True, default='')
+    public_caption = models.CharField(
+        max_length=200, blank=True, default='', editable=False,
+    )
+    approved_version = models.PositiveIntegerField(
+        null=True, blank=True, editable=False,
+    )
+    rights_confirmed_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_expert_article_image'
+        ordering = ['created_at', 'pk']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(byte_size__gt=0, byte_size__lte=5 * 1024 * 1024),
+                name='knowledge_image_max_size_ck',
+            ),
+        ]
+
+    def __str__(self):
+        return f'ExpertArticle #{self.article_id} image #{self.pk}'
+
+
+class ExpertArticleDecision(models.Model):
+    """Immutable moderation decision, including private rejection/removal reason."""
+
+    class Kind(models.TextChoices):
+        APPROVE = 'approve', 'Одобрить'
+        REJECT = 'reject', 'Отклонить'
+        REMOVE = 'remove', 'Снять с публикации'
+
+    article = models.ForeignKey(
+        ExpertArticle, on_delete=models.PROTECT, related_name='decisions',
+    )
+    moderator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='expert_article_decisions',
+    )
+    version = models.PositiveIntegerField()
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    reason = models.CharField(max_length=500, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_expert_article_decision'
+        ordering = ['created_at', 'pk']
+        default_permissions = ('view',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['article', 'version'], name='knowledge_decision_version_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(kind__in=['approve', 'reject', 'remove']),
+                name='knowledge_decision_kind_ck',
+            ),
+        ]
+
+    def __str__(self):
+        return f'ExpertArticle #{self.article_id} decision #{self.pk}'
+
+
+class ExpertArticleReport(models.Model):
+    """Private reports are NOT verified reviews and do not create orders."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Ожидает проверки'
+        DISMISSED = 'dismissed', 'Отклонена'
+        REMOVED = 'removed', 'Статья снята с публикации'
+
+    class Reason(models.TextChoices):
+        SPAM = 'spam', 'Спам'
+        PRIVATE = 'private', 'Персональные данные'
+        DANGEROUS = 'dangerous', 'Небезопасный совет'
+        COPYRIGHT = 'copyright', 'Нарушение авторских прав'
+        OTHER = 'other', 'Другое'
+
+    article = models.ForeignKey(
+        ExpertArticle, on_delete=models.PROTECT, related_name='reports',
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='expert_article_reports',
+    )
+    reason = models.CharField(max_length=12, choices=Reason.choices)
+    message = models.TextField()
+    status = models.CharField(
+        max_length=10, choices=Status.choices,
+        default=Status.PENDING, db_index=True,
+    )
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True, related_name='handled_expert_article_reports',
+    )
+    handled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_expert_article_report'
+        ordering = ['created_at', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['article', 'reporter'], name='knowledge_report_once_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['pending', 'dismissed', 'removed']),
+                name='knowledge_report_status_ck',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(reason__in=[
+                    'spam', 'private', 'dangerous', 'copyright', 'other',
+                ]),
+                name='knowledge_report_reason_ck',
+            ),
+        ]
+
+    def __str__(self):
+        return f'ExpertArticle #{self.article_id} report #{self.pk}'

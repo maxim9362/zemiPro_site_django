@@ -95,6 +95,8 @@ ZEMIPRO_PILOT_CITY_SLUG = 'ashdod'
 # Stage 14.1: owner-gated features. These are deliberately NOT env-overridable:
 # defining a production environment variable must not activate unpublished code.
 # Stage 14.7 will supply permissioned, auditable rollout controls.
+# Private article editor/moderator UI is separately locked until owner-controlled pilot.
+ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED = False
 ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED = False
 ZEMIPRO_KNOWLEDGE_QA_ENABLED = False
 ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED = False

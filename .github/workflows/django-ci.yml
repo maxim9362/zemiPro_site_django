@@ -100,6 +100,10 @@ jobs:
           python manage.py migrate --check
           python manage.py test apps.knowledge.tests.test_stage14_models
 
+      - name: Stage 14.2 article authoring, moderation and media security
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_authoring
+
       - name: Stage 02.1 catalog seed round-trip on isolated CI PostgreSQL
         run: |
           python manage.py seed_service_catalog --plan

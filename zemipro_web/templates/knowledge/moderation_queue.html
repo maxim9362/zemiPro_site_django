@@ -1,0 +1,40 @@
+{% extends 'pages/communication_base.html' %}
+{% load i18n knowledge_i18n %}
+{% get_current_language as lang %}
+{% block title %}{% if lang == 'he' %}בקרת מאמרים{% elif lang == 'en' %}Article moderation{% else %}Модерация статей{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<header class="page-header app-page-header comm-page-header"><div class="container comm-container">
+    <h1>{% if lang == 'he' %}בדיקת מאמרים ודיווחים{% elif lang == 'en' %}Articles and reports{% else %}Очередь статей и жалоб{% endif %}</h1>
+    <p>{% if lang == 'he' %}גישה למורשים בלבד. אין פרסום ציבורי ללא החלטת בעלים.{% elif lang == 'en' %}Authorized staff only. No public launch without a separate owner decision.{% else %}Только для уполномоченных модераторов. Публичное включение отдельно.{% endif %}</p>
+</div></header>
+<section class="comm-page"><div class="container comm-container comm-stack">
+    {% include 'components/flash_messages.html' %}
+    <section class="comm-panel">
+        <h2>{% if lang == 'he' %}ממתינים לאישור{% elif lang == 'en' %}Awaiting review{% else %}На проверке{% endif %}</h2>
+        <ol class="comm-case-list">{% for article in articles %}
+            <li class="comm-case"><a href="{% url 'knowledge:moderation_article' pk=article.pk %}"><bdi dir="auto">{{ article.title }}</bdi></a> · {{ article.get_language_display }} · v{{ article.content_version }}
+                <p>{{ article.category.localized_name }} · <time datetime="{{ article.submitted_at|date:'c' }}">{{ article.submitted_at|date:'d.m.Y H:i' }}</time></p>
+            </li>
+            {% empty %}<li class="comm-empty">{% if lang == 'he' %}אין מאמרים לבדיקה.{% elif lang == 'en' %}No pending articles.{% else %}Нет статей на проверке.{% endif %}</li>{% endfor %}
+        </ol>
+    </section>
+    <section class="comm-panel">
+        <h2>{% if lang == 'he' %}דיווחים{% elif lang == 'en' %}Reports{% else %}Жалобы на статьи{% endif %}</h2>
+        <ol class="comm-case-list">{% for report in reports %}
+            <li class="comm-case">
+                <strong><bdi dir="ltr">#{{ report.pk }}</bdi></strong>
+                <p dir="auto">{{ report.message }}</p>
+                <p><a href="{% url 'knowledge:moderation_article' pk=report.article_id %}">{% if lang == 'he' %}מאמר{% elif lang == 'en' %}Article{% else %}Статья{% endif %} #{{ report.article_id }}</a> · {{ report.reason|knowledge_report_reason }}</p>
+                <form method="post" action="{% url 'knowledge:report_decision' pk=report.pk %}">
+                    {% csrf_token %}
+                    <label for="report-note-{{ report.pk }}">{% if lang == 'he' %}נימוק{% elif lang == 'en' %}Decision reason{% else %}Основание решения{% endif %}</label>
+                    <textarea id="report-note-{{ report.pk }}" name="note" maxlength="500" rows="2"></textarea>
+                    <button class="btn btn--secondary" type="submit" name="action" value="dismiss">{% if lang == 'he' %}דחיית דיווח{% elif lang == 'en' %}Dismiss report{% else %}Отклонить жалобу{% endif %}</button>
+                    <button class="btn btn--primary" type="submit" name="action" value="remove">{% if lang == 'he' %}הסרת מאמר{% elif lang == 'en' %}Remove article{% else %}Снять статью{% endif %}</button>
+                </form>
+            </li>
+            {% empty %}<li class="comm-empty">{% if lang == 'he' %}אין דיווחים.{% elif lang == 'en' %}No reports.{% else %}Жалоб пока нет.{% endif %}</li>{% endfor %}
+        </ol>
+    </section>
+</div></section>
+{% endblock %}
