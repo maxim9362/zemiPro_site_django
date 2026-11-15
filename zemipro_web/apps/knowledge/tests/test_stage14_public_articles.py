@@ -381,7 +381,11 @@ class Stage14PublicArticleTests(TestCase):
             'catalog_i18n:category_detail', kwargs={'slug': self.category.slug},
         ))
         profile_url = reverse('marketplace:worker_public_profile', args=[self.worker.pk])
-        self.assertContains(response, profile_url)
+        outbound = reverse('knowledge_public:article_outbound', kwargs={
+            'slug': article.slug, 'destination': 'profile',
+        })
+        self.assertContains(response, outbound)
+        self.assertEqual(self.client.get(outbound).url, profile_url)
         profile = self.client.get(profile_url)
         self.assertContains(profile, 'Статьи специалиста')
         self.assertContains(profile, article.public_title)
