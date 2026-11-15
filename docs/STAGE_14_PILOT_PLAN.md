@@ -1,6 +1,6 @@
 # ZemiPro — Stage 14.4: управляемый пилот статей и доказательства для Q&A
 
-**Статус:** TECH_PREPARED / REAL_PILOT_PENDING / QA_OWNER_GO_PENDING; CI по финальному SHA ещё не проверен.
+**Статус:** **14.4 CODE_CI_VERIFIED / REAL_PILOT_PENDING / QA_OWNER_GO_PENDING**. Финальный проверенный код: `8d02ed58eed68cdce09b83c9648e36f9d398973b`, [GitHub Actions #43702478915](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43702478915) — `completed/success`, **21/21** адресных тестов 14.4, **707/707** Django, **40/40** CI, PostgreSQL 17 migrations, Ruff и браузерные проверки PASS. Технический PASS не означает живой пилот.
 Дата подготовки: 2026-11-15. Техническая разработка разрешена перед Stage09 и независимо от Stage10; **реальный пилот не разрешается автоматически**. Публичные флаги и мониторинг остаются False до отдельного решения владельца.
 
 ## 1. Цели, пределы и участники
