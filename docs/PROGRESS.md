@@ -200,6 +200,15 @@
 - **Осталось:** HTTP/GSC и утверждение фактического решения каждой строки. До этого ни одна запись не активна.
 - **Следующий:** 09.6 — технический cutover/rollback/monitoring plan без production действий.
 
+## 2026-11-15 — 09.6: cutover preparation
+
+- **Статус:** `09.6_PREPARED / PRODUCTION_CUTOVER_PENDING_OWNER_APPROVAL`, не `DONE`.
+- **Сделано:** параметризованный staging→backup/restore→migration→proxy switch→smoke/monitoring→rollback runbook; оба Stage09 flags явно false в staging Compose/example.
+- **Stage14:** remote PR branch проверена без merge. URL/migrations не пересекаются; ожидаемые shared-file rebase conflicts и sitemap/public-GO integration описаны. Полный combined test остаётся PENDING будущего rebase PR #18.
+- **Проверки:** Compose config validation и isolated staging/static checks выполняются в финальном цикле Stage09. Production-команды из runbook НЕ ВЫПОЛНЯЛИСЬ.
+- **Не затронуто:** domain, old site, DNS, Cloudflare, VPS, TLS, production proxy/DB/media и Stage14 flags.
+- **Следующий:** 09.7 — редакционный workflow, object permissions и publication controls.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.
