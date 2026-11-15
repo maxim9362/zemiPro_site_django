@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import override
 
-from apps.knowledge import services
+from apps.knowledge import services, pilot_services
 from apps.knowledge.models import (
     ExpertArticle, ExpertArticleDecision, ExpertArticleImage,
     ExpertArticleReport,
@@ -73,6 +73,12 @@ class Stage14PublicArticleTests(TestCase):
             expected_version=article.content_version, approve=True,
             content_reviewed=True, media_reviewed=image,
         )
+        # Synthetic consent and curator selection, not a real pilot result.
+        pilot_services.consent_to_pilot(self.writer, confirmed=True)
+        pilot_services.select_for_pilot(
+            self.moderator, article_id=result.pk,
+            expected_version=result.content_version,
+        )
         return result
 
     @staticmethod
@@ -105,10 +111,16 @@ class Stage14PublicArticleTests(TestCase):
         detail = self.client.get(self.article_path(article))
         self.assertEqual(detail.status_code, 200)
         self.assertContains(detail, article.public_body)
-        self.assertContains(detail, reverse(
-            'marketplace:worker_public_profile', args=[self.worker.pk],
-        ))
-        self.assertContains(detail, reverse('marketplace:order_wizard_start'))
+        for destination, target in (
+            ('profile', reverse('marketplace:worker_public_profile',
+                                args=[self.worker.pk])),
+            ('order', reverse('marketplace:order_wizard_start')),
+        ):
+            outbound = reverse('knowledge_public:article_outbound', kwargs={
+                'slug': article.slug, 'destination': destination,
+            })
+            self.assertContains(detail, outbound)
+            self.assertEqual(self.client.get(outbound).url, target)
         self.assertContains(detail, 'Публикация статьи не повышает рейтинг')
         self.assertNotContains(detail, 'license verified')
         self.assertEqual(Order.objects.count(), 0)
@@ -435,5 +447,10 @@ class Stage14PublicArticleTests(TestCase):
         self.assertEqual(self.client.post(detail_url).status_code, 405)
         self.assertEqual(Order.objects.count(), 0)
         response = self.client.get(detail_url)
-        self.assertContains(response, reverse('marketplace:order_wizard_start'))
+        outbound = reverse('knowledge_public:article_outbound', kwargs={
+            'slug': article.slug, 'destination': 'order',
+        })
+        self.assertContains(response, outbound)
+        self.assertEqual(self.client.get(outbound).url,
+                         reverse('marketplace:order_wizard_start'))
         self.assertEqual(Order.objects.count(), 0)

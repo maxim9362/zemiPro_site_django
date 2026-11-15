@@ -50,13 +50,13 @@
           <h2 class="public-panel__title">{% if current_language == 'he' %}על המחבר{% elif current_language == 'en' %}About the author{% else %}Об авторе{% endif %}</h2>
           <p dir="auto"><strong>{{ article.author.public_display_name_snapshot }}</strong></p>
           <p>{% if current_language == 'he' %}אשדוד{% elif current_language == 'en' %}Ashdod{% else %}Ашдод{% endif %} · {{ article.category.localized_name }}</p>
-          <a class="btn btn--secondary" href="{% url 'marketplace:worker_public_profile' pk=article.author_id %}">{% if current_language == 'he' %}פרופיל בעל המקצוע{% elif current_language == 'en' %}View specialist profile{% else %}Профиль специалиста{% endif %}</a>
+          <a class="btn btn--secondary" href="{% url 'knowledge_public:article_outbound' slug=article.slug destination='profile' %}">{% if current_language == 'he' %}פרופיל בעל המקצוע{% elif current_language == 'en' %}View specialist profile{% else %}Профиль специалиста{% endif %}</a>
           <p class="knowledge-article__notice">{% if current_language == 'he' %}פרסום מאמר אינו משפיע על דירוג ביקורות מאומתות.{% elif current_language == 'en' %}Writing an article does not change verified job-review ratings.{% else %}Публикация статьи не повышает рейтинг по реальным заказам.{% endif %}</p>
         </div>
         <div class="public-panel">
           <h2 class="public-panel__title">{% if current_language == 'he' %}נדרשת עזרה בפועל?{% elif current_language == 'en' %}Need actual work done?{% else %}Нужна услуга?{% endif %}</h2>
           <p>{% if current_language == 'he' %}צרו בקשת עבודה נפרדת; מאמר אינו הזמנה.{% elif current_language == 'en' %}Create a separate service request. This article is not an order.{% else %}Создайте отдельную заявку — статья не является заказом.{% endif %}</p>
-          <a class="btn btn--primary" href="{% url 'marketplace:order_wizard_start' %}">{% if current_language == 'he' %}יצירת בקשה{% elif current_language == 'en' %}Create a request{% else %}Создать заявку{% endif %}</a>
+          <a class="btn btn--primary" href="{% url 'knowledge_public:article_outbound' slug=article.slug destination='order' %}">{% if current_language == 'he' %}יצירת בקשה{% elif current_language == 'en' %}Create a request{% else %}Создать заявку{% endif %}</a>
         </div>
         <div class="public-panel">
           <a href="{% url 'catalog_i18n:category_detail' slug=article.category.slug %}">{% if current_language == 'he' %}בעלי מקצוע נוספים בתחום{% elif current_language == 'en' %}More specialists in this category{% else %}Другие мастера в категории{% endif %}</a>

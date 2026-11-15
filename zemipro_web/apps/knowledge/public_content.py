@@ -38,6 +38,18 @@ def public_articles():
             category__is_active=True,
             author_id__in=workers,
             author__skills__pk=F('category_id'),
+            # Stage14.4: opt-in plus individually moderated pilot whitelist.
+            # A mistaken global flag change alone must never publish all articles.
+            author__knowledge_pilot_enrollment__consent_version=1,
+            author__knowledge_pilot_enrollment__consented_at__isnull=False,
+            author__knowledge_pilot_enrollment__revoked_at__isnull=True,
+            author__knowledge_pilot_enrollment__accepted_by_id=F('author__user_id'),
+            pilot_selection__selected_at__isnull=False,
+            pilot_selection__revoked_at__isnull=True,
+            pilot_selection__approved_version=F('content_version'),
+            pilot_selection__selected_by__is_staff=True,
+            pilot_selection__selected_by__is_active=True,
+            pilot_selection__selected_by__is_blocked=False,
         ).filter(
             Q(category__section__isnull=True) | Q(category__section__is_active=True),
         ).filter(

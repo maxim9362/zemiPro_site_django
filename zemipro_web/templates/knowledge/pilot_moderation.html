@@ -1,0 +1,65 @@
+{% extends 'pages/communication_base.html' %}
+{% load i18n %}
+{% get_current_language as lang %}
+{% block title %}{% if lang == 'he' %}בקרת פיילוט{% elif lang == 'en' %}Article pilot review{% else %}Контроль пилота статей{% endif %} — ZemiPro{% endblock %}
+{% block content %}
+<header class="page-header app-page-header comm-page-header"><div class="container comm-container">
+    <h1>{% if lang == 'he' %}בקרת פיילוט המאמרים{% elif lang == 'en' %}Article pilot readiness{% else %}Пилот статей — контроль допуска{% endif %}</h1>
+    <p>{% if lang == 'he' %}הנתונים הם לצורכי תפעול. ההחלטה על פתיחה ועל Q&A היא של בעל המיזם בלבד.{% elif lang == 'en' %}Operational numbers, not a launch approval. Only the owner can decide pilot release and Q&A GO/NO-GO.{% else %}Технические показатели не разрешают запуск. Решение о пилоте и GO/NO-GO для Q&A принимает только владелец.{% endif %}</p>
+</div></header>
+<section class="comm-page"><div class="container comm-container comm-stack">
+    {% include 'components/flash_messages.html' %}
+    <p><a href="{% url 'knowledge:moderation_queue' %}">{% if lang == 'he' %}חזרה לתור הבקרה{% elif lang == 'en' %}Back to moderation{% else %}К общей модерации{% endif %}</a></p>
+    <section class="comm-panel">
+        <h2>{% if lang == 'he' %}התאמה והסכמה{% elif lang == 'en' %}Eligibility and consent{% else %}Готовность и согласия{% endif %}</h2>
+        <p>{% if lang == 'he' %}מחברים שהסכימו{% elif lang == 'en' %}Opted-in specialists{% else %}Мастеров с согласием{% endif %}: <strong>{{ pilot.consenting_authors }}</strong></p>
+        <p>{% if lang == 'he' %}מאמרים נבחרים{% elif lang == 'en' %}Selected articles{% else %}Статей с допуском{% endif %}: <strong>{{ pilot.selected_articles }}</strong></p>
+        <p>{% if lang == 'he' %}קטגוריות{% elif lang == 'en' %}Categories{% else %}Категорий{% endif %}: <strong>{{ pilot.selected_categories }}</strong></p>
+        <p>{% if lang == 'he' %}פרסום פעיל{% elif lang == 'en' %}Public flag enabled{% else %}Публичный флаг включён{% endif %}: {% if pilot.published_views_available %}{% if lang == 'he' %}כן{% elif lang == 'en' %}Yes{% else %}Да{% endif %}{% else %}{% if lang == 'he' %}לא{% elif lang == 'en' %}No{% else %}Нет{% endif %}{% endif %}</p>
+        <p>{% if lang == 'he' %}Q&A{% elif lang == 'en' %}Q&A GO/NO-GO{% else %}Решение GO/NO-GO для Q&A{% endif %}: <strong>{{ pilot.owner_qa_decision }}</strong></p>
+    </section>
+    <section class="comm-panel">
+        <h2>{% if lang == 'he' %}תצפיות מצטברות{% elif lang == 'en' %}Aggregate observations{% else %}Наблюдаемые показатели{% endif %}</h2>
+        <p>{% if lang == 'he' %}הספירה כבויה עד לאישור הפעלה. אפס אינו מוכיח היעדר ביקוש.{% elif lang == 'en' %}Collection is disabled until separately approved. Zero is not evidence of no demand.{% else %}Сбор данных выключен до отдельного разрешения. Ноль не доказывает отсутствие спроса.{% endif %}</p>
+        <table>
+            <tbody>
+                <tr><th scope="row">{% if lang == 'he' %}טעינות מאמרים{% elif lang == 'en' %}Raw article loads{% else %}Открытия статей (не уникальные){% endif %}</th><td>{{ pilot.raw_article_views }}</td></tr>
+                <tr><th scope="row">{% if lang == 'he' %}מעברים לפרופיל{% elif lang == 'en' %}Profile link redirects{% else %}Переходы к профилям{% endif %}</th><td>{{ pilot.raw_profile_clicks }}</td></tr>
+                <tr><th scope="row">{% if lang == 'he' %}מעברים לפתיחת בקשה{% elif lang == 'en' %}Order CTA redirects (not orders){% else %}Переходы к созданию заявки (не заявки){% endif %}</th><td>{{ pilot.raw_order_clicks }}</td></tr>
+                <tr><th scope="row">{% if lang == 'he' %}בקשות שפורסמו בפועל{% elif lang == 'en' %}Published attributed requests{% else %}Реально опубликованные заявки по переходу{% endif %}</th><td>{{ pilot.real_attributed_published_orders }}</td></tr>
+                <tr><th scope="row">{% if lang == 'he' %}החלטות בקרת תוכן{% elif lang == 'en' %}Moderation decisions{% else %}Решения модерации{% endif %}</th><td>{{ pilot.moderation_decisions }}</td></tr>
+                <tr><th scope="row">{% if lang == 'he' %}דיווחים שממתינים{% elif lang == 'en' %}Pending reports{% else %}Необработанные жалобы{% endif %}</th><td>{{ pilot.pending_reports }}</td></tr>
+            </tbody>
+        </table>
+        <p>{% if lang == 'he' %}אין כאן ספירת משתמשים ייחודיים או הוכחת המרה סיבתית.{% elif lang == 'en' %}These are not unique visitor counts or causal conversion estimates.{% else %}Это не уникальные посетители и не доказательство причинной конверсии.{% endif %}</p>
+    </section>
+    <section class="comm-panel">
+        <h2>{% if lang == 'he' %}בחירת מאמרים{% elif lang == 'en' %}Article selection{% else %}Отбор статей в пилот{% endif %}</h2>
+        {{ form.non_field_errors }}
+        <ol class="comm-case-list">
+        {% for article in articles %}
+            <li class="comm-case">
+                <h3 dir="auto">{{ article.public_title }}</h3>
+                <p>{{ article.category.localized_name }} · v{{ article.content_version }}</p>
+                {% with selection=article.pilot_selection %}
+                {% if selection and not selection.revoked_at and selection.approved_version == article.content_version %}
+                    <p>{% if lang == 'he' %}נכלל בפיילוט{% elif lang == 'en' %}Selected for pilot{% else %}Допущена в пилот{% endif %}</p>
+                {% endif %}
+                {% endwith %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="article_id" value="{{ article.pk }}">
+                    <input type="hidden" name="expected_version" value="{{ article.content_version }}">
+                    {% if knowledge_authoring_enabled %}
+                    <button class="btn btn--primary" type="submit" name="action" value="select">{% if lang == 'he' %}אישור השתתפות{% elif lang == 'en' %}Select for pilot{% else %}Допустить в пилот{% endif %}</button>
+                    {% endif %}
+                    <button class="btn btn--secondary" type="submit" name="action" value="deselect">{% if lang == 'he' %}הסרה מהפיילוט{% elif lang == 'en' %}Remove from pilot{% else %}Отозвать допуск{% endif %}</button>
+                </form>
+            </li>
+            {% empty %}
+            <li>{% if lang == 'he' %}אין מאמרים מתאימים עם הסכמה.{% elif lang == 'en' %}No consented eligible articles.{% else %}Нет допущенных авторов с готовыми статьями.{% endif %}</li>
+            {% endfor %}
+        </ol>
+    </section>
+</div></section>
+{% endblock %}

@@ -9,6 +9,7 @@
 </div></header>
 <section class="app-page"><div class="container app-medium app-stack">
     {% include 'components/flash_messages.html' %}
+    <p><a href="{% url 'knowledge:pilot_consent' %}">{% if lang == 'he' %}השתתפות בפיילוט{% elif lang == 'en' %}Article pilot participation{% else %}Участие в пилоте статей{% endif %}</a></p>
     <p><a class="btn btn--primary" href="{% url 'knowledge:article_create' %}">{% if lang == 'he' %}כתיבת מאמר{% elif lang == 'en' %}Write an article{% else %}Написать статью{% endif %}</a></p>
     <ul class="app-stack">
         {% for article in articles %}

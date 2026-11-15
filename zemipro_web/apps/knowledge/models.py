@@ -315,3 +315,143 @@ class ExpertArticleReport(models.Model):
 
     def __str__(self):
         return f'ExpertArticle #{self.article_id} report #{self.pk}'
+
+
+class ArticlePilotEnrollment(models.Model):
+    """Explicit opt-in from a real Ashdod specialist; a moderator cannot opt in for them."""
+
+    worker = models.OneToOneField(
+        'accounts.WorkerProfile', on_delete=models.PROTECT,
+        related_name='knowledge_pilot_enrollment',
+    )
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='knowledge_pilot_acceptances',
+    )
+    consent_version = models.PositiveSmallIntegerField(default=1)
+    consented_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'knowledge_pilot_enrollment'
+        default_permissions = ('view',)
+
+    def __str__(self):
+        return f'Article pilot enrollment #{self.pk}'
+
+
+class ArticlePilotSelection(models.Model):
+    """An editor-reviewed, version-specific, limited public pilot whitelist."""
+
+    article = models.OneToOneField(
+        ExpertArticle, on_delete=models.PROTECT, related_name='pilot_selection',
+    )
+    approved_version = models.PositiveIntegerField()
+    selected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='knowledge_pilot_selections',
+    )
+    selected_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'knowledge_pilot_selection'
+        default_permissions = ('view',)
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(approved_version__gte=1),
+                name='knowledge_pilot_version_positive_ck',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Article pilot selection #{self.pk}'
+
+
+class ArticlePilotAudit(models.Model):
+    """Immutable pilot consent/selection audit; no raw text or visitor identity."""
+
+    class Action(models.TextChoices):
+        CONSENTED = 'consented', 'Согласие получено'
+        WITHDRAWN = 'withdrawn', 'Согласие отозвано'
+        SELECTED = 'selected', 'Статья допущена'
+        DESELECTED = 'deselected', 'Допуск отозван'
+
+    worker = models.ForeignKey(
+        'accounts.WorkerProfile', on_delete=models.PROTECT,
+        related_name='knowledge_pilot_audit',
+    )
+    article = models.ForeignKey(
+        ExpertArticle, null=True, blank=True,
+        on_delete=models.PROTECT, related_name='pilot_audit',
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='knowledge_pilot_audit',
+    )
+    action = models.CharField(max_length=12, choices=Action.choices)
+    content_version = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_pilot_audit'
+        ordering = ['created_at', 'pk']
+        default_permissions = ('view',)
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(action__in=[
+                    'consented', 'withdrawn', 'selected', 'deselected',
+                ]),
+                name='knowledge_pilot_audit_action_ck',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Article pilot audit #{self.pk}'
+
+
+class ArticlePilotDailyMetric(models.Model):
+    """Aggregate event totals. No IP, cookie, session, UA, path or visitor ID."""
+
+    article = models.ForeignKey(
+        ExpertArticle, on_delete=models.PROTECT, related_name='pilot_metrics',
+    )
+    day = models.DateField()
+    article_views = models.PositiveIntegerField(default=0)
+    profile_clicks = models.PositiveIntegerField(default=0)
+    order_clicks = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'knowledge_pilot_daily_metric'
+        ordering = ['-day', 'article_id']
+        default_permissions = ('view',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['article', 'day'], name='knowledge_pilot_article_day_uq',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Article pilot aggregate #{self.article_id}'
+
+
+class ArticlePilotOrderAttribution(models.Model):
+    """One real, published order in a source-linked session (NOT a click)."""
+
+    # HMAC of the verified published order ID; never persist the client/order FK.
+    # This provides deduplication without keeping a relation to customer PII.
+    order_digest = models.CharField(max_length=64, unique=True)
+    article = models.ForeignKey(
+        ExpertArticle, on_delete=models.PROTECT,
+        related_name='pilot_published_orders',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_pilot_order_attribution'
+        default_permissions = ('view',)
+
+    def __str__(self):
+        return f'Article pilot attributed order #{self.pk}'

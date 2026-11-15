@@ -7,4 +7,7 @@ def public_knowledge_navigation(request):
         'knowledge_articles_enabled': bool(
             settings.ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED,
         ),
+        'knowledge_authoring_enabled': bool(
+            settings.ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED,
+        ),
     }

@@ -9,6 +9,9 @@
 </div></header>
 <section class="comm-page"><div class="container comm-container comm-stack">
     {% include 'components/flash_messages.html' %}
+    {% if knowledge_authoring_enabled %}
+    <p><a href="{% url 'knowledge:pilot_moderation' %}">{% if lang == 'he' %}בקרת פיילוט{% elif lang == 'en' %}Pilot review{% else %}Контроль пилота статей{% endif %}</a></p>
+    {% endif %}
     <section class="comm-panel">
         <h2>{% if lang == 'he' %}ממתינים לאישור{% elif lang == 'en' %}Awaiting review{% else %}На проверке{% endif %}</h2>
         <ol class="comm-case-list">{% for article in articles %}

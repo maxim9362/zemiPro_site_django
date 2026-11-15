@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404, HttpResponse
+from django.shortcuts import redirect
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import get_language
 from django.views.decorators.cache import never_cache
@@ -93,11 +94,40 @@ def article_detail(request, slug):
     )
     seo = article_seo(request, article)
     # No raw author name, source text or unrestricted uploads in context.
-    return render(request, 'knowledge/public_detail.html', {
+    response = render(request, 'knowledge/public_detail.html', {
         'article': article,
         'images': public_article_images(article),
         **seo,
     })
+    from .pilot_metrics import safe_record_metric
+    safe_record_metric(article, 'article_view')
+    return response
+
+
+@require_GET
+@never_cache
+def article_outbound(request, slug, destination):
+    """Same-origin redirect, strictly whitelisted targets; no external URL input."""
+    _allow_public()
+    language = (get_language() or 'ru').split('-')[0]
+    if language not in ('ru', 'en', 'he') or destination not in ('profile', 'order'):
+        raise Http404
+    article = get_object_or_404(
+        public_articles(), slug=slug, language=language,
+    )
+    from django.urls import reverse
+    from .pilot_metrics import safe_record_metric, start_order_ref
+
+    if destination == 'profile':
+        safe_record_metric(article, 'profile_click')
+        target = reverse('marketplace:worker_public_profile', args=[article.author_id])
+    else:
+        safe_record_metric(article, 'order_click')
+        start_order_ref(request, article)
+        target = reverse('marketplace:order_wizard_start')
+    response = redirect(target)
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @require_GET

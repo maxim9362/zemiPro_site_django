@@ -730,6 +730,10 @@ def order_wizard_start_view(request):
                 form.add_error(None, str(error))
             else:
                 request.session.pop('order_wizard_token', None)
+                # Attach pilot provenance only to this authenticated draft.
+                # Any failure is observational; it must never block an order.
+                from apps.knowledge.pilot_metrics import safe_bind_started_order
+                safe_bind_started_order(request, order)
                 return redirect('marketplace:order_wizard_edit', pk=order.pk)
     else:
         token = str(uuid.uuid4())
@@ -806,6 +810,9 @@ def order_wizard_edit_view(request, pk):
                         confirmation_form=form,
                     )
                     _flush_order_events(published)
+                    # Count verified published requests, not intent clicks.
+                    from apps.knowledge.pilot_metrics import safe_record_published_order
+                    safe_record_published_order(request, published)
                     invite_id = (published.wizard_data or {}).get('invite_worker_id')
                     if invite_id and worker_matches_order(invite_id, published):
                         return redirect(

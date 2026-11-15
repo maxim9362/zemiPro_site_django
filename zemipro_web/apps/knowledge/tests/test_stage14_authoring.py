@@ -9,7 +9,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
-from apps.knowledge import services
+from apps.knowledge import services, pilot_services
 from apps.knowledge.models import (
     ExpertArticle, ExpertArticleDecision, ExpertArticleImage,
     ExpertArticleReport, ExpertArticleRevision,
@@ -71,11 +71,18 @@ class Stage14AuthoringTests(TestCase):
 
     def approved(self):
         article = self.submitted()
-        return services.decide_article(
+        article = services.decide_article(
             actor=self.staff, article_id=article.pk,
             expected_version=article.content_version,
             approve=True, content_reviewed=True,
         )
+        # Stage14.4 now requires separately verified pilot consent/selection.
+        pilot_services.consent_to_pilot(self.writer, confirmed=True)
+        pilot_services.select_for_pilot(
+            self.staff, article_id=article.pk,
+            expected_version=article.content_version,
+        )
+        return article
 
     def test_new_draft_has_private_content_and_append_only_revision(self):
         article = self.draft()

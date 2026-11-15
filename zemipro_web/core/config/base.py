@@ -99,6 +99,8 @@ ZEMIPRO_PILOT_CITY_SLUG = 'ashdod'
 # Private article editor/moderator UI is separately locked until owner-controlled pilot.
 ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED = False
 ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED = False
+# Observation is distinct from releasing articles and cannot be enabled by .env.
+ZEMIPRO_KNOWLEDGE_PILOT_METRICS_ENABLED = False
 ZEMIPRO_KNOWLEDGE_QA_ENABLED = False
 ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED = False
 ZEMIPRO_RECOMMENDATION_REQUESTS_ENABLED = False
