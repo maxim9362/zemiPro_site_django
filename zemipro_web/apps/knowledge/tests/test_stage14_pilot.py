@@ -1,6 +1,5 @@
 """14.4 — synthetic pilot only. These tests never authorize real publication."""
 import time
-from unittest.mock import patch
 
 from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied
@@ -12,7 +11,7 @@ from django.utils.translation import override
 from apps.knowledge import pilot_metrics, pilot_services, services
 from apps.knowledge.models import (
     ArticlePilotAudit, ArticlePilotDailyMetric, ArticlePilotEnrollment,
-    ArticlePilotOrderAttribution, ArticlePilotSelection, ExpertArticle,
+    ArticlePilotOrderAttribution, ArticlePilotSelection,
 )
 from apps.marketplace.models import Order
 from apps.marketplace.tests.factories import (
