@@ -1,0 +1,8 @@
+{% load i18n %}
+<nav class="breadcrumbs" aria-label="{% trans 'Хлебные крошки' %}">
+    <ol>
+        {% for crumb in breadcrumbs %}
+        <li>{% if crumb.url %}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{% else %}<span aria-current="page">{{ crumb.label }}</span>{% endif %}</li>
+        {% endfor %}
+    </ol>
+</nav>

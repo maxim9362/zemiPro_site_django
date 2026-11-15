@@ -1,12 +1,13 @@
 {% extends 'pages/public_base.html' %}
 {% load i18n %}
 {% get_current_language as current_language %}
-{% block title %}{{ category.localized_name }} — ZemiPro{% endblock %}
-{% block meta_description %}{{ category.localized_description }}. {% trans 'Найдите мастера по категории' %} {{ category.localized_name }}.{% endblock %}
+{% block title %}{% if seo_content %}{{ seo_content.title }}{% else %}{{ category.localized_name }} — ZemiPro{% endif %}{% endblock %}
+{% block meta_description %}{% if seo_content %}{{ seo_content.meta_description }}{% else %}{{ category.localized_description }}. {% trans 'Найдите мастера по категории' %} {{ category.localized_name }}.{% endif %}{% endblock %}
 
 {% block content %}
 <header class="page-header public-page-header">
     <div class="container">
+        {% include 'components/breadcrumbs.html' %}
         <p class="public-kicker">{% if current_language == 'he' %}בעלי מקצוע באשדוד{% elif current_language == 'en' %}Specialists in Ashdod{% else %}Специалисты в Ашдоде{% endif %}</p>
         <h1>{{ category.emoji }} {{ category.localized_name }}</h1>
         <p>{{ category.localized_description }}</p>
@@ -14,6 +15,7 @@
 </header>
 <section class="category-content public-content">
     <div class="container public-stack">
+        {% if seo_content %}<section class="public-panel"><h2 class="public-panel__title">{{ seo_content.topic }}</h2><div>{{ seo_content.body|linebreaks }}</div></section>{% endif %}
         {% if subcategories %}
         <section class="public-panel" aria-labelledby="category-services-title">
             <h2 id="category-services-title" class="public-panel__title">{% trans 'Виды услуг' %}</h2>

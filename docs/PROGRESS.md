@@ -175,6 +175,14 @@
 - **Данные:** PSEO/Flask/SQLite не импортировались; фиктивные мастера/цены/отзывы/контент не создавались вне test DB.
 - **Следующий:** 09.3 — публичные SEO-представления и шаблоны на существующей Stage 08 дизайн-системе.
 
+## 2026-11-15 — 09.3: Django SEO-страницы
+
+- **Статус:** `CODE_VERIFIED`; публикация/индексация production не выполнялась.
+- **Сделано:** страницы услуги-в-Ashdod и локализованного профиля, редакционные блоки, breadcrumbs, реальные service workers, связанные услуги и CTA. Существующие Stage 08 templates/layouts переиспользованы; четыре originals не изменялись.
+- **Безопасность:** другие города 404; пустые/непроверенные страницы noindex; legacy profile route сохранён; XSS autoescape и отсутствие private contact проверены.
+- **Проверки:** Stage09 + Stage02 i18n + Stage08 public UI 28/28 PASS; RU/EN/HE, RTL, canonical и backward compatibility PASS.
+- **Следующий:** 09.4 — sitemap, robots, Open Graph, x-default и правдивые JSON-LD.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.

@@ -1,30 +1,68 @@
 {% extends 'pages/public_base.html' %}
 {% load i18n %}
 {% get_current_language as current_language %}
-{% block title %}{{ service.localized_name }} — ZemiPro{% endblock %}
-{% block meta_description %}{{ service.localized_description }}{% endblock %}
+{% block title %}{% if seo_content %}{{ seo_content.title }}{% else %}{{ service.localized_name }}{% if city %} — {{ city.localized_name }}{% endif %} — ZemiPro{% endif %}{% endblock %}
+{% block meta_description %}{% if seo_content %}{{ seo_content.meta_description }}{% else %}{{ service.localized_description }}{% endif %}{% endblock %}
 
 {% block content %}
 <header class="page-header public-page-header">
     <div class="container">
+        {% include 'components/breadcrumbs.html' %}
         <p class="public-kicker">{% if current_language == 'he' %}שירותים באשדוד{% elif current_language == 'en' %}Services in Ashdod{% else %}Услуги в Ашдоде{% endif %}</p>
-        <h1>{{ service.localized_name }}</h1>
-        {% if service.localized_description %}<p>{{ service.localized_description }}</p>{% endif %}
+        <h1>{{ service.localized_name }}{% if city %} — {{ city.localized_name }}{% endif %}</h1>
+        {% if seo_content %}<p>{{ seo_content.summary }}</p>{% elif service.localized_description %}<p>{{ service.localized_description }}</p>{% endif %}
     </div>
 </header>
 <section class="category-content public-content">
     <div class="container public-stack">
+        {% if seo_content %}
+        <section class="public-panel" aria-labelledby="seo-editorial-content">
+            <h2 id="seo-editorial-content" class="public-panel__title">{{ seo_content.topic }}</h2>
+            <div>{{ seo_content.body|linebreaks }}</div>
+        </section>
+        {% endif %}
         <section class="public-panel">
             <h2 class="public-panel__title">
                 <a href="{% url 'catalog_i18n:category_detail' slug=category.slug %}">{{ category.localized_name }}</a>
             </h2>
             {% if category.localized_description %}<p>{{ category.localized_description }}</p>{% endif %}
         </section>
+        <section class="public-results" aria-labelledby="service-workers-title">
+            <div class="public-section__heading">
+                <h2 id="service-workers-title">{% if current_language == 'he' %}בעלי מקצוע שמציעים את השירות{% elif current_language == 'en' %}Specialists listing this service{% else %}Мастера, указавшие эту услугу{% endif %}</h2>
+            </div>
+            <p class="public-result-heading" role="status">{% if current_language == 'he' %}נמצאו: {{ worker_count }}{% elif current_language == 'en' %}Found: {{ worker_count }}{% else %}Найдено: {{ worker_count }}{% endif %}</p>
+            {% if workers %}
+            <div class="public-result-grid">
+                {% for worker in workers %}{% include 'components/worker_summary_card.html' with show_city=True %}{% endfor %}
+            </div>
+            {% else %}
+                {% if current_language == 'he' %}{% include 'components/empty_state.html' with empty_title='עדיין אין בעלי מקצוע שציינו את השירות הזה.' %}
+                {% elif current_language == 'en' %}{% include 'components/empty_state.html' with empty_title='No published specialist lists this exact service yet.' %}
+                {% else %}{% include 'components/empty_state.html' with empty_title='Пока нет опубликованных мастеров, указавших именно эту услугу.' %}{% endif %}
+            {% endif %}
+        </section>
+        {% if city and related_services %}
+        <section class="public-panel" aria-labelledby="related-services-title">
+            <h2 id="related-services-title" class="public-panel__title">{% trans 'Связанные услуги' %}</h2>
+            <ul class="public-link-list">
+                {% for related in related_services %}<li><a href="{% url 'catalog_i18n:service_city_detail' category_slug=category.slug service_slug=related.slug city_slug=city.slug %}">{{ related.localized_name }}</a></li>{% endfor %}
+            </ul>
+        </section>
+        {% elif related_services %}
+        <section class="public-panel" aria-labelledby="related-services-title">
+            <h2 id="related-services-title" class="public-panel__title">{% trans 'Связанные услуги' %}</h2>
+            <ul class="public-link-list">
+                {% for related in related_services %}<li><a href="{% url 'catalog_i18n:service_detail' category_slug=category.slug service_slug=related.slug %}">{{ related.localized_name }}</a></li>{% endfor %}
+            </ul>
+        </section>
+        {% endif %}
         <div class="cta-block public-cta">
             <h2>{% if current_language == 'he' %}צריכים שירות כזה באשדוד?{% elif current_language == 'en' %}Need this service in Ashdod?{% else %}Нужна эта услуга в Ашдоде?{% endif %}</h2>
             <p>{% if current_language == 'he' %}בדקו אילו בעלי מקצוע מציינים את השירות הזה בפרופיל, או פרסמו בקשה וקבלו הצעות.{% elif current_language == 'en' %}See which published specialists list this service, or post a request and receive offers.{% else %}Посмотрите мастеров, указавших эту услугу в анкете, или создайте заявку и получите предложения.{% endif %}</p>
             <div class="public-actions">
                 <a class="btn btn--primary" href="{% url 'catalog_i18n:worker_directory' %}?service={{ service.pk }}">{% if current_language == 'he' %}חיפוש לפי שירות{% elif current_language == 'en' %}Search this service{% else %}Найти по услуге{% endif %}</a>
+                {% if not city and supply_city and worker_count %}<a class="btn btn--secondary" href="{% url 'catalog_i18n:service_city_detail' category_slug=category.slug service_slug=service.slug city_slug=supply_city.slug %}">{% trans 'Страница услуги в городе' %}</a>{% endif %}
                 <a class="btn btn--secondary" href="{% url 'marketplace:order_wizard_start' %}">{% trans 'Создать заявку' %}</a>
             </div>
         </div>

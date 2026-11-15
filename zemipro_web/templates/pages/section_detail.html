@@ -1,12 +1,13 @@
 {% extends 'pages/public_base.html' %}
 {% load i18n %}
 {% get_current_language as current_language %}
-{% block title %}{{ section.localized_name }} — ZemiPro{% endblock %}
-{% block meta_description %}{{ section.localized_description }}{% endblock %}
+{% block title %}{% if seo_content %}{{ seo_content.title }}{% else %}{{ section.localized_name }} — ZemiPro{% endif %}{% endblock %}
+{% block meta_description %}{% if seo_content %}{{ seo_content.meta_description }}{% else %}{{ section.localized_description }}{% endif %}{% endblock %}
 
 {% block content %}
 <header class="page-header public-page-header">
     <div class="container">
+        {% include 'components/breadcrumbs.html' %}
         <p class="public-kicker">{% if current_language == 'he' %}שירותים באשדוד{% elif current_language == 'en' %}Services in Ashdod{% else %}Услуги в Ашдоде{% endif %}</p>
         <h1>{{ section.localized_name }}</h1>
         {% if section.localized_description %}<p>{{ section.localized_description }}</p>{% endif %}
@@ -14,6 +15,7 @@
 </header>
 <section class="categories-list public-content">
     <div class="container public-stack">
+        {% if seo_content %}<section class="public-panel"><h2 class="public-panel__title">{{ seo_content.topic }}</h2><div>{{ seo_content.body|linebreaks }}</div></section>{% endif %}
         {% if categories %}
         <section class="public-panel" aria-label="{% trans 'Категории услуг' %}">
             <h2 class="public-panel__title">{% trans 'Категории услуг' %}</h2>

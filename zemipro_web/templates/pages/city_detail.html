@@ -1,12 +1,13 @@
 {% extends 'pages/public_base.html' %}
 {% load i18n %}
 {% get_current_language as current_language %}
-{% block title %}{{ city.localized_name }} — ZemiPro{% endblock %}
-{% block meta_description %}{% trans 'Поиск специалистов в городе' %} {{ city.localized_name }}.{% endblock %}
+{% block title %}{% if seo_content %}{{ seo_content.title }}{% else %}{{ city.localized_name }} — ZemiPro{% endif %}{% endblock %}
+{% block meta_description %}{% if seo_content %}{{ seo_content.meta_description }}{% else %}{% trans 'Поиск специалистов в городе' %} {{ city.localized_name }}.{% endif %}{% endblock %}
 
 {% block content %}
 <header class="page-header public-page-header">
     <div class="container">
+        {% include 'components/breadcrumbs.html' %}
         <p class="public-kicker">{% if current_language == 'he' %}אזור הפיילוט{% elif current_language == 'en' %}Pilot city{% else %}Город пилота{% endif %}</p>
         <h1>{% trans 'Специалисты в городе' %} {{ city.localized_name }}</h1>
         <p>{% trans 'Выберите категорию или просматривайте всех мастеров города' %}</p>
@@ -14,6 +15,7 @@
 </header>
 <section class="category-content public-content">
     <div class="container public-stack">
+        {% if seo_content %}<section class="public-panel"><h2 class="public-panel__title">{{ seo_content.topic }}</h2><div>{{ seo_content.body|linebreaks }}</div></section>{% endif %}
         <section class="public-results" aria-labelledby="city-workers-title">
             <div class="public-section__heading">
                 <h2 id="city-workers-title">{% if current_language == 'he' %}בעלי מקצוע בעיר{% elif current_language == 'en' %}Professionals in this city{% else %}Мастера в городе{% endif %}</h2>
