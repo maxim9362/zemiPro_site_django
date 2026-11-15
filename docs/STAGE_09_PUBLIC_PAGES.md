@@ -27,4 +27,3 @@
 - Legacy profile links и старые маршруты: regression PASS.
 
 Четыре утверждённых HTML-эталона в `docs/frontend/approved/` не изменялись.
-

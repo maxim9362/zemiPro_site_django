@@ -1,6 +1,6 @@
 # Stage 09.6 — план перехода на Django
 
-Статус: **`09.6_PREPARED / PRODUCTION_CUTOVER_PENDING`**.  
+Статус: **`09.6_PREPARED / PRODUCTION_CUTOVER_PENDING`**.
 Этот документ не является разрешением выполнить команды. В Codex Cloud не
 изменялись production, VPS, reverse proxy, DNS, Cloudflare, TLS, рабочая
 PostgreSQL, media или действующий сайт.
@@ -147,4 +147,3 @@ PII exposure, redirect loop, массовый нерелевантный redirec
 
 Полная интеграционная проверка Stage09+Stage14 без merge невозможна и остаётся
 `PENDING` после будущего rebase PR #18. Код Stage14 не копировался.
-

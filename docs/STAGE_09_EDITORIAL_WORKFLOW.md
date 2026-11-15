@@ -39,4 +39,3 @@
   write, thin-content/duplicate gates: PASS.
 - Прямые SQL update/delete history: BLOCKED/PASS.
 - Ruff, Django checks, migration drift: PASS.
-
