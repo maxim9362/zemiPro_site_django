@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'apps.accounts',
     'apps.marketplace',
+    'apps.knowledge',
     'apps.locations',
     'apps.seo',
     'apps.notifications',
@@ -91,6 +92,13 @@ ZEMIPRO_CATALOG_INDEXING_ENABLED = env_bool('ZEMIPRO_CATALOG_INDEXING_ENABLED', 
 # Owner-approved first public pilot: only Ashdod. Expansion requires a code review.
 # Not environment-overridable, so a production .env cannot silently open all cities.
 ZEMIPRO_PILOT_CITY_SLUG = 'ashdod'
+# Stage 14.1: owner-gated features. These are deliberately NOT env-overridable:
+# defining a production environment variable must not activate unpublished code.
+# Stage 14.7 will supply permissioned, auditable rollout controls.
+ZEMIPRO_KNOWLEDGE_ARTICLES_ENABLED = False
+ZEMIPRO_KNOWLEDGE_QA_ENABLED = False
+ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED = False
+ZEMIPRO_RECOMMENDATION_REQUESTS_ENABLED = False
 # Stage 07.6: external AI translation is strictly opt-in and disabled by default.
 # The API key is never stored in code, test fixtures or logs.
 ZEMIPRO_GEMINI_TRANSLATION_ENABLED = env_bool(
