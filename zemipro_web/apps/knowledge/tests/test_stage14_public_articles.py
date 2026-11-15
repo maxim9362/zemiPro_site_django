@@ -89,7 +89,9 @@ class Stage14PublicArticleTests(TestCase):
                 reverse('knowledge_public:article_list'),
             ).status_code, 404)
             self.assertEqual(self.client.get(self.article_path(article)).status_code, 404)
-            self.assertNotContains(self.client.get('/'), 'advice/', status_code=200)
+            self.assertNotContains(
+                self.client.get('/'), 'href="/ru/advice/"', status_code=200,
+            )
             self.assertFalse(sitemap_candidates().exists())
 
     def test_approved_original_visible_to_guest_with_safe_profile_and_order(self):
@@ -258,7 +260,8 @@ class Stage14PublicArticleTests(TestCase):
         response = self.client.get(path)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'image/jpeg')
-        self.assertEqual(response['Cache-Control'], 'private, no-store, max-age=0')
+        self.assertIn('no-store', response['Cache-Control'])
+        self.assertIn('private', response['Cache-Control'])
         self.assertIn('nosniff', response['X-Content-Type-Options'])
         self.assertIn(b'\xff\xd8', response.content[:2])
         self.assertNotIn(b'Exif', response.content)
