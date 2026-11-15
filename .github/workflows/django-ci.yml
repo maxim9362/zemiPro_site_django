@@ -263,6 +263,26 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Stage 09 public SEO, responsive, RTL and no-JS Chromium smoke
+        env:
+          ZEMIPRO_TEST_ASHDOD_ONLY: "1"
+          ZEMIPRO_CATALOG_INDEXING_ENABLED: "true"
+        run: |
+          set -euo pipefail
+          python manage.py runserver --insecure --noreload 127.0.0.1:8770 > /tmp/stage09-django-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python scripts/stage09_seo_browser_smoke.py
+
+      - name: Upload Stage 09 public SEO screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage09-seo-browser-screenshots
+          path: zemipro_web/artifacts/stage09-seo-browser/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Run Django suite with service coverage gate
         run: |
           python -m coverage run manage.py test

@@ -18,6 +18,7 @@ __pycache__/
 .coverage
 htmlcov/
 zemipro_web/artifacts/shared-test-env/
+zemipro_web/artifacts/stage09-seo-browser/
 venv/
 .venv/
 .venv-shared-test/
