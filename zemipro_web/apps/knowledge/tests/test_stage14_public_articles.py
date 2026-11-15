@@ -4,21 +4,18 @@ import re
 from unittest.mock import patch
 
 from django.contrib.auth.models import Permission
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import override
 
-from apps.accounts.models import WorkerProfile
 from apps.knowledge import services
 from apps.knowledge.models import (
     ExpertArticle, ExpertArticleDecision, ExpertArticleImage,
     ExpertArticleReport,
 )
 from apps.knowledge.public_seo import sitemap_candidates
-from apps.marketplace.models import Category, Order, ServiceSection
+from apps.marketplace.models import Order, ServiceSection
 from apps.marketplace.tests.factories import (
     make_category, make_city, make_user, make_worker_profile,
 )
