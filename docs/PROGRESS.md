@@ -183,6 +183,14 @@
 - **Проверки:** Stage09 + Stage02 i18n + Stage08 public UI 28/28 PASS; RU/EN/HE, RTL, canonical и backward compatibility PASS.
 - **Следующий:** 09.4 — sitemap, robots, Open Graph, x-default и правдивые JSON-LD.
 
+## 2026-11-15 — 09.4: техническое SEO
+
+- **Статус:** `CODE_VERIFIED / INDEXING_DISABLED_BY_DEFAULT`.
+- **Сделано:** root sitemap/robots, x-default, Open Graph и safe JSON-LD; sitemap включает только трёхъязычные проверенные landing pages с реальным supply и безопасные опубликованные профили.
+- **Fail-closed:** общий indexing flag по умолчанию false; robots запрещает crawl, sitemap пуст. Закрытые Stage14 функции не активированы.
+- **Проверки:** technical SEO+i18n 23/23 PASS; schema XSS, PII, ложные rating/price, другая география, canonical/hreflang и robots PASS; Django check/Ruff/diff check PASS.
+- **Следующий:** 09.5 — точный legacy resolver, URL matrix и rollback без wildcard.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.

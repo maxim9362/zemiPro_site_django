@@ -28,6 +28,7 @@ from apps.seo.catalog import (
     public_pilot_city, published_landing, service_workers,
 )
 from apps.seo.models import SeoContentPage
+from apps.seo.metadata import page_metadata
 from .catalog_seo import catalog_context, complete_collection, complete_content, complete_names
 from .directory_search import (
     WorkerDirectoryForm, active_categories, search_worker_profiles,
@@ -333,6 +334,16 @@ def category_detail(request, slug):
             )
         ),
     ))
+    content = context['seo_content']
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{category.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else category.localized_description or category.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'],
+    ))
     return render(request, 'pages/category_detail.html', context)
 
 
@@ -350,6 +361,11 @@ def cities_list(request):
                 for city in cities
             )
         ),
+    ))
+    context.update(page_metadata(
+        request,
+        title=_('Города') + ' — ZemiPro',
+        description=_('Города публичного пилота ZemiPro.'),
     ))
     return render(request, 'pages/cities.html', context)
 
@@ -420,6 +436,17 @@ def city_detail(request, slug):
             )
         ),
     ))
+    content = context['seo_content']
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{city.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else f'{city.localized_name}: ZemiPro'
+        ),
+        breadcrumbs=context['breadcrumbs'],
+        city=city,
+    ))
     return render(request, 'pages/city_detail.html', context)
 
 
@@ -450,6 +477,16 @@ def section_detail(request, slug):
             and categories.exists()
             and complete_collection(categories, description=True)
         ),
+    ))
+    content = context['seo_content']
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{section.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else section.localized_description or section.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'],
     ))
     return render(request, 'pages/section_detail.html', context)
 
@@ -499,6 +536,15 @@ def service_detail(request, category_slug, service_slug):
             and complete_content(service, description=True)
             and complete_names(supply_city)
         ),
+    ))
+    context.update(page_metadata(
+        request,
+        title=content.title if content else f'{service.localized_name} — ZemiPro',
+        description=(
+            content.meta_description if content
+            else service.localized_description or service.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'], service=service,
     ))
     return render(request, 'pages/service_detail.html', context)
 
@@ -551,6 +597,17 @@ def service_city_detail(request, category_slug, service_slug, city_slug):
             and complete_names(city)
         ),
     ))
+    context.update(page_metadata(
+        request,
+        title=content.title if content else (
+            f'{service.localized_name} — {city.localized_name} — ZemiPro'
+        ),
+        description=(
+            content.meta_description if content
+            else service.localized_description or service.localized_name
+        ),
+        breadcrumbs=context['breadcrumbs'], service=service, city=city,
+    ))
     return render(request, 'pages/service_detail.html', context)
 
 
@@ -597,6 +654,18 @@ def worker_public_profile_view(request, pk):
                 reverse('marketplace:worker_public_profile', args=[profile.pk])
             ),
         }
+    elif seo.get('seo_canonical'):
+        seo.update(page_metadata(
+            request,
+            title=f'{profile.public_display_name} — ZemiPro',
+            description=profile.public_description,
+            breadcrumbs=[
+                {'label': _('Главная'), 'url': reverse('marketplace:home')},
+                {'label': _('Мастера'), 'url': reverse('catalog_i18n:worker_directory')},
+                {'label': profile.public_display_name, 'url': ''},
+            ],
+            profile=profile,
+        ))
     response = render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
         'public_photos': profile.portfolio_photos.filter(is_public=True),

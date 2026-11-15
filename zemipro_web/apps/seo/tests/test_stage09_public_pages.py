@@ -131,3 +131,50 @@ class Stage09PublicPageTests(TestCase):
         ))
         self.assertNotContains(page, '<script>window.stage09Xss')
         self.assertContains(page, '&lt;script&gt;window.stage09Xss')
+
+    def test_technical_metadata_is_truthful_and_script_safe(self):
+        content = SeoContentPage.objects.get(
+            page_type=SeoContentPage.PageType.SERVICE_CITY,
+            service=self.service, city=self.city, language='ru',
+        )
+        content.meta_description = '</script><script>window.schemaXss=true</script>'
+        content.save()
+        page = self.client.get(self.localized(
+            'ru', 'service_city_detail', category_slug=self.category.slug,
+            service_slug=self.service.slug, city_slug=self.city.slug,
+        ))
+        self.assertContains(page, 'property="og:title"')
+        self.assertContains(page, 'type="application/ld+json"')
+        self.assertContains(page, '"@type":"Service"')
+        self.assertContains(page, '"@type":"BreadcrumbList"')
+        self.assertNotContains(page, '<script>window.schemaXss')
+        self.assertNotContains(page, 'AggregateRating')
+        self.assertNotContains(page, '"price"')
+        self.assertNotContains(page, 'private-stage09@example.test')
+
+    def test_sitemap_and_robots_include_only_eligible_public_urls(self):
+        sitemap = self.client.get(reverse('seo_sitemap'))
+        self.assertEqual(sitemap.status_code, 200)
+        self.assertEqual(sitemap['Content-Type'], 'application/xml; charset=utf-8')
+        for language in ('ru', 'en', 'he'):
+            self.assertContains(sitemap, self.localized(
+                language, 'service_city_detail', category_slug=self.category.slug,
+                service_slug=self.service.slug, city_slug=self.city.slug,
+            ))
+            self.assertContains(sitemap, self.localized(
+                language, 'worker_public_profile', pk=self.worker.pk,
+            ))
+        self.assertContains(sitemap, 'hreflang="x-default"')
+        self.assertNotContains(sitemap, self.other_city.slug)
+        self.assertNotContains(sitemap, 'private-stage09@example.test')
+        robots = self.client.get(reverse('seo_robots'))
+        self.assertContains(robots, 'Disallow: /admin/')
+        self.assertContains(robots, 'Disallow: /knowledge/')
+        self.assertContains(robots, 'Sitemap: http://testserver/sitemap.xml')
+
+    @override_settings(ZEMIPRO_CATALOG_INDEXING_ENABLED=False)
+    def test_indexing_switch_fails_closed(self):
+        robots = self.client.get(reverse('seo_robots'))
+        self.assertContains(robots, 'Disallow: /')
+        sitemap = self.client.get(reverse('seo_sitemap'))
+        self.assertNotContains(sitemap, '<url>')
