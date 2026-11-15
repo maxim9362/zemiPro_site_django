@@ -1442,3 +1442,93 @@ msgstr "Provides additional service details"
 
 msgid "Есть отзывы пользователей"
 msgstr "Has user reviews"
+
+msgid "Переписка"
+msgstr "Messages"
+
+msgid "Настройки уведомлений"
+msgstr "Notification settings"
+
+msgid "Обязательные уведомления безопасности не отключаются."
+msgstr "Required security notifications cannot be disabled."
+
+msgid "Необязательные уведомления внутри сайта"
+msgstr "Optional notifications on the website"
+
+msgid "Необязательные уведомления по подтверждённому email"
+msgstr "Optional notifications to your verified email"
+
+msgid "Для email требуется подтверждённый адрес."
+msgstr "Email delivery requires a verified address."
+
+msgid "Очередь модерации"
+msgstr "Moderation queue"
+
+msgid "Жалобы"
+msgstr "Reports"
+
+msgid "Сообщение, на которое пожаловались"
+msgstr "Reported message"
+
+msgid "Примечание модератора"
+msgstr "Moderator note"
+
+msgid "Рассмотреть"
+msgstr "Resolve"
+
+msgid "Нет ожидающих жалоб."
+msgstr "No reports awaiting review."
+
+msgid "Апелляции"
+msgstr "Appeals"
+
+msgid "Жалоба"
+msgstr "Report"
+
+msgid "Удовлетворить"
+msgstr "Grant appeal"
+
+msgid "Нет ожидающих апелляций."
+msgstr "No appeals awaiting review."
+
+msgid "Апелляция"
+msgstr "Appeal"
+
+msgid "Апелляция по жалобе"
+msgstr "Appeal concerning report"
+
+msgid "Апелляция уже подана."
+msgstr "An appeal has already been filed."
+
+msgid "Причина апелляции"
+msgstr "Reason for appeal"
+
+msgid "Мои жалобы"
+msgstr "My reports"
+
+msgid "У вас пока нет жалоб."
+msgstr "You have not filed any reports."
+
+msgid "Жалоба на сообщение"
+msgstr "Report a message"
+
+msgid "Ответ специалиста"
+msgstr "Specialist response"
+
+msgid "Ответить на отзыв"
+msgstr "Reply to review"
+
+msgid "Отправить ответ"
+msgstr "Send reply"
+
+msgid "Рассмотрена"
+msgstr "Resolved"
+
+msgid "Отклонена"
+msgstr "Dismissed"
+
+msgid "Апелляция удовлетворена"
+msgstr "Appeal granted"
+
+msgid "Апелляция отклонена"
+msgstr "Appeal denied"

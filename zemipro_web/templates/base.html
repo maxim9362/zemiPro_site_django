@@ -34,6 +34,7 @@
                     <button type="submit" aria-label="{% trans 'Кабинет мастера' %}">⇄ {% trans 'Кабинет мастера' %}</button>
                     {% endif %}
                 </form>
+                <a href="{% url 'marketplace:chat_index' %}">{% trans 'Переписка' %}</a>
                 <a href="{% url 'notifications:notification_list' %}" class="nav__notif">
                     {% trans 'Уведомления' %}
                     {% if unread_notifications_count %}
