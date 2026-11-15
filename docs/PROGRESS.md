@@ -166,6 +166,15 @@
 - **Production/VPS/DNS/Cloudflare/рабочая PostgreSQL:** `NOT_TOUCHED`; редиректы не включены, старый сайт не отключён.
 - **Следующий:** 09.2 — безопасный Django SEO-каталог из актуальных моделей и только Ashdod, без импорта PSEO и без выдуманных данных.
 
+## 2026-11-15 — 09.2: Django SEO-каталог
+
+- **Статус:** `CODE_VERIFIED`; production activation не выполнялась.
+- **Сделано:** `SeoLegacyUrl`, `SeoContentPage`, append-only `SeoContentRevision`, CAS/editorial services и read-only SEO-проекция реального каталога. Только фактически опубликованный privacy-safe мастер с явно заявленной услугой и обслуживанием Ashdod попадает в service supply.
+- **Защита:** exact local paths, запрет open redirect/self-loop на уровне модели, неактивность legacy по умолчанию, staff approval/evidence для активации, PostgreSQL constraints и trigger неизменяемости истории.
+- **Проверки:** PostgreSQL 17 migrations PASS; `apps.seo.tests` 8/8 PASS; Django check, migration drift, Ruff и `git diff --check` PASS.
+- **Данные:** PSEO/Flask/SQLite не импортировались; фиктивные мастера/цены/отзывы/контент не создавались вне test DB.
+- **Следующий:** 09.3 — публичные SEO-представления и шаблоны на существующей Stage 08 дизайн-системе.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.
