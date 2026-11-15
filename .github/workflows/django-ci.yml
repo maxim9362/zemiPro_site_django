@@ -124,6 +124,10 @@ jobs:
         run: |
           python manage.py test apps.knowledge.tests.test_stage14_profile_sharing
 
+      - name: Stage 14.10 recommendation requests and suggestions
+        run: |
+          python manage.py test apps.knowledge.tests.test_stage14_recommendation_requests
+
       - name: Stage 02.1 catalog seed round-trip on isolated CI PostgreSQL
         run: |
           python manage.py seed_service_catalog --plan

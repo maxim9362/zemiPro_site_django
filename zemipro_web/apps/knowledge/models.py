@@ -909,3 +909,234 @@ class PersonalRecommendationReport(models.Model):
                 name='knowledge_recommendation_report_once_uq',
             ),
         ]
+
+
+class RecommendationRequest(models.Model):
+    """Community request for a public specialist; neither Q&A nor Order."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'На модерации'
+        PUBLISHED = 'published', 'Опубликован'
+        REJECTED = 'rejected', 'Отклонён'
+        ARCHIVED = 'archived', 'Архив'
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='recommendation_requests',
+    )
+    category = models.ForeignKey(
+        'marketplace.Category', on_delete=models.PROTECT,
+        related_name='recommendation_requests',
+    )
+    language = models.CharField(max_length=2, choices=ExpertArticle.Language.choices)
+    slug = models.SlugField(max_length=160, allow_unicode=True)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True,
+    )
+    title = models.CharField(max_length=180)
+    body = models.TextField()
+    content_version = models.PositiveIntegerField(default=0, editable=False)
+    public_title = models.CharField(max_length=180, blank=True, default='', editable=False)
+    public_body = models.TextField(blank=True, default='', editable=False)
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    approved_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='moderated_recommendation_requests',
+    )
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'knowledge_recommendation_request'
+        ordering = ['-published_at', '-pk']
+        permissions = [(
+            'moderate_recommendation_requests',
+            'Can moderate recommendation requests',
+        )]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['slug', 'language'], name='knowledge_request_slug_lang_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(language__in=['ru', 'en', 'he']),
+                name='knowledge_request_language_ck',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=[
+                    'pending', 'published', 'rejected', 'archived',
+                ]), name='knowledge_request_status_ck',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status='published') |
+                    (
+                        models.Q(public_content_safe=True) &
+                        ~models.Q(public_title='') & ~models.Q(public_body='') &
+                        models.Q(approved_version__isnull=False) &
+                        models.Q(published_at__isnull=False)
+                    )
+                ), name='knowledge_request_publish_ck',
+            ),
+        ]
+
+
+class RecommendationRequestRevision(models.Model):
+    request = models.ForeignKey(
+        RecommendationRequest, on_delete=models.PROTECT, related_name='revisions',
+    )
+    version = models.PositiveIntegerField()
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='recommendation_request_revisions',
+    )
+    action = models.CharField(max_length=16)
+    status_snapshot = models.CharField(max_length=16)
+    title = models.CharField(max_length=180)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_recommendation_request_revision'
+        default_permissions = ('view',)
+        ordering = ['request_id', 'version']
+        constraints = [models.UniqueConstraint(
+            fields=['request', 'version'], name='knowledge_request_revision_uq',
+        )]
+
+
+class RecommendationResponse(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'На модерации'
+        PUBLISHED = 'published', 'Опубликован'
+        REJECTED = 'rejected', 'Отклонён'
+        ARCHIVED = 'archived', 'Архив'
+
+    request = models.ForeignKey(
+        RecommendationRequest, on_delete=models.PROTECT, related_name='responses',
+    )
+    recommender = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='recommendation_responses',
+    )
+    worker = models.ForeignKey(
+        'accounts.WorkerProfile', on_delete=models.PROTECT,
+        related_name='community_recommendation_responses',
+    )
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True,
+    )
+    body = models.TextField()
+    content_version = models.PositiveIntegerField(default=0, editable=False)
+    public_body = models.TextField(blank=True, default='', editable=False)
+    public_content_safe = models.BooleanField(default=False, editable=False)
+    approved_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='moderated_recommendation_responses',
+    )
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'knowledge_recommendation_response'
+        ordering = ['-published_at', '-pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['request', 'recommender'],
+                name='knowledge_response_recommender_uq',
+            ),
+            models.UniqueConstraint(
+                fields=['request', 'worker'], name='knowledge_response_worker_uq',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=[
+                    'pending', 'published', 'rejected', 'archived',
+                ]), name='knowledge_response_status_ck',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status='published') |
+                    (
+                        models.Q(public_content_safe=True) &
+                        ~models.Q(public_body='') &
+                        models.Q(approved_version__isnull=False) &
+                        models.Q(published_at__isnull=False)
+                    )
+                ), name='knowledge_response_publish_ck',
+            ),
+        ]
+
+
+class RecommendationResponseRevision(models.Model):
+    response = models.ForeignKey(
+        RecommendationResponse, on_delete=models.PROTECT, related_name='revisions',
+    )
+    version = models.PositiveIntegerField()
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='recommendation_response_revisions',
+    )
+    action = models.CharField(max_length=16)
+    status_snapshot = models.CharField(max_length=16)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_recommendation_response_revision'
+        default_permissions = ('view',)
+        ordering = ['response_id', 'version']
+        constraints = [models.UniqueConstraint(
+            fields=['response', 'version'], name='knowledge_response_revision_uq',
+        )]
+
+
+class RecommendationRequestReport(models.Model):
+    request = models.ForeignKey(
+        RecommendationRequest, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='reports',
+    )
+    response = models.ForeignKey(
+        RecommendationResponse, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='reports',
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='recommendation_request_reports',
+    )
+    reason = models.CharField(max_length=12, choices=KnowledgeQAReport.Reason.choices)
+    message = models.TextField()
+    status = models.CharField(
+        max_length=10, choices=KnowledgeQAReport.Status.choices,
+        default=KnowledgeQAReport.Status.PENDING,
+    )
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='handled_recommendation_request_reports',
+    )
+    handled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'knowledge_recommendation_request_report'
+        default_permissions = ('view',)
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(request__isnull=False) & models.Q(response__isnull=True)) |
+                    (models.Q(request__isnull=True) & models.Q(response__isnull=False))
+                ), name='knowledge_request_report_target_ck',
+            ),
+            models.UniqueConstraint(
+                fields=['request', 'reporter'], condition=models.Q(request__isnull=False),
+                name='knowledge_request_report_once_uq',
+            ),
+            models.UniqueConstraint(
+                fields=['response', 'reporter'], condition=models.Q(response__isnull=False),
+                name='knowledge_response_report_once_uq',
+            ),
+        ]

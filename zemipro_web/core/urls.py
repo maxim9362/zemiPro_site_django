@@ -38,6 +38,7 @@ urlpatterns += i18n_patterns(
     path('questions/', include('apps.knowledge.qa_urls')),
     path('recommendations/', include('apps.knowledge.recommendation_urls')),
     path('share/', include('apps.knowledge.share_urls')),
+    path('recommend-master/', include('apps.knowledge.request_urls')),
     prefix_default_language=True,
 )
 

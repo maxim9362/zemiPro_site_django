@@ -1389,3 +1389,9 @@ Runtime после review не менялся. Последний SHA долже
 - **Статус:** `CODE_IMPLEMENTED / LOCAL_TARGETED_PASS / CI_PENDING / ACTIVATION_PENDING`. На безопасной публичной карточке добавлены только явные пользовательские действия: фиксированная ссылка на Facebook sharer и локальное копирование текущего URL с no-JS fallback. Сервер заново проверяет live public-worker predicate и не принимает внешний URL от пользователя.
 - **Приватность:** Facebook Login/Graph API/access token/friend list/autopost отсутствуют; редирект только на `https://www.facebook.com/sharer/sharer.php`, передаёт единственный уже публичный URL и ставит `Referrer-Policy: no-referrer`. Заблокированный/неопубликованный мастер получает 404.
 - **Проверки:** `test_stage14_profile_sharing` — **4/4 PASS**. `ZEMIPRO_PROFILE_SHARING_ENABLED=False` остаётся hard-off; реальные действия в Facebook не выполнялись.
+
+## 2026-11-15 — Stage 14.10: отдельный раздел «Посоветуйте мастера»
+
+- **Статус:** `CODE_IMPLEMENTED / LOCAL_TARGETED_PASS / CI_PENDING / PUBLIC_GO_PENDING`. `RecommendationRequest`/`RecommendationResponse` отделены от Q&A, заказов, предложений и рейтинга. Ответ выбирает только действующую безопасную публичную карточку мастера Ашдода из той же категории; он не создаёт заявку и не подтверждает выполненную работу.
+- **Безопасность:** живой аккаунт, per-account quota, ручная модерация, contact/HTML filter, safe snapshots, CAS, immutable revisions/reports, запрет ответа автором запроса, self-promotion, повторного рекомендателя и повторного мастера. RU/EN/HE locale-prefixed noindex UI работает без JavaScript; жалобы и снятие атомарны.
+- **Проверки:** `test_stage14_recommendation_requests` — **8/8 PASS** на PostgreSQL 17, включая `Order=0`, `Rating=0`, IDOR/anti-fraud, category/Ashdod, PII, append-only, report removal, три локали и fail-closed flag. `ZEMIPRO_RECOMMENDATION_REQUESTS_ENABLED=False`; спрос и реальный owner GO не заявляются.
