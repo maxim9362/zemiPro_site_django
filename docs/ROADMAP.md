@@ -1,6 +1,6 @@
 # ZemiPro — дорожная карта разработки и запуска
 
-> **Версия:** 1.4.3
+> **Версия:** 1.5.0
 > **Базовая дата:** 2026-11-05  
 > **Статус:** рабочая дорожная карта, не свидетельство завершения этапов  
 > **Горизонт:** бессрочно; без фиксированных дедлайнов  
@@ -357,7 +357,7 @@ flowchart TD
 - [x] **09.4 — Техническое SEO и три языка.** `CODE_VERIFIED / DEFAULT_OFF` — sitemap/robots, canonical, RU/EN/HE/x-default, Open Graph и правдивые JSON-LD реализованы; sitemap fail-closed и не включает thin/Stage14 страницы. [Контракты и проверки](STAGE_09_TECHNICAL_SEO.md).
 - [ ] **09.5 — Страница-по-странице миграция и редиректы.** `MECHANISM_VERIFIED / REAL_DECISIONS_PENDING_09.1` — 21 URL seeded как inactive review; exact resolver, staff approval, target ORM validation, 301/308/404/410, chain rejection и rollback протестированы. [Детали](STAGE_09_LEGACY_MIGRATION.md). Не закрыто до HTTP/GSC и утверждения каждой реальной судьбы.
 - [ ] **09.6 — Переход на Django и контроль индексации.** `09.6_PREPARED / PRODUCTION_CUTOVER_PENDING` — staging/migration/backup/restore/proxy/monitoring/rollback и Stage14 compatibility runbook подготовлен; staging flags default false. [План](STAGE_09_CUTOVER_PLAN.md). Не `DONE`: домен/production не переключались без owner GO.
-- [ ] **09.7 — Редакционный конвейер нового SEO-контента.** Готово когда: у публикаций есть источник данных, версия, статус ревью и контроль низкоценного контента.
+- [x] **09.7 — Редакционный конвейер нового SEO-контента.** `CODE_VERIFIED / NO_REAL_CONTENT_PUBLISHED` — permissioned brief→review→separate approval→publish/unpublish, CAS, immutable history, sources, duplicate/thin-content gates и CSRF UI. [Контракт](STAGE_09_EDITORIAL_WORKFLOW.md).
 
 **Решение по этапу 09:** закрывать только после выполненных подэтапов (или документированного `DEFERRED` с подтверждением), адресных проверок, необходимых интеграционных тестов и принятия единственного этапного PR.
 
@@ -590,11 +590,12 @@ flowchart TD
 | 2026-11-14 | 1.4.0 | Вставлен обязательный этап 08 «Фронтенд» (08.1–08.7) после 07. Прежние плановые этапы 08–13 стали 09–14; актуальный объём 15 этапов / 103 подэтапа. История прежних PR и решений сохранена, код не менялся. | Прямое решение владельца, документационный PR |
 | 2026-11-15 | 1.4.2 | Сверены GitHub PR #8–#17; Stage07 #16 MERGED, Stage08 #17 CODEX/CI PASS, но Draft/NOT_MERGED. Утверждённые 4 HTML-эталона из PR #15 закреплены без изменения. Исправлен пропуск нумерации этапа 14: прежние плановые 14.11→14.10 и 14.12→14.11, по-прежнему 11 задач и 103 всего; исторические записи не переименованы. Не менялись код и production. | PR metadata + обязательные GitHub Actions exact SHA, решение владельца о дизайне |
 | 2026-11-15 | 1.4.3 | Согласовано с обновлённым main после MERGED PR #17 (Stage08), сохранены 4 неизменяемых HTML-макета и актуальный реестр 103 подэтапов. Этап09 не запущен; внешние гейты открыты. | Синхронизация PR #15, проверка SHA дерева GitHub и актуального состояния PR #17 |
+| 2026-11-15 | 1.5.0 | По новой прямой команде владельца начата и технически реализована Stage09 в отдельной ветке. 09.2–09.4 и 09.7 code verified; 09.1/09.5 ждут внешних HTTP/GSC решений, 09.6 подготовлен и ждёт отдельный production GO. История приоритета Stage14 сохранена. | Решение владельца Stage09; ветка `stage-09-django-seo`, без deployment/merge |
 
 
 ## 12. Ближайшее подтверждённое действие
 
-**Срез на 2026-11-15:** этапы 00–08 по основному коду находятся в `main`; этап 08 — [PR #17 MERGED](https://github.com/maxim9362/zemiPro_site_django/pull/17), независимое review/CI PASS, **не развёрнут в production**. Четыре утверждённых оригинальных HTML-макета и согласованная документация — [PR #15](https://github.com/maxim9362/zemiPro_site_django/pull/15) `OPEN / DRAFT / NOT_MERGED`, конфликт устраняется в этом PR без изменения runtime. Дальнейший шаг — согласование владельцем документационного merge и визуальная сверка Django-интерфейса с эталонами. **Этап 09 НЕ НАЧИНАТЬ без отдельной команды.** Pre-release: Ashdod-only, 00.2 secrets, 00.4 SEO inventory перед 09, HE, реальные устройства, backup/alerts/staging TLS/branch protection. Никаких изменений в production/VPS/DNS или реальной БД.
+**Текущий срез на 2026-11-15:** прежний запрет начинать Stage09 снят новой прямой командой владельца. Техническая разработка выполняется в `stage-09-django-seo` от `main`; production cutover, merge, DNS/Cloudflare/VPS и рабочая БД по-прежнему не разрешены. Stage14 PR #18 остаётся отдельным Draft и не активируется автоматически. Pre-release: Ashdod-only, 00.2 secrets, HTTP/GSC 00.4/09.1, HE, реальные устройства, backup/alerts/staging TLS/branch protection.
 
 **Историческая запись на 2026-11-12:** первый пилот — **только Ашдод**; остальные 24 города сохраняются в техническом справочнике, но недоступны клиентам для новых заявок и поиска. Ashdod-only фильтрация реализована в views/forms/services на Django, без миграций и удаления данных. [Django CI #43171013111](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171013111) подтвердил **12/12 адресных Ashdod tests, 163/163 Django, Chrome 45/45**; [Docker smoke #43171022632](https://github.com/maxim9362/zemiPro_site_django/actions/runs/43171022632) SUCCESS. Требуется отдельное независимое **Codex review нового кода**, иврит и контент (Ашдод, 11 категорий, 4 анкеты), реальные Android/iPhone, UX одобрение, release security/infra gates; CBS обязателен до национального rollout. PR [#8](https://github.com/maxim9362/zemiPro_site_django/pull/8) остаётся Draft / NOT_MERGED, Stage 02 не DONE, production/VPS/DNS/Cloudflare не затронуты. Дополнительная чистка UX-формы: убран пример адреса в Тель-Авиве (`f21444d7`), добавлен 12-й адресный тест. Текущий подтверждённый кодовый SHA — `f21444d72ab804bffca1dccc067d124ac97a5014`.
 

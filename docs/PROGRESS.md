@@ -209,6 +209,15 @@
 - **Не затронуто:** domain, old site, DNS, Cloudflare, VPS, TLS, production proxy/DB/media и Stage14 flags.
 - **Следующий:** 09.7 — редакционный workflow, object permissions и publication controls.
 
+## 2026-11-15 — 09.7: редакционный SEO workflow
+
+- **Статус:** `CODE_VERIFIED / NO_REAL_CONTENT_PUBLISHED`.
+- **Сделано:** permissioned brief/create/edit/submit/separate-review/publish/unpublish UI; CAS version, row locks, append-only revisions, author/reviewer separation, source/duplicate/thin-content gates.
+- **Безопасность:** login/object permissions/CSRF/noindex/method guards; прямые SQL update/delete history блокируются PostgreSQL trigger; публичного delete нет; AI/Gemini не вызывается.
+- **Проверки:** `apps.seo.tests` 21/21 PASS на PostgreSQL 17; полный synthetic workflow, stale CAS, CSRF/IDOR, quality gates и immutable history PASS; Ruff/check/migration drift PASS.
+- **Реальные публикации/метрики/согласия:** `NONE`; только synthetic test DB.
+- **Следующий:** единый финальный цикл Stage09, browser/RTL, migration rehearsal, independent review, CI и один Draft PR.
+
 ## 2026-11-10 — подэтап 00.5: архитектурная карта и план перехода
 
 - **Статус:** `IN_PROGRESS / PLAN_PREPARED`, не `DONE`.

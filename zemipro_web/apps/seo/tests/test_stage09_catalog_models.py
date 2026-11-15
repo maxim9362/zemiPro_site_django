@@ -24,9 +24,14 @@ class Stage09SeoModelTests(TestCase):
         self.page = SeoContentPage.objects.create(
             page_type=SeoContentPage.PageType.CATEGORY,
             language='ru', category=self.category, topic='Уборка в Ашдоде',
-            title='Уборка в Ашдоде', meta_description='Проверенное описание.',
-            summary='Как выбрать подходящую услугу.',
-            body='Полезный редакционный текст без цен, отзывов и выдуманной статистики.',
+            title='Уборка в Ашдоде',
+            meta_description='Проверенное описание услуги для безопасного выбора исполнителя в Ашдоде.',
+            summary='Как выбрать подходящую услугу и оформить заявку без раскрытия контактов.',
+            body=(
+                'Полезный редакционный текст без цен, отзывов и выдуманной статистики. '
+                'Он объясняет границы услуги, рекомендует описывать задачу через защищённую '
+                'заявку и предлагает сравнивать только реальные опубликованные анкеты.'
+            ),
             source_facts='Актуальный Django-каталог; редакционная проверка.',
             status=SeoContentPage.Status.DRAFT, author=self.author,
         )
@@ -64,7 +69,10 @@ class Stage09SeoModelTests(TestCase):
     def test_editorial_cas_review_publish_and_unpublish(self):
         revised = revise_content(
             page_id=self.page.pk, actor=self.author, expected_version=1,
-            changes={'status': SeoContentPage.Status.REVIEW, 'summary': 'Reviewed summary.'},
+            changes={
+                'status': SeoContentPage.Status.REVIEW,
+                'summary': 'Reviewed summary with sufficient editorial context for approval.',
+            },
         )
         self.assertEqual(revised.version, 2)
         self.assertEqual(revised.revisions.count(), 1)

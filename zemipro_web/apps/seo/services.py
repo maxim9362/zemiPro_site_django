@@ -60,6 +60,8 @@ def approve_content(*, page_id, actor, expected_version):
     page = SeoContentPage.objects.select_for_update().get(pk=page_id)
     if page.version != expected_version or page.status != SeoContentPage.Status.REVIEW:
         raise ValidationError('Content is not the expected review version.')
+    if page.author_id == actor.pk:
+        raise ValidationError('Author and approving reviewer must be different users.')
     SeoContentRevision.objects.create(
         page=page, version=page.version, snapshot=_snapshot(page), created_by=actor,
     )

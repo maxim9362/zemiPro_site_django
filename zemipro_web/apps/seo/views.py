@@ -3,18 +3,26 @@ from collections import defaultdict
 from xml.etree import ElementTree
 
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, HttpResponse, HttpResponseGone
 from django.http.response import HttpResponseRedirectBase
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import override
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 
 from apps.accounts.client_favorites import public_worker_queryset
 from apps.locations.services import get_public_cities
 from apps.marketplace.services import workers_serving_city
 
 from .legacy import redirect_target_is_safe
+from .forms import SeoContentEditForm, SeoContentPageForm
 from .models import SeoContentPage, SeoLegacyUrl
+from .services import approve_content, publish_content, revise_content, unpublish_content
 
 
 LANGUAGES = ('ru', 'en', 'he')
@@ -174,3 +182,115 @@ def legacy_url(request, legacy_path):
     )
     response['Cache-Control'] = 'public, max-age=300'
     return response
+
+
+def _editorial_queryset(user):
+    queryset = SeoContentPage.objects.select_related(
+        'author', 'reviewer', 'section', 'category', 'service', 'city',
+    )
+    return queryset if user.is_staff else queryset.filter(author=user)
+
+
+@login_required
+@require_GET
+@never_cache
+def editorial_list(request):
+    if not request.user.has_perm('seo.view_seocontentpage'):
+        raise PermissionDenied
+    return render(request, 'seo/editorial_list.html', {
+        'pages': _editorial_queryset(request.user).order_by('-updated_at', '-pk')[:100],
+        'seo_noindex': True,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+@never_cache
+def editorial_create(request):
+    if not request.user.has_perm('seo.add_seocontentpage'):
+        raise PermissionDenied
+    form = SeoContentPageForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        page = form.save(commit=False)
+        page.author = request.user
+        page.status = SeoContentPage.Status.BRIEF
+        try:
+            page.save()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, 'SEO brief created.')
+            return redirect('seo:editorial_detail', pk=page.pk)
+    return render(request, 'seo/editorial_form.html', {
+        'form': form, 'page': None, 'seo_noindex': True,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+@never_cache
+def editorial_detail(request, pk):
+    page = get_object_or_404(_editorial_queryset(request.user), pk=pk)
+    if request.method == 'POST':
+        form = SeoContentEditForm(request.POST, instance=page)
+        if form.is_valid():
+            changes = {
+                field: form.cleaned_data[field]
+                for field in form.Meta.fields
+            }
+            try:
+                revise_content(
+                    page_id=page.pk, actor=request.user,
+                    expected_version=form.cleaned_data['expected_version'],
+                    changes=changes,
+                )
+            except (PermissionDenied, ValidationError) as exc:
+                form.add_error(None, exc)
+            else:
+                messages.success(request, 'SEO draft saved as a new revision.')
+                return redirect('seo:editorial_detail', pk=page.pk)
+    else:
+        form = SeoContentEditForm(instance=page, initial={
+            'expected_version': page.version,
+        })
+    return render(request, 'seo/editorial_form.html', {
+        'form': form, 'page': page,
+        'revisions': page.revisions.select_related('created_by')[:100],
+        'seo_noindex': True,
+    })
+
+
+@login_required
+@require_POST
+@never_cache
+def editorial_action(request, pk, action):
+    page = get_object_or_404(_editorial_queryset(request.user), pk=pk)
+    try:
+        expected_version = int(request.POST.get('expected_version', ''))
+    except (TypeError, ValueError):
+        raise Http404 from None
+    try:
+        if action == 'submit':
+            revise_content(
+                page_id=page.pk, actor=request.user, expected_version=expected_version,
+                changes={'status': SeoContentPage.Status.REVIEW},
+            )
+        elif action == 'approve':
+            approve_content(
+                page_id=page.pk, actor=request.user, expected_version=expected_version,
+            )
+        elif action == 'publish':
+            publish_content(
+                page_id=page.pk, actor=request.user, expected_version=expected_version,
+            )
+        elif action == 'unpublish':
+            unpublish_content(
+                page_id=page.pk, actor=request.user, expected_version=expected_version,
+            )
+        else:
+            raise Http404
+    except (PermissionDenied, ValidationError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f'Editorial action completed: {action}.')
+    return redirect('seo:editorial_detail', pk=page.pk)

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'SEO-материалы' %} — ZemiPro{% endblock %}
+{% block content %}
+<section class="public-content"><div class="container public-stack">
+    <header><h1>{% trans 'SEO-материалы' %}</h1></header>
+    {% if perms.seo.add_seocontentpage %}<p><a class="btn btn--primary" href="{% url 'seo:editorial_create' %}">{% trans 'Создать бриф' %}</a></p>{% endif %}
+    <div class="public-panel">
+        <table class="data-table">
+            <thead><tr><th>{% trans 'Заголовок' %}</th><th>{% trans 'Язык' %}</th><th>{% trans 'Статус' %}</th><th>{% trans 'Версия' %}</th></tr></thead>
+            <tbody>{% for page in pages %}<tr>
+                <td><a href="{% url 'seo:editorial_detail' pk=page.pk %}">{{ page.title }}</a></td>
+                <td>{{ page.language }}</td><td>{{ page.get_status_display }}</td><td>{{ page.version }}</td>
+            </tr>{% empty %}<tr><td colspan="4">{% trans 'Материалов пока нет.' %}</td></tr>{% endfor %}</tbody>
+        </table>
+    </div>
+</div></section>
+{% endblock %}

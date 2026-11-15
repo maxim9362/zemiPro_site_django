@@ -58,12 +58,21 @@ class Stage09PublicPageTests(TestCase):
                 page_type=SeoContentPage.PageType.SERVICE_CITY,
                 language=language, service=cls.service, city=cls.city,
                 topic=f'Editorial topic {suffix}', title=f'Editorial title {suffix}',
-                meta_description=f'Editorial description {suffix}',
-                summary=f'Editorial summary {suffix}',
-                body=f'Useful reviewed catalog content {suffix}.',
+                meta_description=(
+                    f'Editorial description {suffix} with verified catalog scope and no claims.'
+                ),
+                summary=(
+                    f'Editorial summary {suffix} explaining safe selection and request flow.'
+                ),
+                body=(
+                    f'Useful reviewed catalog content {suffix}. It explains the visible service '
+                    'scope, the Ashdod pilot boundary and the protected request flow. It never '
+                    'claims invented prices, ratings, guarantees or availability, and it links '
+                    'only to real published catalog records.'
+                ),
                 source_facts='Synthetic catalog fixtures only.',
                 status=SeoContentPage.Status.PUBLISHED, quality_approved=True,
-                author=cls.reviewer, reviewer=cls.reviewer, reviewed_at=now,
+                author=cls.worker.user, reviewer=cls.reviewer, reviewed_at=now,
                 published_at=now,
             )
 
@@ -127,7 +136,12 @@ class Stage09PublicPageTests(TestCase):
             page_type=SeoContentPage.PageType.SERVICE_CITY,
             service=self.service, city=self.city, language='ru',
         )
-        content.body = '<script>window.stage09Xss = true</script> Safe text.'
+        content.body = (
+            '<script>window.stage09Xss = true</script> Safe reviewed text that remains escaped. '
+            'This synthetic paragraph is deliberately long enough for the editorial quality '
+            'gate and contains no real person, contact, price, rating or guarantee. It verifies '
+            'that the renderer treats stored content as text rather than trusted markup.'
+        )
         content.save()
         page = self.client.get(self.localized(
             'ru', 'service_city_detail', category_slug=self.category.slug,
@@ -141,7 +155,9 @@ class Stage09PublicPageTests(TestCase):
             page_type=SeoContentPage.PageType.SERVICE_CITY,
             service=self.service, city=self.city, language='ru',
         )
-        content.meta_description = '</script><script>window.schemaXss=true</script>'
+        content.meta_description = (
+            '</script><script>window.schemaXss=true</script> synthetic safe padding'
+        )
         content.save()
         page = self.client.get(self.localized(
             'ru', 'service_city_detail', category_slug=self.category.slug,

@@ -221,6 +221,12 @@ class SeoContentPage(models.Model):
         ).exclude(pk=self.pk).exists():
             errors['body'] = 'Duplicate content exists for this language.'
         if self.status in {self.Status.APPROVED, self.Status.PUBLISHED}:
+            if len(' '.join(self.body.split())) < 160:
+                errors['body'] = 'Approved landing content must contain at least 160 characters.'
+            if len(' '.join(self.summary.split())) < 40:
+                errors['summary'] = 'Approved landing summary must contain at least 40 characters.'
+            if len(' '.join(self.meta_description.split())) < 50:
+                errors['meta_description'] = 'Approved meta description must contain at least 50 characters.'
             if not self.quality_approved:
                 errors['quality_approved'] = 'Approved content requires quality approval.'
             if not self.source_facts.strip():
@@ -229,6 +235,8 @@ class SeoContentPage(models.Model):
                 errors['reviewer'] = 'Approved content requires staff review.'
             elif not self.reviewer.is_staff:
                 errors['reviewer'] = 'Reviewer must be staff.'
+            elif self.reviewer_id == self.author_id:
+                errors['reviewer'] = 'Author and approving reviewer must be different users.'
         if self.status == self.Status.PUBLISHED and not self.published_at:
             errors['published_at'] = 'Published content requires a timestamp.'
         if self.status != self.Status.PUBLISHED and self.published_at:
