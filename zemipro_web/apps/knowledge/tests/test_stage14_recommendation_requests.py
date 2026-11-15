@@ -148,6 +148,34 @@ class Stage14RecommendationRequestTests(TestCase):
         self.assertEqual(item.status, 'archived')
         self.assertFalse(item.public_content_safe)
 
+    def test_report_http_queue_and_decision_cover_request_and_response(self):
+        item, response = self.published_response()
+        self.client.force_login(self.other)
+        request_report = self.client.post(reverse(
+            'knowledge_requests:report_request', args=[item.slug],
+        ), {'reason': 'other', 'message': 'Synthetic request report for moderation.'})
+        self.assertEqual(request_report.status_code, 302)
+        self.client.force_login(self.author)
+        response_report = self.client.post(reverse(
+            'knowledge_requests:report_response', args=[item.slug, response.pk],
+        ), {'reason': 'other', 'message': 'Synthetic response report for moderation.'})
+        self.assertEqual(response_report.status_code, 302)
+        reports = list(item.reports.order_by('pk'))
+        self.assertEqual(len(reports), 1)
+        second = response.reports.get()
+        self.client.force_login(self.staff)
+        queue = self.client.get(reverse('knowledge:request_moderation'))
+        self.assertContains(queue, 'Synthetic request report')
+        self.assertContains(queue, 'Synthetic response report')
+        self.assertEqual(self.client.post(reverse(
+            'knowledge:request_report_moderate', args=[second.pk],
+        ), {'action': 'dismiss'}).status_code, 302)
+        self.assertEqual(self.client.post(reverse(
+            'knowledge:request_report_moderate', args=[reports[0].pk],
+        ), {'action': 'remove'}).status_code, 302)
+        item.refresh_from_db()
+        self.assertEqual(item.status, 'archived')
+
     def test_no_javascript_http_flow_and_three_locales(self):
         self.client.force_login(self.author)
         response = self.client.post(reverse('knowledge_requests:create'), {

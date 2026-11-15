@@ -89,6 +89,17 @@ class Stage14QAInterfaceTests(TestCase):
         self.assertEqual(question.status, 'pending')
         self.assertEqual(question.revisions.count(), 2)
 
+    def test_contact_domain_error_returns_controlled_400_not_500(self):
+        self.client.force_login(self.asker)
+        response = self.client.post(reverse('knowledge_qa:create'), {
+            'title': 'A complete synthetic question title',
+            'body': 'Please call +972501234567 about this synthetic question.',
+            'category': self.category.pk, 'language': 'en',
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'Contacts, links and HTML', status_code=400)
+        self.assertFalse(self.asker.expert_questions.exists())
+
     def test_answer_endpoint_rejects_non_worker_and_accepts_eligible_worker(self):
         question = self.publish()
         self.client.force_login(self.asker)
@@ -147,3 +158,28 @@ class Stage14QAInterfaceTests(TestCase):
                 'slug': question.slug, 'destination': 'external',
             },
         )).status_code, 404)
+
+    def test_vote_cannot_substitute_answer_from_another_question(self):
+        first = self.publish()
+        second = self.publish()
+        answer = qa_services.create_answer(
+            actor=self.expert_user, question_id=first.pk,
+            body='A distinct synthetic answer that is long enough for review.',
+        )
+        answer = qa_services.submit_answer(
+            actor=self.expert_user, answer_id=answer.pk,
+            expected_version=answer.content_version,
+        )
+        answer = qa_services.moderate_answer(
+            actor=self.staff, answer_id=answer.pk,
+            expected_version=answer.content_version, approve=True,
+        )
+        outsider = make_user('s14-ui-vote-outsider')
+        self.client.force_login(outsider)
+        response = self.client.post(reverse(
+            'knowledge_qa:vote', kwargs={
+                'slug': second.slug, 'answer_id': answer.pk,
+            },
+        ), {'helpful': '1'})
+        self.assertIn(response.status_code, (403, 404))
+        self.assertFalse(answer.helpful_votes.exists())

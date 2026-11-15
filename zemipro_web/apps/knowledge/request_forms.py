@@ -2,6 +2,7 @@ from django import forms
 from django.utils.translation import get_language
 
 from apps.accounts.client_favorites import public_worker_queryset
+from apps.accounts.models import WorkerProfile
 from apps.marketplace.models import Category
 
 
@@ -31,7 +32,10 @@ class RecommendationRequestForm(forms.Form):
 
 
 class RecommendationResponseForm(forms.Form):
-    worker = forms.ModelChoiceField(queryset=public_worker_queryset().none())
+    # Keep module import side-effect free: public_worker_queryset() resolves the
+    # pilot city and therefore must only run when a request instantiates the
+    # form, never while Django imports URL configuration for system checks.
+    worker = forms.ModelChoiceField(queryset=WorkerProfile.objects.none())
     body = forms.CharField(
         min_length=20, max_length=3000,
         widget=forms.Textarea(attrs={'rows': 5, 'dir': 'auto'}),

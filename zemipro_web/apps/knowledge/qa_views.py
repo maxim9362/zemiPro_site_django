@@ -7,7 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import get_language
@@ -129,21 +129,25 @@ def question_create(request):
     _allow()
     form = QuestionForm(request.POST or None, initial={'language': _language()})
     if request.method == 'POST' and form.is_valid():
-        with transaction.atomic():
-            question = qa_services.create_question(
-                actor=request.user, category_id=form.cleaned_data['category'].pk,
-                language=form.cleaned_data['language'], title=form.cleaned_data['title'],
-                body=form.cleaned_data['body'],
-            )
-            qa_services.submit_question(
-                actor=request.user, question_id=question.pk,
-                expected_version=question.content_version,
-            )
-        messages.success(request, 'Question submitted for moderation.')
-        return redirect('knowledge_qa:list')
+        try:
+            with transaction.atomic():
+                question = qa_services.create_question(
+                    actor=request.user, category_id=form.cleaned_data['category'].pk,
+                    language=form.cleaned_data['language'],
+                    title=form.cleaned_data['title'], body=form.cleaned_data['body'],
+                )
+                qa_services.submit_question(
+                    actor=request.user, question_id=question.pk,
+                    expected_version=question.content_version,
+                )
+        except qa_services.QAConflict as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, 'Question submitted for moderation.')
+            return redirect('knowledge_qa:list')
     return render(request, 'knowledge/qa_form.html', {
         'form': form, 'seo_noindex': True,
-    })
+    }, status=400 if request.method == 'POST' else 200)
 
 
 @login_required
@@ -156,15 +160,18 @@ def answer_create(request, slug):
     form = AnswerForm(request.POST)
     if not form.is_valid():
         raise PermissionDenied('Invalid answer.')
-    with transaction.atomic():
-        answer = qa_services.create_answer(
-            actor=request.user, question_id=question.pk,
-            body=form.cleaned_data['body'],
-        )
-        qa_services.submit_answer(
-            actor=request.user, answer_id=answer.pk,
-            expected_version=answer.content_version,
-        )
+    try:
+        with transaction.atomic():
+            answer = qa_services.create_answer(
+                actor=request.user, question_id=question.pk,
+                body=form.cleaned_data['body'],
+            )
+            qa_services.submit_answer(
+                actor=request.user, answer_id=answer.pk,
+                expected_version=answer.content_version,
+            )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     messages.success(request, 'Answer submitted for moderation.')
     return redirect(_detail_url(question))
 
@@ -173,10 +180,15 @@ def answer_create(request, slug):
 @require_POST
 def accept_answer(request, slug, answer_id):
     _allow()
-    question = get_object_or_404(ExpertQuestion, slug=slug, language=_language())
-    qa_services.accept_answer(
-        actor=request.user, question_id=question.pk, answer_id=answer_id,
+    question = get_object_or_404(
+        qa_services.public_questions(), slug=slug, language=_language(),
     )
+    try:
+        qa_services.accept_answer(
+            actor=request.user, question_id=question.pk, answer_id=answer_id,
+        )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     return redirect(_detail_url(question))
 
 
@@ -184,11 +196,17 @@ def accept_answer(request, slug, answer_id):
 @require_POST
 def vote_answer(request, slug, answer_id):
     _allow()
-    question = get_object_or_404(ExpertQuestion, slug=slug, language=_language())
-    qa_services.set_helpful(
-        actor=request.user, answer_id=answer_id,
-        helpful=request.POST.get('helpful') == '1',
+    question = get_object_or_404(
+        qa_services.public_questions(), slug=slug, language=_language(),
     )
+    try:
+        qa_services.set_helpful(
+            actor=request.user, answer_id=answer_id,
+            helpful=request.POST.get('helpful') == '1',
+            question_id=question.pk,
+        )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     return redirect(_detail_url(question))
 
 
@@ -202,9 +220,12 @@ def report_question(request, slug):
     form = ReportForm(request.POST)
     if not form.is_valid():
         raise PermissionDenied('Invalid report.')
-    qa_services.report_content(
-        actor=request.user, question_id=question.pk, **form.cleaned_data,
-    )
+    try:
+        qa_services.report_content(
+            actor=request.user, question_id=question.pk, **form.cleaned_data,
+        )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     messages.success(request, 'Report submitted.')
     return redirect(_detail_url(question))
 
@@ -221,9 +242,12 @@ def report_answer(request, slug, answer_id):
     form = ReportForm(request.POST)
     if not form.is_valid():
         raise PermissionDenied('Invalid report.')
-    qa_services.report_content(
-        actor=request.user, answer_id=answer_id, **form.cleaned_data,
-    )
+    try:
+        qa_services.report_content(
+            actor=request.user, answer_id=answer_id, **form.cleaned_data,
+        )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     messages.success(request, 'Report submitted.')
     return redirect(_detail_url(question))
 
@@ -259,12 +283,15 @@ def moderate_question(request, question_id):
     form = ModerationForm(request.POST)
     if not form.is_valid():
         raise PermissionDenied('Invalid moderation decision.')
-    qa_services.moderate_question(
-        actor=request.user, question_id=question_id,
-        expected_version=form.cleaned_data['expected_version'],
-        approve=form.cleaned_data['action'] == 'approve',
-        note=form.cleaned_data['note'],
-    )
+    try:
+        qa_services.moderate_question(
+            actor=request.user, question_id=question_id,
+            expected_version=form.cleaned_data['expected_version'],
+            approve=form.cleaned_data['action'] == 'approve',
+            note=form.cleaned_data['note'],
+        )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     return redirect('knowledge:qa_moderation')
 
 
@@ -274,12 +301,15 @@ def moderate_answer(request, answer_id):
     form = ModerationForm(request.POST)
     if not form.is_valid():
         raise PermissionDenied('Invalid moderation decision.')
-    qa_services.moderate_answer(
-        actor=request.user, answer_id=answer_id,
-        expected_version=form.cleaned_data['expected_version'],
-        approve=form.cleaned_data['action'] == 'approve',
-        note=form.cleaned_data['note'],
-    )
+    try:
+        qa_services.moderate_answer(
+            actor=request.user, answer_id=answer_id,
+            expected_version=form.cleaned_data['expected_version'],
+            approve=form.cleaned_data['action'] == 'approve',
+            note=form.cleaned_data['note'],
+        )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     return redirect('knowledge:qa_moderation')
 
 
@@ -289,7 +319,10 @@ def moderate_report(request, report_id):
     action = request.POST.get('action')
     if action not in ('dismiss', 'remove'):
         raise PermissionDenied('Invalid moderation decision.')
-    qa_services.decide_report(
-        actor=request.user, report_id=report_id, remove=action == 'remove',
-    )
+    try:
+        qa_services.decide_report(
+            actor=request.user, report_id=report_id, remove=action == 'remove',
+        )
+    except qa_services.QAConflict as exc:
+        return HttpResponseBadRequest(str(exc))
     return redirect('knowledge:qa_moderation')

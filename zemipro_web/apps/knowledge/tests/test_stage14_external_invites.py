@@ -1,6 +1,7 @@
 """Stage 14.11 secure external-worker registration links and data minimization."""
 from datetime import timedelta
 from urllib.parse import urlparse
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -103,6 +104,27 @@ class Stage14ExternalInviteTests(TestCase):
             )
         with self.assertRaises(DatabaseError), transaction.atomic():
             ExternalWorkerInvite.objects.filter(pk=invite.pk).delete()
+
+    def test_attribution_failure_never_breaks_account_registration(self):
+        invite, token = self.create()
+        self.client.get(reverse('knowledge_invites:landing', args=[token]))
+        with patch(
+            'apps.knowledge.invite_services.claim_invite_from_session',
+            side_effect=RuntimeError('synthetic metrics failure'),
+        ):
+            response = self.client.post(reverse('accounts:register'), {
+                'username': 's14-registration-survives-metrics',
+                'email': 'survives-metrics@example.invalid',
+                'password1': 'SafeSyntheticPassword-2026!',
+                'password2': 'SafeSyntheticPassword-2026!',
+            })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(get_user_model().objects.filter(
+            username='s14-registration-survives-metrics',
+        ).exists())
+        self.assertIn('_auth_user_id', self.client.session)
+        invite.refresh_from_db()
+        self.assertEqual(invite.claimed_count, 0)
 
     @override_settings(ZEMIPRO_EXTERNAL_WORKER_INVITES_ENABLED=False)
     def test_flag_blocks_creation_and_public_landing(self):

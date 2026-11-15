@@ -490,9 +490,17 @@ def worker_public_profile_view(request, pk):
         for article in published_expert_articles:
             article.public_path = public_path(article)
 
+    published_personal_recommendations = []
+    if settings.ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED:
+        from apps.knowledge.recommendation_services import public_recommendations
+        published_personal_recommendations = list(
+            public_recommendations(worker_id=profile.pk)[:5],
+        )
+
     response = render(request, 'pages/worker_public_profile.html', {
         'profile': profile,
         'published_expert_articles': published_expert_articles,
+        'published_personal_recommendations': published_personal_recommendations,
         'public_photos': profile.portfolio_photos.filter(is_public=True),
         'reviews': reviews[:10],
         'avg_rating': round(avg_rating, 1),

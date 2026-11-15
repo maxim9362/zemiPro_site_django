@@ -63,7 +63,7 @@ def _active_user(actor, *, lock=True):
 
 def _worker(actor):
     user = _active_user(actor)
-    worker = public_worker_queryset().select_for_update().filter(
+    worker = public_worker_queryset().select_for_update(of=('self',)).filter(
         user_id=user.pk, city__slug='ashdod', city__is_active=True,
     ).first()
     if worker is None:
@@ -372,11 +372,15 @@ def accept_answer(*, actor, question_id, answer_id):
     question = ExpertQuestion.objects.select_for_update().filter(pk=question_id).first()
     if question is None or question.author_id != user.pk:
         raise PermissionDenied('Question is unavailable.')
+    if not public_questions().filter(pk=question.pk).exists():
+        raise PermissionDenied('Question is unavailable.')
     answer = ExpertAnswer.objects.select_for_update().filter(
         pk=answer_id, question=question, status=ExpertAnswer.Status.PUBLISHED,
         public_content_safe=True,
     ).first()
     if answer is None:
+        raise PermissionDenied('Answer is unavailable.')
+    if not public_answers(question).filter(pk=answer.pk).exists():
         raise PermissionDenied('Answer is unavailable.')
     if answer.is_accepted:
         return answer
@@ -388,7 +392,7 @@ def accept_answer(*, actor, question_id, answer_id):
 
 
 @transaction.atomic
-def set_helpful(*, actor, answer_id, helpful):
+def set_helpful(*, actor, answer_id, helpful, question_id=None):
     _enabled()
     user = _active_user(actor)
     answer = ExpertAnswer.objects.select_for_update().filter(
@@ -396,6 +400,12 @@ def set_helpful(*, actor, answer_id, helpful):
         public_content_safe=True,
     ).first()
     if answer is None:
+        raise PermissionDenied('Answer is unavailable.')
+    if question_id is not None and answer.question_id != question_id:
+        raise PermissionDenied('Answer is unavailable.')
+    if not public_questions().filter(pk=answer.question_id).exists():
+        raise PermissionDenied('Answer is unavailable.')
+    if not public_answers(answer.question).filter(pk=answer.pk).exists():
         raise PermissionDenied('Answer is unavailable.')
     if answer.author.user_id == user.pk:
         raise PermissionDenied('Cannot vote for your own answer.')
@@ -419,10 +429,20 @@ def report_content(*, actor, question_id=None, answer_id=None, reason, message):
         raise QAConflict('Invalid report reason.')
     message = _text(message, minimum=10, maximum=2000, field='report details')
     kwargs = {'question_id': question_id} if question_id else {'answer_id': answer_id}
-    model = ExpertQuestion if question_id else ExpertAnswer
-    target = model.objects.select_for_update().filter(
-        pk=question_id or answer_id, status='published', public_content_safe=True,
-    ).first()
+    if question_id:
+        target = ExpertQuestion.objects.select_for_update().filter(
+            pk=question_id, status='published', public_content_safe=True,
+        ).first()
+        if target is not None and not public_questions().filter(pk=target.pk).exists():
+            target = None
+    else:
+        target = ExpertAnswer.objects.select_for_update().filter(
+            pk=answer_id, status='published', public_content_safe=True,
+        ).first()
+        if target is not None and not public_answers(target.question).filter(
+            pk=target.pk,
+        ).exists():
+            target = None
     if target is None:
         raise PermissionDenied('Content is unavailable.')
     owner_id = target.author_id if question_id else target.author.user_id

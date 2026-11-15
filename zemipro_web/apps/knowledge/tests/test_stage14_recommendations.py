@@ -1,8 +1,11 @@
 """Stage 14.8 personal recommendations remain separate, safe and moderated."""
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+from unittest.mock import patch
 from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied
-from django.db import DatabaseError, transaction
-from django.test import TestCase, override_settings
+from django.db import DatabaseError, close_old_connections, transaction
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
 from apps.knowledge import recommendation_services
@@ -78,6 +81,7 @@ class Stage14RecommendationTests(TestCase):
                 experience_confirmed=True,
             )
 
+
     def test_contacts_html_wrong_city_and_blocked_author_fail_closed(self):
         for body in ('Call +972501234567 for details about this work', '<b>unsafe</b>' + BODY):
             with self.subTest(body=body), self.assertRaises(
@@ -133,6 +137,13 @@ class Stage14RecommendationTests(TestCase):
                 actor=self.worker_user, recommendation_id=item.pk, reason='other',
                 message='This synthetic recommendation needs moderation.',
             )
+        report = recommendation_services.decide_report(
+            actor=self.staff, report_id=report.pk, remove=True,
+        )
+        item.refresh_from_db()
+        self.assertEqual(report.status, 'removed')
+        self.assertEqual(item.status, 'archived')
+        self.assertFalse(item.public_content_safe)
 
     def test_http_disabled_flag_no_javascript_submit_and_public_warning(self):
         with override_settings(ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED=False):
@@ -152,9 +163,14 @@ class Stage14RecommendationTests(TestCase):
             actor=self.staff, recommendation_id=item.pk,
             expected_version=item.content_version, approve=True,
         )
-        page = self.client.get(reverse('knowledge_recommendations:list'))
+        page = self.client.get('/ru/recommendations/')
         self.assertContains(page, item.public_body)
         self.assertContains(page, 'не отзывы по подтверждённым заказам')
+        profile = self.client.get(reverse(
+            'marketplace:worker_public_profile', args=[self.worker.pk],
+        ))
+        self.assertContains(profile, item.public_body)
+        self.assertContains(profile, 'Личный опыт вне ZemiPro')
 
     def test_moderation_requires_dedicated_permission(self):
         item = self.submitted()
@@ -172,3 +188,48 @@ class Stage14RecommendationTests(TestCase):
                 actor=self.author, worker_id=self.worker.pk, language='en', body=BODY,
                 experience_confirmed=True,
             )
+
+
+@override_settings(ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED=True)
+class Stage14RecommendationConcurrencyTests(TransactionTestCase):
+    def setUp(self):
+        city = make_city(slug='ashdod', name_ru='Synthetic Ashdod')
+        category = make_category(slug='s14-reciprocal-recommendation')
+        self.user_a = make_user('s14-reciprocal-a')
+        self.user_b = make_user('s14-reciprocal-b')
+        self.worker_a = make_worker_profile(
+            self.user_a, city=city, category=category,
+        )
+        self.worker_b = make_worker_profile(
+            self.user_b, city=city, category=category,
+        )
+
+    def test_reciprocal_recommendations_do_not_deadlock_user_rows(self):
+        barrier = Barrier(2)
+        original = recommendation_services._active_user
+
+        def synchronized_active_user(actor, *, lock=True):
+            user = original(actor, lock=lock)
+            barrier.wait(timeout=5)
+            return user
+
+        def create(actor, worker_id):
+            close_old_connections()
+            try:
+                item = recommendation_services.create_recommendation(
+                    actor=actor, worker_id=worker_id, language='en', body=BODY,
+                    experience_confirmed=True,
+                )
+                return item.pk
+            finally:
+                close_old_connections()
+
+        with patch.object(
+            recommendation_services, '_active_user', synchronized_active_user,
+        ), ThreadPoolExecutor(max_workers=2) as pool:
+            futures = (
+                pool.submit(create, self.user_a, self.worker_b.pk),
+                pool.submit(create, self.user_b, self.worker_a.pk),
+            )
+            results = [future.result(timeout=10) for future in futures]
+        self.assertEqual(len(set(results)), 2)

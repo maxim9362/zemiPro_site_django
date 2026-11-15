@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -36,6 +38,9 @@ from .services import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def register_view(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
@@ -44,7 +49,11 @@ def register_view(request):
             # Stage14.11: count only a genuine completed registration.  The
             # invite stores no new-user FK and creates no worker profile.
             from apps.knowledge.invite_services import claim_invite_from_session
-            claim_invite_from_session(request)
+            try:
+                claim_invite_from_session(request)
+            except Exception:
+                # Optional attribution must never break account registration.
+                logger.exception('External worker invite attribution failed safely.')
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.info(request, _('Подтвердите email, чтобы завершить регистрацию.'))
             return redirect('accounts:contact_verification')

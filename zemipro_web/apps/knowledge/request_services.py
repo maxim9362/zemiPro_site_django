@@ -36,7 +36,7 @@ def _moderator(actor):
 def _worker(worker_id, category_id, *, lock=True):
     workers = public_worker_queryset()
     if lock:
-        workers = workers.select_for_update()
+        workers = workers.select_for_update(of=('self',))
     worker = workers.filter(
         pk=worker_id, city__slug='ashdod', city__is_active=True,
         skills__pk=category_id,
@@ -240,6 +240,10 @@ def report_content(*, actor, request_id=None, response_id=None, reason, message)
         target = RecommendationResponse.objects.select_for_update().filter(
             pk=response_id, status='published', public_content_safe=True,
         ).first()
+        if target is not None and not public_responses(target.request).filter(
+            pk=target.pk,
+        ).exists():
+            target = None
         owner_id = target.recommender_id if target else None
         kwargs = {'response_id': response_id}
     if target is None:
@@ -268,6 +272,12 @@ def decide_report(*, actor, report_id, remove):
     content = model.objects.select_for_update().get(
         pk=target['request_id'] or target['response_id'],
     )
+    owner_id = (
+        content.author_id if isinstance(content, RecommendationRequest)
+        else content.recommender_id
+    )
+    if owner_id == moderator.pk:
+        raise PermissionDenied('Cannot decide a report about own content.')
     report = RecommendationRequestReport.objects.select_for_update().get(pk=report_id)
     if report.status != 'pending' or type(remove) is not bool:
         raise QAConflict('Report is already resolved.')

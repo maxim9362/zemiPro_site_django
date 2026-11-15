@@ -3,13 +3,14 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 
 from . import invite_services
+from .qa_services import QAConflict
 
 
 @login_required
@@ -22,7 +23,10 @@ def create_invite(request):
         raise Http404 from exc
     context = {'seo_noindex': True}
     if request.method == 'POST':
-        invite, token = invite_services.create_invite(actor=request.user)
+        try:
+            invite, token = invite_services.create_invite(actor=request.user)
+        except QAConflict as exc:
+            return HttpResponseBadRequest(str(exc))
         path = reverse('knowledge_invites:landing', args=[token])
         context.update({
             'invite': invite,

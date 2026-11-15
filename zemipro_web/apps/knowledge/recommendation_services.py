@@ -30,7 +30,7 @@ def _moderator(actor):
 def _worker(worker_id, *, lock=True):
     workers = public_worker_queryset()
     if lock:
-        workers = workers.select_for_update()
+        workers = workers.select_for_update(of=('self',))
     worker = workers.filter(
         pk=worker_id, city__slug='ashdod', city__is_active=True,
     ).first()
@@ -205,3 +205,33 @@ def report_recommendation(*, actor, recommendation_id, reason, message):
         )
     except IntegrityError as exc:
         raise QAConflict('Report already filed.') from exc
+
+
+@transaction.atomic
+def decide_report(*, actor, report_id, remove):
+    _enabled()
+    moderator = _moderator(actor)
+    recommendation_id = PersonalRecommendationReport.objects.filter(
+        pk=report_id,
+    ).values_list('recommendation_id', flat=True).first()
+    if recommendation_id is None:
+        raise PermissionDenied('Report is unavailable.')
+    item = PersonalRecommendation.objects.select_for_update().get(pk=recommendation_id)
+    if moderator.pk in (item.author_id, item.worker.user_id):
+        raise PermissionDenied('Cannot decide a related recommendation report.')
+    report = PersonalRecommendationReport.objects.select_for_update().get(
+        pk=report_id, recommendation=item,
+    )
+    if report.status != 'pending' or type(remove) is not bool:
+        raise QAConflict('Report is already resolved.')
+    if remove:
+        item.status = PersonalRecommendation.Status.ARCHIVED
+        _hide(item)
+        _revision(item, moderator, 'archived')
+        report.status = 'removed'
+    else:
+        report.status = 'dismissed'
+    report.handled_by = moderator
+    report.handled_at = timezone.now()
+    report.save(update_fields=['status', 'handled_by', 'handled_at'])
+    return report

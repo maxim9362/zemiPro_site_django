@@ -146,6 +146,17 @@ class Stage14QADomainTests(TestCase):
                 actor=self.other, question_id=question.pk, answer_id=answer.pk,
             )
 
+    def test_hidden_worker_answer_cannot_be_accepted(self):
+        question, answer = self.published_answer()
+        self.expert_user.is_blocked = True
+        self.expert_user.save(update_fields=['is_blocked'])
+        with self.assertRaises(PermissionDenied):
+            qa_services.accept_answer(
+                actor=self.asker, question_id=question.pk, answer_id=answer.pk,
+            )
+        answer.refresh_from_db()
+        self.assertFalse(answer.is_accepted)
+
     def test_helpful_vote_is_idempotent_and_self_vote_is_denied(self):
         _, answer = self.published_answer()
         qa_services.set_helpful(actor=self.other, answer_id=answer.pk, helpful=True)
@@ -157,6 +168,23 @@ class Stage14QADomainTests(TestCase):
             qa_services.set_helpful(
                 actor=self.expert_user, answer_id=answer.pk, helpful=True,
             )
+
+    def test_helpful_vote_rejects_mismatched_or_hidden_parent_question(self):
+        question, answer = self.published_answer()
+        other_question = self.published_question()
+        with self.assertRaises(PermissionDenied):
+            qa_services.set_helpful(
+                actor=self.other, answer_id=answer.pk, helpful=True,
+                question_id=other_question.pk,
+            )
+        question.status = 'archived'
+        question.save(update_fields=['status', 'updated_at'])
+        with self.assertRaises(PermissionDenied):
+            qa_services.set_helpful(
+                actor=self.other, answer_id=answer.pk, helpful=True,
+                question_id=question.pk,
+            )
+        self.assertFalse(HelpfulVote.objects.exists())
 
     def test_reports_are_unique_and_moderation_removal_is_atomic(self):
         question, _ = self.published_answer()

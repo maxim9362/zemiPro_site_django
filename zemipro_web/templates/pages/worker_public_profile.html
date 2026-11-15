@@ -176,6 +176,14 @@
         </section>
         {% endif %}
 
+        {% if published_personal_recommendations %}
+        <section class="public-panel" aria-labelledby="profile-personal-recommendations">
+            <h2 class="public-panel__title" id="profile-personal-recommendations">{% if current_language == 'he' %}המלצות אישיות{% elif current_language == 'en' %}Personal recommendations{% else %}Личные рекомендации{% endif %}</h2>
+            <p class="form__hint">{% if current_language == 'he' %}חוויה אישית מחוץ ל-ZemiPro. זו אינה ביקורת על הזמנה מאומתת ואינה משנה את הדירוג.{% elif current_language == 'en' %}Personal experience outside ZemiPro. These are not verified-order reviews and do not affect the rating.{% else %}Личный опыт вне ZemiPro. Это не отзывы по подтверждённым заказам и они не влияют на рейтинг.{% endif %}</p>
+            {% for recommendation in published_personal_recommendations %}<article class="public-profile__review"><p dir="auto">{{ recommendation.public_body }}</p></article>{% endfor %}
+        </section>
+        {% endif %}
+
         {% if profile_sharing_enabled or personal_recommendations_enabled %}
         <section class="public-panel" aria-labelledby="profile-community-actions">
             <h2 class="public-panel__title" id="profile-community-actions">{% if current_language == 'he' %}שיתוף והמלצה{% elif current_language == 'en' %}Share and recommend{% else %}Поделиться и рекомендовать{% endif %}</h2>
