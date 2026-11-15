@@ -122,7 +122,10 @@ class Stage14PublicArticleTests(TestCase):
         )
         self.assertEqual(self.client.get(self.article_path(draft)).status_code, 404)
         listing = self.client.get('/ru/advice/?q=PRIVATE')
-        self.assertNotContains(listing, 'PRIVATE')
+        # The visitor's own query is shown in its search box; no draft title,
+        # body or excerpts may be returned as matching results.
+        self.assertNotContains(listing, 'PRIVATE SYNTHETIC DRAFT')
+        self.assertNotContains(listing, 'Private source not approved')
         self.assertContains(listing, 'Найдено статей: 0')
         self.assertEqual(self.client.get(self.article_path(approved)).status_code, 200)
         ExpertArticle.objects.filter(pk=approved.pk).update(

@@ -35,11 +35,16 @@ def article_list(request):
     form = PublicArticleSearchForm(
         request.GET if request.GET else None, categories=categories,
     )
-    valid = form.is_valid()
+    # An unbound form (no filters) is valid for browsing all approved articles.
+    # Django forms.is_valid() returns False for unbound forms by design.
+    valid = not form.is_bound or form.is_valid()
     preserved = {}
     invalid_query = not valid
     if valid:
-        fields = form.cleaned_data
+        fields = (
+            form.cleaned_data if form.is_bound
+            else {'q': '', 'category': '', 'language': ''}
+        )
         if fields['q']:
             # Search ONLY approved, contact-free snapshots, never drafts.
             visible = visible.filter(
