@@ -1383,3 +1383,9 @@ Runtime после review не менялся. Последний SHA долже
 - **Статус:** `CODE_IMPLEMENTED / LOCAL_TARGETED_PASS / CI_PENDING / ACTIVATION_PENDING`. `PersonalRecommendation` не имеет связи с `Order`, `Offer` или `Rating` и не участвует в пересчёте рейтинга. Реальный автор хранится приватно; публичная карточка показывает безопасный текст, публичное имя мастера и обязательную маркировку «личный опыт вне сервиса».
 - **Антифрод и модерация:** требуется явное подтверждение личного опыта; запрещены self-recommendation, повтор author/worker, контакты/HTML, мастер вне Ашдода и недействующие аккаунты. CAS-версии и PostgreSQL trigger защищают историю; отдельное permission ограничивает модерацию, жалоба уникальна и её идентичность неизменяема.
 - **Проверки:** `test_stage14_recommendations` — **8/8 PASS** на PostgreSQL 17, включая Rating=0, IDOR/CAS, self/duplicate, PII, append-only, report и no-JS submission. `ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED=False` не изменён; реальные рекомендации/согласия не создавались.
+
+## 2026-11-15 — Stage 14.9: добровольная передача ссылки на профиль
+
+- **Статус:** `CODE_IMPLEMENTED / LOCAL_TARGETED_PASS / CI_PENDING / ACTIVATION_PENDING`. На безопасной публичной карточке добавлены только явные пользовательские действия: фиксированная ссылка на Facebook sharer и локальное копирование текущего URL с no-JS fallback. Сервер заново проверяет live public-worker predicate и не принимает внешний URL от пользователя.
+- **Приватность:** Facebook Login/Graph API/access token/friend list/autopost отсутствуют; редирект только на `https://www.facebook.com/sharer/sharer.php`, передаёт единственный уже публичный URL и ставит `Referrer-Policy: no-referrer`. Заблокированный/неопубликованный мастер получает 404.
+- **Проверки:** `test_stage14_profile_sharing` — **4/4 PASS**. `ZEMIPRO_PROFILE_SHARING_ENABLED=False` остаётся hard-off; реальные действия в Facebook не выполнялись.

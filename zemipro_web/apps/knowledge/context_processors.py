@@ -10,4 +10,10 @@ def public_knowledge_navigation(request):
         'knowledge_authoring_enabled': bool(
             settings.ZEMIPRO_KNOWLEDGE_AUTHORING_ENABLED,
         ),
+        'personal_recommendations_enabled': bool(
+            settings.ZEMIPRO_PERSONAL_RECOMMENDATIONS_ENABLED,
+        ),
+        'profile_sharing_enabled': bool(
+            settings.ZEMIPRO_PROFILE_SHARING_ENABLED,
+        ),
     }
