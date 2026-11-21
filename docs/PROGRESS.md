@@ -1500,3 +1500,11 @@ Runtime после review не менялся. Последний SHA долже
 - Stage14 merged into `main` on `086fb8905c5d6ab4150117332c4fca800e7d10fa`; pilot 14.4 and public feature flags remain PENDING/OFF, no deployment.
 - Stage09 source SHA `608cb22cf987e1377784cc2905e15878db8ffbc6` received successful GitHub CI. Separate Stage09 code is now combined with Stage14 in the existing Stage09 branch for an exact combined-HEAD CI check before merging.
 - Stage09 09.1 HTTP/GSC, 09.5 actual URL decisions, and 09.6 production cutover remain separate external gates. No DNS, Cloudflare, VPS, live database, or public site changes.
+
+## 2026-11-21 — повторная проверка GitHub и roadmap v1.5.2
+
+- **Источник:** опубликованный GitHub репозитория `maxim9362/zemiPro_site_django`; текущий `main` HEAD `31bfb57740c48860c905552abee8884c5ba8e9c0` (коммит от 2026-11-15). Наличие новых локальных изменений на ноутбуке этим не подтверждается.
+- **GitHub:** Stage14 PR #18 MERGED SHA `086fb8905c5d6ab4150117332c4fca800e7d10fa`; Stage09 PR #19 MERGED SHA `31bfb57740c48860c905552abee8884c5ba8e9c0`. Объединённый Stage09+14 head `0fc3656d6e0cfe5282433c563a6393b1623147a3`: Django CI push #43726514474 SUCCESS, Django CI PR #43726558514 SUCCESS, isolated staging/HTTPS/backup #43726558504 SUCCESS. Это **синтетическая/изолированная инфраструктура**, не production.
+- **Сводка:** 15 этапов, 103 подэтапа (уникальные ID проверены). Код 00–09 и 14 находится в `main`; Stage10–13 по опубликованному коду не начаты. Stage09: `[ ] 09.1` HTTP/GSC, `[ ] 09.5` реальные KEEP/301/404/410, `[ ] 09.6` owner-approved cutover; Stage14: `[ ] 14.4` настоящий пилот/GO. Остальные отмеченные `[x]` означают только подтверждённую техническую реализацию.
+- **Другие release-гейты:** 00.2 legacy secret rotation, 00.4 URL inventory, off-host backup/restore реальной топологии, физические Android/iPhone/доступность, проверка иврита, alert delivery, branch protection и owner разрешения. Реальные публикации, включение feature flags, DNS/Cloudflare/VPS/production PostgreSQL не выполнялись в этом документальном обновлении.
+- **Изменения:** `docs/ROADMAP.md`, `docs/DEVELOPMENT_PLAN.md`, `AGENTS.md` синхронизированы до v1.5.2, этот `docs/PROGRESS.md` дополнен фактическими доказательствами. Никаких runtime/миграционных изменений или новых результатов тестов здесь не заявляется.
